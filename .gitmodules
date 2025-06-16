@@ -1,0 +1,3 @@
+[submodule "Plugins/UnrealCommons"]
+	path = Plugins/UnrealCommons
+	url = https://github.com/ScientificWays/UnrealCommons
