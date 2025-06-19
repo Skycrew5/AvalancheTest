@@ -11,8 +11,8 @@ struct FVoxelInstanceData
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 StaticMeshInstanceIndex = INDEX_NONE;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	int32 InstanceIndex = INDEX_NONE;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<const class UATVoxelTypeData> TypeData = nullptr;

@@ -2,4 +2,4 @@
 
 #include "World/ATTypes_World.h"
 
-const FVoxelInstanceData FVoxelInstanceData::Invalid = FVoxelInstanceData(nullptr, 0.0f);
+const FVoxelInstanceData FVoxelInstanceData::Invalid = FVoxelInstanceData(INDEX_NONE, nullptr, 0.0f);

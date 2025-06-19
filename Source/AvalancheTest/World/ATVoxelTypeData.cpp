@@ -17,5 +17,5 @@ FVoxelInstanceData UATVoxelTypeData::K2_InitializeInstanceData_Implementation(AA
 	{
 		return FVoxelInstanceData::Invalid;
 	}
-	return FVoxelInstanceData(this, MaxHealth);
+	return FVoxelInstanceData(INDEX_NONE, this, MaxHealth);
 }

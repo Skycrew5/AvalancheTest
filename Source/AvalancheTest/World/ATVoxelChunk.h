@@ -9,7 +9,7 @@
 #include "ATVoxelChunk.generated.h"
 
 USTRUCT()
-struct FVoxelContainersData
+struct FVoxelChunkContainers
 {
 	GENERATED_BODY()
 
@@ -19,84 +19,91 @@ private:
 	//TArray<FVoxelInstanceData> VoxelDataArray;
 
 	UPROPERTY()
-	TMap<int32, FIntVector> MeshInstanceIndex_To_LocalPoint_Map;
+	TMap<FIntVector, FVoxelInstanceData> LocalPoint_To_InstanceData_Map;
 
 	UPROPERTY()
-	TMap<FIntVector, int32> LocalPoint_To_MeshInstanceIndex_Map;
-
-	UPROPERTY()
-	TMap<FIntVector, FVoxelInstanceData> LocalPoint_To_VoxelDataMap;
+	TMap<int32, FIntVector> InstanceIndex_To_LocalPoint_Map;
 
 public:
 
-	FORCEINLINE bool AddVoxel(int32 InIndex, const FIntVector& InPoint, const FVoxelInstanceData& InData)
+	FORCEINLINE const TMap<FIntVector, FVoxelInstanceData>& GetLocalPoint_To_InstanceData_Map() const { return LocalPoint_To_InstanceData_Map; }
+
+	FORCEINLINE bool AddVoxel(const FIntVector& InPoint, FVoxelInstanceData InInstanceData, int32 InInstanceIndex)
 	{
-		ensure(!MeshInstanceIndex_To_LocalPoint_Map.Contains(InIndex));
-		MeshInstanceIndex_To_LocalPoint_Map.Add(InIndex, InPoint);
+		InInstanceData.InstanceIndex = InInstanceIndex;
 
-		ensure(!LocalPoint_To_MeshInstanceIndex_Map.Contains(InPoint));
-		LocalPoint_To_MeshInstanceIndex_Map.Add(InPoint, InIndex);
+		ensure(!LocalPoint_To_InstanceData_Map.Contains(InPoint));
+		LocalPoint_To_InstanceData_Map.Add(InPoint, InInstanceData);
 
-		ensure(!LocalPoint_To_VoxelDataMap.Contains(InPoint));
-		LocalPoint_To_VoxelDataMap.Add(InPoint, InData);
-	}
-
-	FORCEINLINE bool RemoveVoxelByIndex(int32 InIndex)
-	{
-		ensure(MeshInstanceIndex_To_LocalPoint_Map.Contains(InIndex));
-		if (const FIntVector* SamplePointPtr = MeshInstanceIndex_To_LocalPoint_Map.Find(InIndex))
-		{
-			ensure(LocalPoint_To_MeshInstanceIndex_Map.Contains(*SamplePointPtr));
-			LocalPoint_To_MeshInstanceIndex_Map.Remove(*SamplePointPtr);
-
-			ensure(LocalPoint_To_VoxelDataMap.Contains(*SamplePointPtr));
-			LocalPoint_To_VoxelDataMap.Remove(*SamplePointPtr);
-		}
-		else
-		{
-			ensure(false);
-			return false;
-		}
-		MeshInstanceIndex_To_LocalPoint_Map.Remove(InIndex);
-	}
-
-	FORCEINLINE bool RemoveVoxelByPoint(const FIntVector& InPoint)
-	{
-		ensure(LocalPoint_To_MeshInstanceIndex_Map.Contains(InPoint));
-		if (const int32* SampleIndexPtr = LocalPoint_To_MeshInstanceIndex_Map.Find(InPoint))
-		{
-			ensure(MeshInstanceIndex_To_LocalPoint_Map.Contains(*SampleIndexPtr));
-			MeshInstanceIndex_To_LocalPoint_Map.Remove(*SampleIndexPtr);
-		}
-		else
-		{
-			ensure(false);
-			return false;
-		}
-		LocalPoint_To_MeshInstanceIndex_Map.Remove(InPoint);
-
-		ensure(LocalPoint_To_VoxelDataMap.Contains(InPoint));
-		LocalPoint_To_VoxelDataMap.Remove(InPoint);
+		ensure(!InstanceIndex_To_LocalPoint_Map.Contains(InInstanceIndex));
+		InstanceIndex_To_LocalPoint_Map.Add(InInstanceIndex, InPoint);
 		return true;
 	}
 
-	FORCEINLINE const FIntVector& GetVoxelPoint(int32 InIndex)
+	FORCEINLINE bool RemoveVoxelByInstanceIndex(int32 InInstanceIndex, const bool bInChecked)
 	{
-		if (const FIntVector* SamplePointPtr = MeshInstanceIndex_To_LocalPoint_Map.Find(InIndex))
+		ensure(!bInChecked || InstanceIndex_To_LocalPoint_Map.Contains(InInstanceIndex));
+		if (const FIntVector* SamplePointPtr = InstanceIndex_To_LocalPoint_Map.Find(InInstanceIndex))
+		{
+			const FIntVector& SamplePoint = *SamplePointPtr;
+
+			ensure(LocalPoint_To_InstanceData_Map.Contains(SamplePoint));
+			LocalPoint_To_InstanceData_Map.Remove(SamplePoint);
+		}
+		else
+		{
+			return false;
+		}
+		InstanceIndex_To_LocalPoint_Map.Remove(InInstanceIndex);
+		return true;
+	}
+
+	FORCEINLINE bool RemoveVoxelByPoint(const FIntVector& InPoint, const bool bInChecked)
+	{
+		ensure(!bInChecked || LocalPoint_To_InstanceData_Map.Contains(InPoint));
+		if (const FVoxelInstanceData* SampleInstanceDataPtr = LocalPoint_To_InstanceData_Map.Find(InPoint))
+		{
+			ensure(InstanceIndex_To_LocalPoint_Map.Contains(SampleInstanceDataPtr->InstanceIndex));
+			InstanceIndex_To_LocalPoint_Map.Remove(SampleInstanceDataPtr->InstanceIndex);
+		}
+		else
+		{
+			return false;
+		}
+		LocalPoint_To_InstanceData_Map.Remove(InPoint);
+		return true;
+	}
+
+	FORCEINLINE const FIntVector& GetVoxelPoint(int32 InIndex) const
+	{
+		if (const FIntVector* SamplePointPtr = InstanceIndex_To_LocalPoint_Map.Find(InIndex))
 		{
 			return *SamplePointPtr;
 		}
 		else
 		{
-			return FIntVector::NoneValue;
+			return FIntVector::ZeroValue;
 		}
 	}
 
-	FORCEINLINE int32 GetVoxelInstanceIndex(const FIntVector& InPoint)
+	FORCEINLINE const FVoxelInstanceData& GetVoxelInstanceData(const FIntVector& InPoint) const
 	{
-		if (const int32* SampleIndexPtr = LocalPoint_To_MeshInstanceIndex_Map.Find(InPoint))
+		if (const FVoxelInstanceData* SampleInstanceDataPtr = LocalPoint_To_InstanceData_Map.Find(InPoint))
 		{
-			return *SampleIndexPtr;
+			return *SampleInstanceDataPtr;
+		}
+		else
+		{
+			return FVoxelInstanceData::Invalid;
+		}
+	}
+
+	FORCEINLINE int32 GetVoxelInstanceIndex(const FIntVector& InPoint) const
+	{
+		ensure(LocalPoint_To_InstanceData_Map.Contains(InPoint));
+		if (const FVoxelInstanceData* SampleInstanceDataPtr = LocalPoint_To_InstanceData_Map.Find(InPoint))
+		{
+			return SampleInstanceDataPtr->InstanceIndex;
 		}
 		else
 		{
@@ -106,15 +113,25 @@ public:
 
 	FORCEINLINE bool ChangeVoxelInstanceIndex(int32 InPrevIndex, int32 InNewIndex)
 	{
-		if (MeshInstanceIndex_To_LocalPoint_Map.Contains(InPrevIndex))
+		if (!InstanceIndex_To_LocalPoint_Map.Contains(InPrevIndex))
 		{
-			FIntVector OldIndexPoint;
-			MeshInstanceIndex_To_LocalPoint_Map.RemoveAndCopyValue(InPrevIndex, OldIndexPoint);
-			MeshInstanceIndex_To_LocalPoint_Map.Add(InNewIndex, OldIndexPoint);
-			return true;
+			ensure(false);
+			return false;
 		}
-		ensure(false);
-		return false;
+		FIntVector OldIndexPoint;
+		InstanceIndex_To_LocalPoint_Map.RemoveAndCopyValue(InPrevIndex, OldIndexPoint);
+		InstanceIndex_To_LocalPoint_Map.Add(InNewIndex, OldIndexPoint);
+
+		if (!LocalPoint_To_InstanceData_Map.Contains(OldIndexPoint))
+		{
+			ensure(false);
+			return false;
+		}
+		FVoxelInstanceData& SampleInstanceData = *LocalPoint_To_InstanceData_Map.Find(OldIndexPoint);
+		
+		ensure(SampleInstanceData.InstanceIndex == InPrevIndex);
+		SampleInstanceData.InstanceIndex = InNewIndex;
+		return true;
 	}
 };
 
@@ -134,6 +151,7 @@ public:
 protected:
 	virtual void OnConstruction(const FTransform& InTransform) override; // AActor
 	virtual void BeginPlay() override; // AActor
+	virtual void Tick(float InDeltaSeconds)  override; // AActor
 	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // AActor
 //~ End Initialize
 	
@@ -211,7 +229,7 @@ public:
 	void BreakVoxelsAtLocalPoints(const TArray<FIntVector>& InLocalPoints);
 
 	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "RemoveWithInstanceIds, DeleteWithInstanceIds"))
-	void BreakVoxelsWithInstanceIds(const TArray<int32>& InInstanceIndices);
+	void BreakVoxelsWithInstanceIndices(const TArray<int32>& InInstanceIndices);
 //~ End Setters
 
 //~ Begin Data
@@ -219,6 +237,9 @@ public:
 
 	UFUNCTION(Category = "Data", BlueprintCallable)
 	void UpdateStabilityData();
+
+	UPROPERTY(Category = "Data", EditInstanceOnly, BlueprintReadWrite)
+	bool bUpdateStabilityDataNextTick;
 
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
 	int32 VoxelChunkSize;
@@ -229,7 +250,7 @@ public:
 protected:
 
 	UPROPERTY()
-	FVoxelContainersData Data;
+	FVoxelChunkContainers Data;
 
 	void OnInstanceIndicesUpdated(UInstancedStaticMeshComponent* InUpdatedComponent, TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData> InIndexUpdates);
 	FDelegateHandle InstanceIndexUpdatedDelegateHandle;
