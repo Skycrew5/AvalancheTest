@@ -6,14 +6,14 @@
 
 #include "Framework/ScWGameState.h"
 
-#include "World/Types_World.h"
+#include "World/ATTypes_World.h"
 
 #include "ATGameState.generated.h"
 
 /**
  * 
  */
-UCLASS(Abstract)
+UCLASS(Abstract, meta = (DisplayName = "[AT] Game State"))
 class AVALANCHETEST_API AATGameState : public AScWGameState
 {
 	GENERATED_BODY()
@@ -30,18 +30,5 @@ public:
 //~ End Statics
 
 //~ Begin Voxels
-public:
-
-	UFUNCTION(Category = "Voxels", BlueprintCallable)
-	FORCEINLINE int32 GetVoxelIndexAt(const FIntVector& InGlobalXYZ) const;
-
-	UPROPERTY(Category = "Voxels", EditAnywhere, BlueprintReadOnly)
-	int32 VoxelChunkSize;
-
-	UPROPERTY(Category = "Voxels", EditAnywhere, BlueprintReadOnly)
-	float VoxelBaseSize;
-
-	UPROPERTY(Category = "Voxels", BlueprintReadWrite)
-	TArray<FVoxelData> VoxelDataArray;
 //~ End Voxels
 };

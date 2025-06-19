@@ -4,8 +4,7 @@
 
 AATGameState::AATGameState()
 {
-	VoxelChunkSize = 10;
-	VoxelBaseSize = 10;
+	
 }
 
 //~ Begin Statics
@@ -33,8 +32,4 @@ AATGameState* AATGameState::TryGetATGameState(const UObject* InWCO)
 //~ End Statics
 
 //~ Begin Voxels
-int32 AATGameState::GetVoxelIndexAt(const FIntVector& InGlobalXYZ) const
-{
-	return InGlobalXYZ.X * VoxelChunkSize * VoxelChunkSize + InGlobalXYZ.Y * VoxelChunkSize + InGlobalXYZ.Z;
-}
 //~ End Voxels

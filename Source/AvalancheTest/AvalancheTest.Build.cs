@@ -12,18 +12,11 @@ public class AvalancheTest : ModuleRules
 		{
 			"AvalancheTest",
 		});
-
-		//PrivateIncludePaths.AddRange(new string[]
-		//{
-		//	"UnrealCommons/Source/UnrealCommons",
-		//});
-
+		
 		PublicDependencyModuleNames.AddRange(new string[] {
 
 			"Core",
-			"EngineSettings",
-
-			"UnrealCommons",
+            "EngineSettings",
 
 			"InputCore",
 			"EnhancedInput",
@@ -38,13 +31,15 @@ public class AvalancheTest : ModuleRules
 			"GameplayTasks",
 
 			"Networking",
+
+			"UnrealCommons",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
-		{
-			"CoreUObject",
-			"Engine",
-		});
+        {
+            "CoreUObject",
+            "Engine",
+        });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

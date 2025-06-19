@@ -3,12 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Delegates/IDelegateInstance.h"
+#include "Delegates/DelegateCombinations.h"
 #include "EngineUtils.h"
 #include "Engine/World.h"
 #include "Engine/DamageEvents.h"
-#include "Delegates/IDelegateInstance.h"
-#include "Delegates/DelegateCombinations.h"
 
+#include "InstancedStaticMeshDelegates.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
