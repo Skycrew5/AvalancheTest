@@ -1,4 +1,4 @@
-// Avalanche Test
+// Scientific Ways
 
 #pragma once
 

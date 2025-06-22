@@ -1,8 +1,9 @@
-// Avalanche Test
+// Scientific Ways
 
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Containers/ArrayView.h"
 #include "Delegates/IDelegateInstance.h"
 #include "Delegates/DelegateCombinations.h"
 #include "EngineUtils.h"
@@ -12,6 +13,7 @@
 #include "InstancedStaticMeshDelegates.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
@@ -45,3 +47,5 @@
 #include "EnhancedInputSubsystems.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogATGameplay, Log, All);
+
+#define DEBUG_VOXELS 1

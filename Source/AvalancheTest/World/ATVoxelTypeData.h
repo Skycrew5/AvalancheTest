@@ -21,7 +21,7 @@ public:
 	UATVoxelTypeData();
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, meta = (DisplayName = "InitializeInstanceData"))
-	FVoxelInstanceData K2_InitializeInstanceData(class AATVoxelChunk* InVoxelChunk, const FIntVector& InLocalPoint) const;
+	FVoxelInstanceData BP_InitializeInstanceData(class AATVoxelChunk* InVoxelChunk, const FIntVector& InLocalPoint) const;
 
 //~ Begin UI
 public:
@@ -30,10 +30,13 @@ public:
 	FText DisplayName;
 //~ End UI
 
-//~ Begin Health
+//~ Begin Stability
 public:
 
-	UPROPERTY(Category = "Health", EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Category = "Stability", EditDefaultsOnly, BlueprintReadOnly)
+	bool IsFoundation;
+
+	UPROPERTY(Category = "Stability", EditDefaultsOnly, BlueprintReadOnly)
 	float MaxHealth;
-//~ End Health
+//~ End Stability
 };

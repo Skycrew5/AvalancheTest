@@ -8,14 +8,22 @@ UATVoxelTypeData::UATVoxelTypeData()
 {
 	DisplayName = FText::FromString(TEXT("Unnamed Voxel Type"));
 
+	IsFoundation = false;
 	MaxHealth = 1.0f;
 }
 
-FVoxelInstanceData UATVoxelTypeData::K2_InitializeInstanceData_Implementation(AATVoxelChunk* InVoxelChunk, const FIntVector& InLocalPoint) const
+FVoxelInstanceData UATVoxelTypeData::BP_InitializeInstanceData_Implementation(AATVoxelChunk* InVoxelChunk, const FIntVector& InLocalPoint) const
 {
 	if (!InVoxelChunk)
 	{
 		return FVoxelInstanceData::Invalid;
 	}
-	return FVoxelInstanceData(INDEX_NONE, this, MaxHealth);
+	FVoxelInstanceData OutData = FVoxelInstanceData(this, MaxHealth);
+
+	if (IsFoundation)
+	{
+		OutData.Stability = 1.0f;
+		OutData.AttachmentDirections = { EATAttachmentDirection::Bottom };
+	}
+	return OutData;
 }

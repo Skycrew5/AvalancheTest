@@ -1,4 +1,4 @@
-// Avalanche Test
+// Scientific Ways
 
 using UnrealBuildTool;
 using System.Collections.Generic;
@@ -14,6 +14,6 @@ public class AvalancheTestTarget : TargetRules
 		ExtraModuleNames.AddRange(new string[]
 		{
 			"AvalancheTest",
-		}); ;
+		});
 	}
 }

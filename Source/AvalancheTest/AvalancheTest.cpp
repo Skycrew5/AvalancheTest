@@ -1,4 +1,4 @@
-// Avalanche Test
+// Scientific Ways
 
 #include "AvalancheTest.h"
 #include "Modules/ModuleManager.h"

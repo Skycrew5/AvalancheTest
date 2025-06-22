@@ -1,4 +1,4 @@
-// Avalanche Test
+// Scientific Ways
 
 #include "Framework/ATGameMode.h"
 
