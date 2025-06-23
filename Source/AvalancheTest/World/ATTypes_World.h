@@ -74,7 +74,7 @@ struct FVoxelInstanceData
 	int32 SMI_Index = INDEX_NONE;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	float Stability = 0.0f;
+	float Stability = 1.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TSet<EATAttachmentDirection> AttachmentDirections = TSet<EATAttachmentDirection>();

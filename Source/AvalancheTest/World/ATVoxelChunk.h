@@ -46,7 +46,7 @@ public:
 		return true;
 	}
 
-	FORCEINLINE bool RemoveVoxelByInstanceIndex(int32 InInstanceIndex, const bool bInChecked)
+	FORCEINLINE bool RemoveVoxelByInstanceIndex(int32 InInstanceIndex, const bool bInChecked = true)
 	{
 		ensure(!bInChecked || InstanceIndex_To_LocalPoint_Map.Contains(InInstanceIndex));
 		if (const FIntVector* SamplePointPtr = InstanceIndex_To_LocalPoint_Map.Find(InInstanceIndex))
@@ -64,7 +64,7 @@ public:
 		return true;
 	}
 
-	FORCEINLINE bool RemoveVoxelByPoint(const FIntVector& InPoint, const bool bInChecked)
+	FORCEINLINE bool RemoveVoxelByPoint(const FIntVector& InPoint, const bool bInChecked = true)
 	{
 		ensure(!bInChecked || LocalPoint_To_InstanceData_Map.Contains(InPoint));
 		if (const FVoxelInstanceData* SampleInstanceDataPtr = LocalPoint_To_InstanceData_Map.Find(InPoint))
@@ -79,6 +79,9 @@ public:
 		LocalPoint_To_InstanceData_Map.Remove(InPoint);
 		return true;
 	}
+
+	FORCEINLINE bool HasVoxelAt(const FIntVector& InPoint) const { return LocalPoint_To_InstanceData_Map.Contains(InPoint); }
+	//FORCEINLINE bool HasVoxelAt(int32 InInstanceIndex) const { return InstanceIndex_To_LocalPoint_Map.Contains(InInstanceIndex); }
 
 	FORCEINLINE const FIntVector& GetVoxelInstancePoint(int32 InInstanceIndex) const
 	{
@@ -180,14 +183,14 @@ public:
 	UPROPERTY()
 	TObjectPtr<UInstancedStaticMeshComponent> TargetISMC;
 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 DebugThisTickSelectedDataIndex = 1;
 
-	UPROPERTY(BlueprintReadWrite)
-	bool DebugMarkThisTickSelectedIndices = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bDebugMarkThisTickSelectedIndices = true;
 
-	UPROPERTY(BlueprintReadWrite)
-	bool DebugDeMarkThisTickSelectedIndices = true;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bDebugDeMarkThisTickSelectedIndices = true;
 
 	void QueueInstanceIndexIfRelevant(int32 InInstanceIndex)
 	{
@@ -216,7 +219,7 @@ public:
 
 	bool PrepareThisTickSelectedInstanceIndices(int32 InDesiredUpdatesNum)
 	{
-		if (DebugDeMarkThisTickSelectedIndices && !ThisTickSelectedInstanceIndices.IsEmpty())
+		if (bDebugDeMarkThisTickSelectedIndices && !ThisTickSelectedInstanceIndices.IsEmpty())
 		{
 			for (int32 SampleInstanceIndex : ThisTickSelectedInstanceIndices.GetConstArray())
 			{
@@ -238,7 +241,7 @@ public:
 
 	void ResolveThisTickSelectedInstanceIndices()
 	{
-		if (DebugMarkThisTickSelectedIndices && !ThisTickSelectedInstanceIndices.IsEmpty())
+		if (bDebugMarkThisTickSelectedIndices && !ThisTickSelectedInstanceIndices.IsEmpty())
 		{
 			for (int32 SampleInstanceIndex : ThisTickSelectedInstanceIndices.GetConstArray())
 			{
@@ -371,14 +374,11 @@ public:
 	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "AddVoxelsAt, PlaceVoxelsAt"))
 	void SetVoxelsAtLocalPoints(const TArray<FIntVector>& InLocalPoints, const class UATVoxelTypeData* InTypeData);
 
-	//UFUNCTION(Category = "Setters", BlueprintCallable)
-	//void FillWithVoxels();
+	UFUNCTION(Category = "Setters", BlueprintCallable)
+	void FillWithVoxels(const UATVoxelTypeData* InTypeData);
 
-	//UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelAt, DeleteVoxelAt"))
-	//void BreakVoxelAtLocalIndex(int32 InLocalIndex);
-
-	//UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelsAt, DeleteVoxelsAt"))
-	//void BreakVoxelsAtLocalIndices(const TArray<int32>& InLocalIndices);
+	UFUNCTION(Category = "Setters", BlueprintCallable)
+	void ClearAll();
 
 	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelAt, DeleteVoxelAt"))
 	void BreakVoxelAtLocalPoint(const FIntVector& InLocalPoint);
@@ -421,28 +421,28 @@ public:
 
 protected:
 
-	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
 	float StabilityUpdatePropagationThreshold;
 
-	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
 	float StabilityUpdatePropagationSkipProbability;
 
-	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
 	bool bOffsetMeshToCenter;
 
-	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
 	bool bDebugInstancesAttachmentDirection;
 
-	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
 	bool bDebugInstancesStabilityValues;
 
 	UPROPERTY()
 	FVoxelChunkContainers Data;
 
-	UPROPERTY(Category = "Data | Attachment", BlueprintReadWrite)
+	UPROPERTY(Category = "Data | Attachment", EditAnywhere, BlueprintReadWrite)
 	FVoxelChunkPendingUpdates AttachmentUpdates;
 
-	UPROPERTY(Category = "Data | Stability", BlueprintReadWrite)
+	UPROPERTY(Category = "Data | Stability", EditAnywhere, BlueprintReadWrite)
 	FVoxelChunkPendingUpdates StabilityUpdates;
 
 	void OnInstanceIndicesUpdated(UInstancedStaticMeshComponent* InUpdatedComponent, TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData> InIndexUpdates);

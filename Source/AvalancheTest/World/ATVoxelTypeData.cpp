@@ -19,10 +19,10 @@ FVoxelInstanceData UATVoxelTypeData::BP_InitializeInstanceData_Implementation(AA
 		return FVoxelInstanceData::Invalid;
 	}
 	FVoxelInstanceData OutData = FVoxelInstanceData(this, MaxHealth);
+	OutData.Stability = 1.0f;
 
 	if (IsFoundation)
 	{
-		OutData.Stability = 1.0f;
 		OutData.AttachmentDirections = { EATAttachmentDirection::Bottom };
 	}
 	return OutData;

@@ -16,7 +16,7 @@ void FVoxelChunkDetails::CustomizeDetails(IDetailLayoutBuilder& InDetailBuilder)
 
 void FVoxelChunkDetails::AddVoxelCategory(IDetailLayoutBuilder& InDetailBuilder)
 {
-	IDetailCategoryBuilder& CustomCategoryBuilder = InDetailBuilder.EditCategory("Voxel");
+	IDetailCategoryBuilder& CustomCategoryBuilder = InDetailBuilder.EditCategory("Voxels");
 	CustomCategoryBuilder.SetSortOrder(0);
 }
 

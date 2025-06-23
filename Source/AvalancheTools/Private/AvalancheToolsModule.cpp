@@ -28,7 +28,7 @@ public:
 
 		FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"));
 
-		// AATVoxelChunk
+		// ATVoxelChunk
 		{
 			PropertyModule.RegisterCustomClassLayout("ATVoxelChunk", FOnGetDetailCustomizationInstance::CreateStatic(&FVoxelChunkDetails::MakeInstance));
 			
@@ -118,8 +118,7 @@ private:
 
 			if (!SampleClass->HasAllClassFlags(CLASS_NotPlaceable) &&
 				!SampleClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists) &&
-				(SampleClass->IsChildOf(AATVoxelChunk::StaticClass())) &&
-				SampleClass->ClassGeneratedBy == nullptr)
+				(SampleClass->IsChildOf(AATVoxelChunk::StaticClass())))
 			{
 				UActorFactory* Factory = GEditor->FindActorFactoryByClassForActorClass(UActorFactory::StaticClass(), SampleClass);
 
