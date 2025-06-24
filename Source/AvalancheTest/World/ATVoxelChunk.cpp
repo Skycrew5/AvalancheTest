@@ -8,6 +8,10 @@
 #include "World/ScWTypes_World.h"
 #include "World/ATVoxelTypeData.h"
 
+#if DEBUG_VOXELS
+	#pragma optimize("", off)
+#endif // DEBUG_VOXELS
+
 FDelegateHandle AATVoxelChunk::InstanceIndexUpdatedDelegateHandle = FDelegateHandle();
 
 AATVoxelChunk::AATVoxelChunk()
@@ -195,6 +199,28 @@ bool AATVoxelChunk::IsVoxelAtPointFullyClosed(const FIntVector& InPoint) const
 		return false;
 	}
 	return true;
+}
+
+void AATVoxelChunk::GetAllPointsInRadius(const FIntVector& InCenterPoint, int32 InRadius, TArray<FIntVector>& OutPoints) const
+{
+	ensure(InRadius > 0);
+
+	for (int32 OffsetX = -InRadius; OffsetX < InRadius + 1; ++OffsetX)
+	{
+		float Alpha = FMath::Abs((float)OffsetX) / (float)InRadius;
+		int32 SliceRadius = FMath::Max(FMath::CeilToInt32((float)InRadius * (1.0f - FMath::Square(Alpha))), 1);
+
+		for (int32 OffsetY = -SliceRadius; OffsetY < SliceRadius + 1; ++OffsetY)
+		{
+			float Alpha2 = FMath::Abs((float)OffsetY) / (float)SliceRadius;
+			int32 SliceRadius2 = FMath::Max(FMath::CeilToInt32((float)SliceRadius * (1.0f - FMath::Square(Alpha2))), 1);
+
+			for (int32 OffsetZ = -SliceRadius2; OffsetZ < SliceRadius2 + 1; ++OffsetZ)
+			{
+				OutPoints.Add(InCenterPoint + FIntVector(OffsetX, OffsetY, OffsetZ));
+			}
+		}
+	}
 }
 //~ End Getters
 

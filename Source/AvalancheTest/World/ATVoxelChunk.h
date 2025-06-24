@@ -220,6 +220,9 @@ public:
 
 	UFUNCTION(Category = "Getters", BlueprintCallable)
 	bool IsVoxelAtPointFullyClosed(const FIntVector& InPoint) const;
+
+	UFUNCTION(Category = "Getters", BlueprintCallable)
+	void GetAllPointsInRadius(const FIntVector& InCenterPoint, int32 InRadius, TArray<FIntVector>& OutPoints) const;
 //~ End Getters
 	
 //~ Begin Setters

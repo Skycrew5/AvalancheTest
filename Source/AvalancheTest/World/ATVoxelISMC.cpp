@@ -123,8 +123,13 @@ bool UATVoxelISMC::RemoveVoxelAtPoint(const FIntVector& InPoint, const bool bInC
 		ensure(false);
 		return false;
 	}
-	if (const FVoxelInstanceData* SampleData = LocalPoint_To_InstanceData_Map.Find(InPoint))
+	if (FVoxelInstanceData* SampleData = LocalPoint_To_InstanceData_Map.Find(InPoint))
 	{
+		if (SampleData->HasMesh())
+		{
+			InstanceIndex_To_LocalPoint_Map.Remove(SampleData->SMI_Index);
+			RemoveInstance(SampleData->SMI_Index);
+		}
 		LocalPoint_To_InstanceData_Map.Remove(InPoint);
 		QueuePointForVisibilityUpdate(InPoint);
 		return true;
@@ -228,9 +233,9 @@ void UATVoxelISMC::UpdateVoxelsVisibilityState()
 				}
 			}
 		}
-		else if (const int32* SampleInstance = InstanceIndex_To_LocalPoint_Map.FindKey(SamplePoint)) // Point is empty - no instance data
+		else // Point is empty - no instance data
 		{
-			MeshInstancesToRemove.Add(*SampleInstance);
+			
 		}
 	}
 	// Remove
