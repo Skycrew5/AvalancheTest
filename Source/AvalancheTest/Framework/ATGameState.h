@@ -28,7 +28,14 @@ public:
 	UFUNCTION(Category = "Statics", BlueprintCallable, BlueprintPure, meta = (WorldContext = "InWCO"))
 	static AATGameState* TryGetATGameState(const UObject* InWCO);
 //~ End Statics
-
+	
+//~ Begin Initialize
+protected:
+	virtual void BeginPlay() override; // AActor
+	virtual void Tick(float InDeltaSeconds)  override; // AActor
+	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // AActor
+//~ End Initialize
+	
 //~ Begin Voxels
 //~ End Voxels
 };

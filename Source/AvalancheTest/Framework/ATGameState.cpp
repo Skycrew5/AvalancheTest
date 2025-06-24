@@ -2,6 +2,8 @@
 
 #include "Framework/ATGameState.h"
 
+#include "World/ATVoxelChunk.h"
+
 AATGameState::AATGameState()
 {
 	
@@ -30,6 +32,25 @@ AATGameState* AATGameState::TryGetATGameState(const UObject* InWCO)
 	return nullptr;
 }
 //~ End Statics
+
+//~ Begin Initialize
+void AATGameState::BeginPlay() // AActor
+{
+	Super::BeginPlay();
+}
+
+void AATGameState::Tick(float InDeltaSeconds) // AActor
+{
+	Super::Tick(InDeltaSeconds);
+
+
+}
+
+void AATGameState::EndPlay(const EEndPlayReason::Type InReason) // AActor
+{
+	Super::EndPlay(InReason);
+}
+//~ End Initialize
 
 //~ Begin Voxels
 //~ End Voxels

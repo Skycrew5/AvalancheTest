@@ -2,33 +2,36 @@
 
 #include "World/ATVoxelChunk.h"
 
-#include "Framework/ATGameState.h"
 #include "Framework/ScWPlayerController.h"
 
+#include "World/ATVoxelISMC.h"
 #include "World/ScWTypes_World.h"
 #include "World/ATVoxelTypeData.h"
 
-FVoxelInstanceData FVoxelChunkContainers::InvalidInstanceData_NonConst = FVoxelInstanceData::Invalid;
+FDelegateHandle AATVoxelChunk::InstanceIndexUpdatedDelegateHandle = FDelegateHandle();
 
 AATVoxelChunk::AATVoxelChunk()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
-	InstancedStaticMeshComponent = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("InstancedStaticMeshComponent"));
-	InstancedStaticMeshComponent->SetNumCustomDataFloats(3);
-	InstancedStaticMeshComponent->SetupAttachment(RootComponent);
+	VoxelISMC = CreateDefaultSubobject<UATVoxelISMC>(TEXT("VoxelISMC"));
+	VoxelISMC->SetNumCustomDataFloats(3);
+	VoxelISMC->SetupAttachment(RootComponent);
 
-	AttachmentUpdates.TargetISMC = InstancedStaticMeshComponent;
-	AttachmentUpdates.DebugThisTickSelectedDataIndex = 1;
+	bHandleISMCUpdatesTick = true;
 
-	StabilityUpdates.TargetISMC = InstancedStaticMeshComponent;
-	StabilityUpdates.DebugThisTickSelectedDataIndex = 2;
-
+	bHandleVoxelDataUpdatesTick = true;
 	ChunkSize = 12;
 	VoxelBaseSize = 16.0f;
 	bIsOnFoundation = true;
 	MaxUpdatesPerSecond = 10000;
+
+	AttachmentUpdates.TargetISMC = VoxelISMC;
+	AttachmentUpdates.DebugVoxelCustomData_ThisTickSelected = 1;
+
+	StabilityUpdates.TargetISMC = VoxelISMC;
+	StabilityUpdates.DebugVoxelCustomData_ThisTickSelected = 2;
 
 	StabilityUpdatePropagationThreshold = 0.1f;
 	StabilityUpdatePropagationSkipProbability = 0.1f;
@@ -37,14 +40,16 @@ AATVoxelChunk::AATVoxelChunk()
 //~ Begin Initialize
 void AATVoxelChunk::OnConstruction(const FTransform& InTransform) // AActor
 {
+	if (!InstanceIndexUpdatedDelegateHandle.IsValid())
+	{
+		InstanceIndexUpdatedDelegateHandle = FInstancedStaticMeshDelegates::OnInstanceIndexUpdated.AddStatic(&AATVoxelChunk::Static_OnISMInstanceIndicesUpdated);
+	}
 	Super::OnConstruction(InTransform);
 
 	if (UWorld* World = GetWorld())
 	{
 		if (World->IsEditorWorld())
 		{
-			InstanceIndexUpdatedDelegateHandle = FInstancedStaticMeshDelegates::OnInstanceIndexUpdated.AddUObject(this, &AATVoxelChunk::OnInstanceIndicesUpdated);
-
 			if (bIsOnFoundation)
 			{
 				CreateFoundation();
@@ -55,14 +60,10 @@ void AATVoxelChunk::OnConstruction(const FTransform& InTransform) // AActor
 
 void AATVoxelChunk::BeginPlay() // AActor
 {
-	UpdateCache();
-
 	if (UWorld* World = GetWorld())
 	{
 		if (World->IsGameWorld())
 		{
-			InstanceIndexUpdatedDelegateHandle = FInstancedStaticMeshDelegates::OnInstanceIndexUpdated.AddUObject(this, &AATVoxelChunk::OnInstanceIndicesUpdated);
-
 			if (bIsOnFoundation)
 			{
 				CreateFoundation();
@@ -76,48 +77,34 @@ void AATVoxelChunk::Tick(float InDeltaSeconds) // AActor
 {
 	Super::Tick(InDeltaSeconds);
 
-	int32 MaxUpdates = FMath::CeilToInt((float)MaxUpdatesPerSecond * InDeltaSeconds);
-	MaxUpdates -= UpdatePendingAttachmentData(MaxUpdates);
-	UpdatePendingStabilityData(MaxUpdates);
+	int32 UpdatesLeft = FMath::CeilToInt((float)MaxUpdatesPerSecond * InDeltaSeconds);
+
+	if (bHandleISMCUpdatesTick)
+	{
+		HandleISMCUpdatesTick(UpdatesLeft);
+	}
+	if (bHandleVoxelDataUpdatesTick)
+	{
+		HandleVoxelDataUpdatesTick(UpdatesLeft);
+	}
 }
 
 void AATVoxelChunk::EndPlay(const EEndPlayReason::Type InReason) // AActor
 {
-	ResetCache();
+	
 
 	Super::EndPlay(InReason);
 }
 //~ End Initialize
 
-//~ Begin Getters
-const FVoxelInstanceData& AATVoxelChunk::GetVoxelDataAtLocalPoint(const FIntVector& InLocalPoint) const
+//~ Begin Components
+void AATVoxelChunk::HandleISMCUpdatesTick(int32& InOutMaxUpdates)
 {
-	return Data.GetVoxelInstanceData(InLocalPoint);
+	VoxelISMC->UpdateVoxelsVisibilityState();
 }
+//~ End Components
 
-/*const FVoxelInstanceData& AATVoxelChunk::GetVoxelDataAtIndex(int32 InLocalIndex) const
-{
-	return VoxelDataArray.IsValidIndex(InLocalIndex) ? VoxelDataArray[InLocalIndex] : FVoxelInstanceData::Invalid;
-}
-
-int32 AATVoxelChunk::LocalPoint_To_LocalIndex(const FIntVector& InLocalPoint) const
-{
-	if (!Cache_LocalPoint_To_LocalIndex_Map.Contains(InLocalPoint))
-	{
-		return const_cast<ThisClass*>(this)->Cache_LocalPoint_To_LocalIndex_Map.Add(InLocalPoint, InLocalPoint.X + InLocalPoint.Y * VoxelChunkSize + InLocalPoint.Z * (VoxelChunkSize * VoxelChunkSize));
-	}
-	return Cache_LocalPoint_To_LocalIndex_Map[InLocalPoint];
-}
-
-const FIntVector& AATVoxelChunk::LocalIndex_To_LocalPoint(int32 InLocalIndex) const
-{
-	if (!Cache_LocalIndex_To_LocalPoint_Map.Contains(InLocalIndex))
-	{
-		return const_cast<ThisClass*>(this)->Cache_LocalIndex_To_LocalPoint_Map.Add(InLocalIndex, FIntVector(InLocalIndex % VoxelChunkSize, (InLocalIndex / VoxelChunkSize) % VoxelChunkSize, (InLocalIndex / (VoxelChunkSize * VoxelChunkSize)) % VoxelChunkSize));
-	}
-	return Cache_LocalIndex_To_LocalPoint_Map[InLocalIndex];
-}*/
-
+//~ Begin Locations
 FIntVector AATVoxelChunk::RelativeLocation_To_LocalPoint(const FVector& InRelativeLocation) const
 {
 	FVector VoxelScaledRelativeLocation = (InRelativeLocation / VoxelBaseSize);
@@ -129,21 +116,21 @@ FIntVector AATVoxelChunk::WorldLocation_To_LocalPoint(const FVector& InWorldLoca
 	return RelativeLocation_To_LocalPoint(GetActorTransform().InverseTransformPosition(InWorldLocation));
 }
 
-FVector AATVoxelChunk::LocalPoint_To_RelativeLocation(const FIntVector& InLocalPoint) const
+FVector AATVoxelChunk::LocalPoint_To_RelativeLocation(const FIntVector& InPoint) const
 {
 	if (bOffsetMeshToCenter)
 	{
-		return FVector(InLocalPoint * VoxelBaseSize) + FVector(VoxelBaseSize * 0.5f, VoxelBaseSize * 0.5f, VoxelBaseSize * 0.5f);
+		return FVector(InPoint * VoxelBaseSize) + FVector(VoxelBaseSize * 0.5f, VoxelBaseSize * 0.5f, VoxelBaseSize * 0.5f);
 	}
 	else
 	{
-		return FVector(InLocalPoint * VoxelBaseSize);
+		return FVector(InPoint * VoxelBaseSize);
 	}
 }
 
-FVector AATVoxelChunk::LocalPoint_To_WorldLocation(const FIntVector& InLocalPoint) const
+FVector AATVoxelChunk::LocalPoint_To_WorldLocation(const FIntVector& InPoint) const
 {
-	return GetActorTransform().TransformPosition(LocalPoint_To_RelativeLocation(InLocalPoint));
+	return GetActorTransform().TransformPosition(LocalPoint_To_RelativeLocation(InPoint));
 }
 
 FVector AATVoxelChunk::GetChunkCenterWorldLocation() const
@@ -151,119 +138,75 @@ FVector AATVoxelChunk::GetChunkCenterWorldLocation() const
 	return GetActorLocation() + FVector((float)ChunkSize * VoxelBaseSize * 0.5f);
 }
 
-FVector AATVoxelChunk::GetVoxelCenterWorldLocation(const FIntVector& InLocalPoint) const
+FVector AATVoxelChunk::GetVoxelCenterWorldLocation(const FIntVector& InPoint) const
 {
-	return GetActorLocation() + FVector(InLocalPoint * VoxelBaseSize) + FVector(VoxelBaseSize * 0.5f, VoxelBaseSize * 0.5f, VoxelBaseSize * 0.5f);
+	return GetActorLocation() + FVector(InPoint * VoxelBaseSize) + FVector(VoxelBaseSize * 0.5f, VoxelBaseSize * 0.5f, VoxelBaseSize * 0.5f);
+}
+//~ End Locations
+
+//~ Begin Getters
+const FVoxelInstanceData& AATVoxelChunk::GetVoxelInstanceDataAtPoint(const FIntVector& InPoint) const
+{
+	return VoxelISMC->GetVoxelInstanceDataAtPoint(InPoint);
 }
 
-bool AATVoxelChunk::HasVoxelAtLocalPoint(const FIntVector& InLocalPoint) const
+bool AATVoxelChunk::HasVoxelAtPoint(const FIntVector& InPoint) const
 {
-	return Data.HasVoxelAt(InLocalPoint);
+	return VoxelISMC->HasVoxelAtPoint(InPoint);
 }
 
-int32 AATVoxelChunk::GetVoxelNeighborsNumAtLocalPoint(const FIntVector& InLocalPoint) const
+int32 AATVoxelChunk::GetVoxelNeighborsNumAtLocalPoint(const FIntVector& InPoint) const
 {
 	int32 OutNum = 0;
 
-	if (HasVoxelAtLocalPoint(InLocalPoint + FIntVector(1, 0, 0)))
-	{
-		OutNum += 1;
-	}
-	if (HasVoxelAtLocalPoint(InLocalPoint + FIntVector(-1, 0, 0)))
-	{
-		OutNum += 1;
-	}
-	if (HasVoxelAtLocalPoint(InLocalPoint + FIntVector(0, 1, 0)))
-	{
-		OutNum += 1;
-	}
-	if (HasVoxelAtLocalPoint(InLocalPoint + FIntVector(0, -1, 0)))
-	{
-		OutNum += 1;
-	}
-	if (HasVoxelAtLocalPoint(InLocalPoint + FIntVector(0, 0, 1)))
-	{
-		OutNum += 1;
-	}
-	if (HasVoxelAtLocalPoint(InLocalPoint + FIntVector(0, 0, -1)))
-	{
-		OutNum += 1;
-	}
+	if (HasVoxelAtPoint(InPoint + FIntVector(1, 0, 0))) OutNum += 1;
+	if (HasVoxelAtPoint(InPoint + FIntVector(-1, 0, 0))) OutNum += 1;
+	if (HasVoxelAtPoint(InPoint + FIntVector(0, 1, 0))) OutNum += 1;
+	if (HasVoxelAtPoint(InPoint + FIntVector(0, -1, 0))) OutNum += 1;
+	if (HasVoxelAtPoint(InPoint + FIntVector(0, 0, 1))) OutNum += 1;
+	if (HasVoxelAtPoint(InPoint + FIntVector(0, 0, -1))) OutNum += 1;
 	return OutNum;
 }
 
-void AATVoxelChunk::GetVoxelPointsInSphere(const FIntVector& InCenterLocalPoint, int32 InRadius, TArray<FIntVector>& OutPoints) const
+bool AATVoxelChunk::IsVoxelAtPointFullyClosed(const FIntVector& InPoint) const
 {
-	for (int32 OffsetX = -InRadius; OffsetX < InRadius + 1; ++OffsetX)
+	if (!HasVoxelAtPoint(InPoint + FIntVector(1, 0, 0)))
 	{
-		int32 SliceRadius = InRadius - FMath::Abs(OffsetX);
-
-		for (int32 OffsetY = -SliceRadius; OffsetY < SliceRadius + 1; ++OffsetY)
-		{
-			for (int32 OffsetZ = -SliceRadius; OffsetZ < SliceRadius + 1; ++OffsetZ)
-			{
-				OutPoints.Add(InCenterLocalPoint + FIntVector(OffsetX, OffsetY, OffsetZ));
-			}
-		}
+		return false;
 	}
+	if (!HasVoxelAtPoint(InPoint + FIntVector(-1, 0, 0)))
+	{
+		return false;
+	}
+	if (!HasVoxelAtPoint(InPoint + FIntVector(0, 1, 0)))
+	{
+		return false;
+	}
+	if (!HasVoxelAtPoint(InPoint + FIntVector(0, -1, 0)))
+	{
+		return false;
+	}
+	if (!HasVoxelAtPoint(InPoint + FIntVector(0, 0, 1)))
+	{
+		return false;
+	}
+	if (!HasVoxelAtPoint(InPoint + FIntVector(0, 0, -1)))
+	{
+		return false;
+	}
+	return true;
 }
-
-/*void AATVoxelChunk::GetVoxelIndicesInSphere(int32 InCenterLocalIndex, int32 InRadius, TArray<int32>& OutIndices) const
-{
-	const FIntVector& CenterLocalPoint = LocalIndex_To_LocalPoint(InCenterLocalIndex);
-
-	for (int32 OffsetX = -InRadius; OffsetX < InRadius + 1; ++OffsetX)
-	{
-		int32 SliceRadius = InRadius - FMath::Abs(OffsetX);
-
-		for (int32 OffsetY = -SliceRadius; OffsetY < SliceRadius + 1; ++OffsetY)
-		{
-			for (int32 OffsetZ = -SliceRadius; OffsetZ < SliceRadius + 1; ++OffsetZ)
-			{
-				OutIndices.Add(LocalPoint_To_LocalIndex(CenterLocalPoint + FIntVector(OffsetX, OffsetY, OffsetZ)));
-			}
-		}
-	}
-}*/
 //~ End Getters
 
 //~ Begin Setters
-void AATVoxelChunk::SetVoxelAtLocalPoint(const FIntVector& InLocalPoint, const UATVoxelTypeData* InTypeData)
+bool AATVoxelChunk::SetVoxelAtLocalPoint(const FIntVector& InPoint, const UATVoxelTypeData* InTypeData, const bool bInForced)
 {
-	if (!InTypeData)
-	{
-		return;
-	}
-	BreakVoxelAtLocalPoint(InLocalPoint);
-
-	FTransform NewInstanceTransform = FTransform(LocalPoint_To_RelativeLocation(InLocalPoint));
-	int32 NewInstanceIndex = InstancedStaticMeshComponent->AddInstance(NewInstanceTransform);
-
-	Data.AddVoxel(InLocalPoint, InTypeData->BP_InitializeInstanceData(this, InLocalPoint), NewInstanceIndex);
+	return VoxelISMC->SetVoxelAtPoint(InPoint, InTypeData, bInForced);
 }
 
-void AATVoxelChunk::SetVoxelsAtLocalPoints(const TArray<FIntVector>& InLocalPoints, const UATVoxelTypeData* InTypeData)
+bool AATVoxelChunk::SetVoxelsAtLocalPoints(const TArray<FIntVector>& InPoints, const UATVoxelTypeData* InTypeData, const bool bInForced)
 {
-	ensure(InTypeData);
-	if (!InTypeData)
-	{
-		return;
-	}
-	TArray<FTransform> InstanceTransforms;
-	for (const FIntVector& SampleLocalPoint : InLocalPoints)
-	{
-		InstanceTransforms.Add(FTransform(LocalPoint_To_RelativeLocation(SampleLocalPoint)));
-	}
-	TArray<int32> NewInstanceIndices = InstancedStaticMeshComponent->AddInstances(InstanceTransforms, true);
-
-	ensure(NewInstanceIndices.Num() == InLocalPoints.Num());
-	for (int32 SampleIndex = 0; SampleIndex < InLocalPoints.Num(); ++SampleIndex)
-	{
-		const FIntVector& SamplePoint = InLocalPoints[SampleIndex];
-
-		Data.RemoveVoxelByPoint(SamplePoint, false);
-		Data.AddVoxel(SamplePoint, InTypeData->BP_InitializeInstanceData(this, SamplePoint), NewInstanceIndices[SampleIndex]);
-	}
+	return VoxelISMC->SetVoxelsAtPoints(InPoints, InTypeData, bInForced);
 }
 
 void AATVoxelChunk::FillWithVoxels(const UATVoxelTypeData* InTypeData)
@@ -280,78 +223,63 @@ void AATVoxelChunk::FillWithVoxels(const UATVoxelTypeData* InTypeData)
 			}
 		}
 	}
-	SetVoxelsAtLocalPoints(VoxelPoints, InTypeData);
+	SetVoxelsAtLocalPoints(VoxelPoints, InTypeData, true);
 }
 
-void AATVoxelChunk::ClearAll()
+void AATVoxelChunk::RemoveAllVoxels()
 {
-	InstancedStaticMeshComponent->ClearInstances();
+	VoxelISMC->RemoveAllVoxels();
 }
 
-void AATVoxelChunk::BreakVoxelAtLocalPoint(const FIntVector& InLocalPoint)
+bool AATVoxelChunk::BreakVoxelAtLocalPoint(const FIntVector& InPoint, const bool bInForced)
 {
-	const FVoxelInstanceData& TargetData = Data.GetVoxelInstanceData(InLocalPoint);
-	if (TargetData.IsTypeDataValid() && !TargetData.TypeData->IsFoundation)
+	if (bInForced)
 	{
-		InstancedStaticMeshComponent->RemoveInstance(Data.GetVoxelInstanceIndex(InLocalPoint));
+		return VoxelISMC->RemoveVoxelAtPoint(InPoint, false);
 	}
-}
-
-void AATVoxelChunk::BreakVoxelsAtLocalPoints(const TArray<FIntVector>& InLocalPoints)
-{
-	TArray<int32> BreakableInstanceIndices;
-
-	for (const FIntVector& SampleLocalPoint : InLocalPoints)
+	else
 	{
-		const FVoxelInstanceData& SampleTargetData = Data.GetVoxelInstanceData(SampleLocalPoint);
-		if (SampleTargetData.IsTypeDataValid() && !SampleTargetData.TypeData->IsFoundation)
+		const FVoxelInstanceData& TargetData = VoxelISMC->GetVoxelInstanceDataAtPoint(InPoint);
+		if (TargetData.IsTypeDataValid() && !TargetData.TypeData->IsFoundation)
 		{
-			BreakableInstanceIndices.Add(Data.GetVoxelInstanceIndex(SampleLocalPoint));
+			return VoxelISMC->RemoveVoxelAtPoint(InPoint);
 		}
+		return false;
 	}
-	InstancedStaticMeshComponent->RemoveInstances(BreakableInstanceIndices);
 }
 
-void AATVoxelChunk::BreakVoxelsWithInstanceIndices(const TArray<int32>& InInstanceIndices)
+bool AATVoxelChunk::BreakVoxelsAtLocalPoints(const TArray<FIntVector>& InPoints, const bool bInForced)
 {
-	TArray<int32> BreakableInstanceIndices;
-
-	for (int32 SampleInstanceIndex : InInstanceIndices)
-	{
-		const FVoxelInstanceData& SampleTargetData = Data.GetVoxelInstanceData(SampleInstanceIndex);
-		if (SampleTargetData.IsTypeDataValid() && !SampleTargetData.TypeData->IsFoundation)
-		{
-			BreakableInstanceIndices.Add(SampleInstanceIndex);
-		}
-	}
-	InstancedStaticMeshComponent->RemoveInstances(BreakableInstanceIndices);
+	return VoxelISMC->RemoveVoxelsAtPoints(InPoints, bInForced);
 }
-//~ End Setters
 
-//~ Begin Data
 void AATVoxelChunk::CreateFoundation()
 {
-	//ensure(Data.FoundationLocalPoints.IsEmpty());
-	if (!Data.FoundationLocalPoints.IsEmpty())
+	ensure(FoundationVoxelTypeData);
+	if (!FoundationVoxelTypeData)
 	{
-		for (const FIntVector& SamplePoint : Data.FoundationLocalPoints)
-		{
-			Data.RemoveVoxelByPoint(SamplePoint);
-		}
+		return;
 	}
-	Data.FoundationLocalPoints.Empty(ChunkSize * ChunkSize);
+	BreakVoxelsAtLocalPoints(VoxelISMC->FoundationLocalPoints, true);
+	VoxelISMC->FoundationLocalPoints.Empty(ChunkSize * ChunkSize);
 
 	for (int32 SampleX = 0; SampleX < ChunkSize; ++SampleX)
 	{
 		for (int32 SampleY = 0; SampleY < ChunkSize; ++SampleY)
 		{
-			Data.FoundationLocalPoints.Add(FIntVector(SampleX, SampleY, -1));
+			VoxelISMC->FoundationLocalPoints.Add(FIntVector(SampleX, SampleY, -1));
 		}
 	}
-	SetVoxelsAtLocalPoints(Data.FoundationLocalPoints, FoundationVoxelTypeData);
+	SetVoxelsAtLocalPoints(VoxelISMC->FoundationLocalPoints, FoundationVoxelTypeData);
 }
+//~ End Setters
 
-#pragma optimize("", off)
+//~ Begin Voxel Data
+void AATVoxelChunk::HandleVoxelDataUpdatesTick(int32& InOutMaxUpdates)
+{
+	InOutMaxUpdates -= UpdatePendingAttachmentData(InOutMaxUpdates);
+	InOutMaxUpdates -= UpdatePendingStabilityData(InOutMaxUpdates);
+}
 
 int32 AATVoxelChunk::UpdatePendingAttachmentData(int32 InMaxUpdates)
 {
@@ -366,8 +294,8 @@ int32 AATVoxelChunk::UpdatePendingAttachmentData(int32 InMaxUpdates)
 
 	for (int32 SampleInstanceIndex : AttachmentUpdates.GetThisTickSelectedInstanceIndicesConstArray())
 	{
-		const FIntVector& SamplePoint = Data.GetVoxelInstancePoint(SampleInstanceIndex);
-		FVoxelInstanceData& SampleData = Data.GetVoxelInstanceData(SamplePoint);
+		const FIntVector& SamplePoint = VoxelISMC->GetVoxelInstancePointAtIndex(SampleInstanceIndex);
+		FVoxelInstanceData& SampleData = VoxelISMC->GetVoxelInstanceDataAtPoint(SamplePoint);
 
 		if (SampleData.IsTypeDataValid())
 		{
@@ -416,8 +344,8 @@ int32 AATVoxelChunk::UpdatePendingAttachmentData(int32 InMaxUpdates)
 
 void AATVoxelChunk::UpdatePendingAttachmentData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, const FVector& InAttachmentDirection, EAxis::Type InAxis, float InAxisMul, float InAttachmentStrengthMul, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection)
 {
-	FVoxelInstanceData& TargetData = Data.GetVoxelInstanceData(InTargetPoint);
-	FVoxelInstanceData& NeighborData = Data.GetVoxelInstanceData(InTargetPoint + InNeighborOffset);
+	FVoxelInstanceData& TargetData = VoxelISMC->GetVoxelInstanceDataAtPoint(InTargetPoint);
+	FVoxelInstanceData& NeighborData = VoxelISMC->GetVoxelInstanceDataAtPoint(InTargetPoint + InNeighborOffset, false);
 
 	bool bAddNeighborToPending = false;
 
@@ -478,8 +406,8 @@ int32 AATVoxelChunk::UpdatePendingStabilityData(int32 InMaxUpdates)
 
 	for (int32 SampleInstanceIndex : StabilityUpdates.GetThisTickSelectedInstanceIndicesConstArray())
 	{
-		const FIntVector& SamplePoint = Data.GetVoxelInstancePoint(SampleInstanceIndex);
-		FVoxelInstanceData& SampleData = Data.GetVoxelInstanceData(SamplePoint);
+		const FIntVector& SamplePoint = VoxelISMC->GetVoxelInstancePointAtIndex(SampleInstanceIndex);
+		FVoxelInstanceData& SampleData = VoxelISMC->GetVoxelInstanceDataAtPoint(SamplePoint);
 
 		if (SampleData.IsTypeDataValid())
 		{
@@ -528,7 +456,7 @@ int32 AATVoxelChunk::UpdatePendingStabilityData(int32 InMaxUpdates)
 			}
 			if (bDebugInstancesStabilityValues)
 			{
-				InstancedStaticMeshComponent->SetCustomDataValue(SampleInstanceIndex, 0, SampleData.Stability, false);
+				VoxelISMC->SetCustomDataValue(SampleInstanceIndex, DebugVoxelCustomData_Stability, SampleData.Stability, false);
 			}
 		}
 		StabilityUpdates.MarkInstanceIndexAsUpdatedThisTick(SampleInstanceIndex);
@@ -539,8 +467,8 @@ int32 AATVoxelChunk::UpdatePendingStabilityData(int32 InMaxUpdates)
 
 void AATVoxelChunk::UpdatePendingStabilityData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, const FVector& InAttachmentDirection, EAxis::Type InAxis, float InAxisMul, float InAttachmentStrengthMul, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection, TArray<int32>& InOutAttachedNeighbors)
 {
-	FVoxelInstanceData& TargetData = Data.GetVoxelInstanceData(InTargetPoint);
-	FVoxelInstanceData& NeighborData = Data.GetVoxelInstanceData(InTargetPoint + InNeighborOffset);
+	FVoxelInstanceData& TargetData = VoxelISMC->GetVoxelInstanceDataAtPoint(InTargetPoint);
+	FVoxelInstanceData& NeighborData = VoxelISMC->GetVoxelInstanceDataAtPoint(InTargetPoint + InNeighborOffset);
 
 	// Only consider update if both instances are valid
 	if (TargetData.IsTypeDataValid() && NeighborData.IsTypeDataValid())
@@ -577,66 +505,57 @@ void AATVoxelChunk::UpdatePendingStabilityData_UpdateFromNeighbor(const FIntVect
 	}
 }
 
-#pragma optimize("", on)
-
-void AATVoxelChunk::OnInstanceIndicesUpdated(UInstancedStaticMeshComponent* InUpdatedComponent, TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData> InIndexUpdates)
+void AATVoxelChunk::Static_OnISMInstanceIndicesUpdated(UInstancedStaticMeshComponent* InUpdatedComponent, TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData> InIndexUpdates)
 {
-	if (InUpdatedComponent == InstancedStaticMeshComponent)
+	check(InUpdatedComponent);
+
+	if (AATVoxelChunk* TargetChunk = InUpdatedComponent->GetOwner<AATVoxelChunk>())
 	{
-		//PendingAttachmentUpdateInstanceIndices.Reserve(PendingAttachmentUpdateInstanceIndices.Num() + InIndexUpdates.Num());
-
-		for (const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData& SampleUpdate : InIndexUpdates)
-		{
-			bool bQueueUpdate = false;
-
-			switch (SampleUpdate.Type)
-			{
-				case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Added:
-				{
-					bQueueUpdate = true;
-					break;
-				}
-				case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Removed:
-				case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Cleared:
-				case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Destroyed:
-				{
-					bQueueUpdate = true;
-					Data.RemoveVoxelByInstanceIndex(SampleUpdate.Index, true);
-					break;
-				}
-				case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Relocated:
-				{
-					bQueueUpdate = true;
-					Data.RelocateInstanceIndex(SampleUpdate.OldIndex, SampleUpdate.Index);
-					AttachmentUpdates.RelocateInstanceIndex(SampleUpdate.OldIndex, SampleUpdate.Index);
-					StabilityUpdates.RelocateInstanceIndex(SampleUpdate.OldIndex, SampleUpdate.Index);
-					break;
-				}
-			}
-			if (bQueueUpdate)
-			{
-				AttachmentUpdates.QueueInstanceIndexIfRelevant(SampleUpdate.Index);
-				StabilityUpdates.QueueInstanceIndexIfRelevant(SampleUpdate.Index);
-			}
-		}
+		TargetChunk->HandleInstanceIndicesUpdates(InIndexUpdates);
 	}
 }
-//~ End Data
 
-//~ Begin Cache
-void AATVoxelChunk::UpdateCache()
+void AATVoxelChunk::HandleInstanceIndicesUpdates(const TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData>& InIndexUpdates)
 {
-	Cache_GameState = AATGameState::TryGetATGameState(this);
-	ensure(Cache_GameState);
-}
+	for (const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData& SampleUpdate : InIndexUpdates)
+	{
+		//bool bQueueUpdate = false;
 
-void AATVoxelChunk::ResetCache()
-{
-	Cache_GameState = nullptr;
-	//Cache_LocalPoint_To_LocalIndex_Map.Empty();
-	//Cache_LocalIndex_To_LocalPoint_Map.Empty();
+		switch (SampleUpdate.Type)
+		{
+			/*case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Added:
+			{
+				bQueueUpdate = true;
+				break;
+			}
+			case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Removed:
+			case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Cleared:
+			//case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Destroyed:
+			{
+				if (SampleUpdate.Index != INDEX_NONE)
+				{
+					bQueueUpdate = true;
+					VoxelISMC->RemoveVoxelFromComponentUpdateCallback(SampleUpdate.Index);
+				}
+				break;
+			}*/
+			case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Relocated:
+			{
+				//bQueueUpdate = true;
+				VoxelISMC->RelocateInstanceIndex(SampleUpdate.OldIndex, SampleUpdate.Index);
+				//AttachmentUpdates.RelocateInstanceIndex(SampleUpdate.OldIndex, SampleUpdate.Index);
+				//StabilityUpdates.RelocateInstanceIndex(SampleUpdate.OldIndex, SampleUpdate.Index);
+				break;
+			}
+		}
+		/*if (bQueueUpdate)
+		{
+			AttachmentUpdates.QueueInstanceIndexIfRelevant(SampleUpdate.Index);
+			StabilityUpdates.QueueInstanceIndexIfRelevant(SampleUpdate.Index);
+		}*/
+	}
 }
-//~ End Cache
+//~ End Voxel Data
 
 //~ Begin Debug
 void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerController* ForPlayerController, FVoxelChunkDebugData& InOutData) const
@@ -647,7 +566,7 @@ void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerCont
 	InOutData.Label = GetActorLabel();
 	InOutData.LabelColor = FColor::MakeRandomSeededColor(GetActorGuid()[0]);
 
-	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Instances Num"), Data.GetLocalPoint_To_InstanceData_Map().Num()));
+	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Instances Num"), VoxelISMC->GetLocalPoint_To_InstanceData_Map().Num()));
 	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Chunk Size"), ChunkSize));
 	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Voxel Base Size"), VoxelBaseSize));
 	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Max Updates per Second"), MaxUpdatesPerSecond));
@@ -667,12 +586,13 @@ void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerCont
 	ScWPlayerController->GetHitResultUnderScreenCenter(TraceTypeQuery_Visibility, false, ScreenCenterHitResult);
 
 	UInstancedStaticMeshComponent* TargetISMC = Cast<UInstancedStaticMeshComponent>(ScreenCenterHitResult.GetComponent());
-	if (TargetISMC == InstancedStaticMeshComponent)
+	if (TargetISMC == VoxelISMC)
 	{
 		int32 TargetInstanceIndex = ScreenCenterHitResult.Item;
-		InOutData.InstanceLabel = FString::Printf(TEXT("Looking at Voxel at %s, instance index %d"), *Data.GetVoxelInstancePoint(TargetInstanceIndex).ToString(), TargetInstanceIndex);
+		const FIntVector& TargetPoint = VoxelISMC->GetVoxelInstancePointAtIndex(TargetInstanceIndex);
+		InOutData.InstanceLabel = FString::Printf(TEXT("Looking at Voxel at %s, instance index %d"), *TargetPoint.ToString(), TargetInstanceIndex);
 		
-		const FVoxelInstanceData& TargetData = Data.GetVoxelInstanceData(TargetInstanceIndex);
+		const FVoxelInstanceData& TargetData = VoxelISMC->GetVoxelInstanceDataAtPoint(TargetPoint);
 		if (TargetData.IsTypeDataValid())
 		{
 			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Type Data"), TargetData.TypeData.GetName()));
@@ -680,7 +600,11 @@ void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerCont
 			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Stability"), TargetData.Stability));
 			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Attachment Directions"), EATAttachmentDirection_Utils::CreateStringFromAttachmentDirections(TargetData.AttachmentDirections)));
 		}
-		InOutData.InstanceHighlightTransform = FTransform(FRotator::ZeroRotator, GetVoxelCenterWorldLocation(Data.GetVoxelInstancePoint(TargetInstanceIndex)), FVector(VoxelBaseSize * 0.5f));
+		InOutData.InstanceHighlightTransform = FTransform(FRotator::ZeroRotator, GetVoxelCenterWorldLocation(VoxelISMC->GetVoxelInstancePointAtIndex(TargetInstanceIndex)), FVector(VoxelBaseSize * 0.5f));
 	}
 }
 //~ End Debug
+
+#if DEBUG_VOXELS
+	#pragma optimize("", on)
+#endif // DEBUG_VOXELS

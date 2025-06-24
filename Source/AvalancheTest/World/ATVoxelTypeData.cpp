@@ -12,7 +12,7 @@ UATVoxelTypeData::UATVoxelTypeData()
 	MaxHealth = 1.0f;
 }
 
-FVoxelInstanceData UATVoxelTypeData::BP_InitializeInstanceData_Implementation(AATVoxelChunk* InVoxelChunk, const FIntVector& InLocalPoint) const
+FVoxelInstanceData UATVoxelTypeData::BP_InitializeInstanceData_Implementation(AATVoxelChunk* InVoxelChunk, const FIntVector& InPoint) const
 {
 	if (!InVoxelChunk)
 	{

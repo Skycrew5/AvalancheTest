@@ -82,6 +82,7 @@ struct FVoxelInstanceData
 	bool IsTypeDataValid() const { return TypeData != nullptr; }
 	bool IsAttachmentDataValid() const { return !AttachmentDirections.IsEmpty(); }
 	bool IsAttachedTo(EATAttachmentDirection ToDirection) const { return AttachmentDirections.Contains(ToDirection); }
+	bool HasMesh() const { return SMI_Index != INDEX_NONE; }
 
 	FVoxelInstanceData(TObjectPtr<const class UATVoxelTypeData> InTypeData = nullptr, float InHealth = 1.0f)
 		: TypeData(InTypeData), Health(InHealth) {}
@@ -93,25 +94,18 @@ struct FVoxelInstanceData
 	#pragma optimize("", off)
 #endif // DEBUG_VOXELS
 
-USTRUCT()
-struct FIntArraySetPair
+template<typename Type>
+struct TArraySetPair
 {
-	GENERATED_BODY()
-
 private:
-
-	UPROPERTY()
-	TArray<int32> Array;
-
-	UPROPERTY()
-	TSet<int32> Set;
-
+	TArray<Type> Array;
+	TSet<Type> Set;
 public:
 
-	const TArray<int32>& GetConstArray() const { return Array; }
-	const TSet<int32>& GetConstSet() const { return Set; }
+	const TArray<Type>& GetConstArray() const { return Array; }
+	const TSet<Type>& GetConstSet() const { return Set; }
 
-	bool Add(int32 InItem)
+	bool Add(Type InItem)
 	{
 		if (Contains(InItem))
 		{
@@ -126,7 +120,7 @@ public:
 		}
 	}
 
-	bool Remove(int32 InItem)
+	bool Remove(Type InItem)
 	{
 		if (Contains(InItem))
 		{
@@ -141,7 +135,7 @@ public:
 		}
 	}
 
-	bool Replace(int32 InPrevItem, int32 InNewItem)
+	bool Replace(Type InPrevItem, Type InNewItem)
 	{
 		if (Contains(InPrevItem))
 		{
@@ -155,46 +149,46 @@ public:
 		}
 	}
 
-	void AddFromOther(const FIntArraySetPair& InOther)
+	void AddFromOther(const TArraySetPair<Type>& InOther)
 	{
-		for (int32 SampleOtherItem : InOther.Array)
+		for (Type SampleOtherItem : InOther.Array)
 		{
 			Add(SampleOtherItem);
 		}
 	}
 
-	void RemoveFromOther(const FIntArraySetPair& InOther)
+	void RemoveFromOther(const TArraySetPair<Type>& InOther)
 	{
-		for (int32 SampleOtherItem : InOther.Array)
+		for (Type SampleOtherItem : InOther.Array)
 		{
 			Remove(SampleOtherItem);
 		}
 	}
 
-	void AddHeadTo(int32 InDesiredElementsNum, FIntArraySetPair& InOutOther)
+	void AddHeadTo(Type InDesiredElementsNum, TArraySetPair<Type>& InOutOther)
 	{
-		int32 FirstIndex = 0;
-		int32 LastIndex = FMath::Min(InDesiredElementsNum, Array.Num()) - 1;
+		Type FirstIndex = 0;
+		Type LastIndex = FMath::Min(InDesiredElementsNum, Array.Num()) - 1;
 
-		for (int32 SampleIndex = FirstIndex; SampleIndex <= LastIndex; ++SampleIndex)
+		for (Type SampleIndex = FirstIndex; SampleIndex <= LastIndex; ++SampleIndex)
 		{
 			InOutOther.Add(Array[SampleIndex]);
 		}
 	}
 
-	void AddTailTo(int32 InDesiredElementsNum, FIntArraySetPair& InOutOther)
+	void AddTailTo(Type InDesiredElementsNum, TArraySetPair<Type>& InOutOther)
 	{
-		int32 FirstIndex = Array.Num() - 1;
-		int32 LastIndex = Array.Num() - FMath::Min(InDesiredElementsNum, Array.Num());
+		Type FirstIndex = Array.Num() - 1;
+		Type LastIndex = Array.Num() - FMath::Min(InDesiredElementsNum, Array.Num());
 
-		for (int32 SampleIndex = FirstIndex; SampleIndex >= LastIndex; --SampleIndex)
+		for (Type SampleIndex = FirstIndex; SampleIndex >= LastIndex; --SampleIndex)
 		{
 			InOutOther.Add(Array[SampleIndex]);
 		}
 	}
 
-	int32 Num() const { return Array.Num(); }
-	bool Contains(int32 InItem) const { return Set.Contains(InItem); }
+	Type Num() const { return Array.Num(); }
+	bool Contains(Type InItem) const { return Set.Contains(InItem); }
 	bool IsEmpty() const { return Array.IsEmpty(); }
 
 	void Empty(int32 InSlack = 0)

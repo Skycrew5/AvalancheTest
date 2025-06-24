@@ -21,7 +21,7 @@ public:
 	UATVoxelTypeData();
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, meta = (DisplayName = "InitializeInstanceData"))
-	FVoxelInstanceData BP_InitializeInstanceData(class AATVoxelChunk* InVoxelChunk, const FIntVector& InLocalPoint) const;
+	FVoxelInstanceData BP_InitializeInstanceData(class AATVoxelChunk* InVoxelChunk, const FIntVector& InPoint) const;
 
 //~ Begin UI
 public:
