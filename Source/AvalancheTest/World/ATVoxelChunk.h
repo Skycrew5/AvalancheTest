@@ -178,7 +178,8 @@ public:
 	TSet<FIntVector> UpdateStabilityRecursive_ThisOrderUpdatedPoints;
 	TMap<FIntVector, float> UpdateStabilityRecursive_CachedPointStabilities;
 
-	float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, EATAttachmentDirection InDirectionsOrder[6], EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None);
+	float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None, uint8 InCurrentRecursionLevel = 0u);
+	//float UpdateStabilityRecursive_GetStabilityFromAllNeighbors_HandleCompound(const FIntVector& InOrigin, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None);
 	
 	//float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(TSet<FIntVector>& InOutCurrentSubChain, int32 InOutSubChainHash, const FIntVector& InTargetPoint, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None);
 	TMap<int32, float> UpdateStabilityRecursive_CachedSubchainStabilities;

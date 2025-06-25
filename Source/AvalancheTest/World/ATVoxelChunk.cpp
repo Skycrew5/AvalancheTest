@@ -434,19 +434,24 @@ void AATVoxelChunk::HandleVoxelDataUpdatesTick(int32& InOutUpdatesLeft)
 	UpdateStabilityRecursive(InOutUpdatesLeft);
 }
 
+static TArray<EATAttachmentDirection> DirectionsOrder1 = { EATAttachmentDirection::Bottom, EATAttachmentDirection::Right, EATAttachmentDirection::Left, EATAttachmentDirection::Front, EATAttachmentDirection::Back, EATAttachmentDirection::Top };
+static TArray<EATAttachmentDirection> DirectionsOrder2 = { EATAttachmentDirection::Top, EATAttachmentDirection::Back, EATAttachmentDirection::Front, EATAttachmentDirection::Left, EATAttachmentDirection::Right, EATAttachmentDirection::Bottom };
+static TArray<EATAttachmentDirection> DirectionsOrder3 = { EATAttachmentDirection::Left, EATAttachmentDirection::Right, EATAttachmentDirection::Front, EATAttachmentDirection::Back, EATAttachmentDirection::Top, EATAttachmentDirection::Bottom };
+static TArray<EATAttachmentDirection> DirectionsOrder4 = { EATAttachmentDirection::Right, EATAttachmentDirection::Left, EATAttachmentDirection::Back, EATAttachmentDirection::Front, EATAttachmentDirection::Top, EATAttachmentDirection::Bottom };
+static TArray<EATAttachmentDirection> DirectionsOrder5 = { EATAttachmentDirection::Front, EATAttachmentDirection::Back, EATAttachmentDirection::Bottom, EATAttachmentDirection::Top, EATAttachmentDirection::Left, EATAttachmentDirection::Right };
+static TArray<EATAttachmentDirection> DirectionsOrder6 = { EATAttachmentDirection::Back, EATAttachmentDirection::Front, EATAttachmentDirection::Top, EATAttachmentDirection::Bottom, EATAttachmentDirection::Right, EATAttachmentDirection::Left };
+
+static TArray<TArray<EATAttachmentDirection>*> UsedDirectionsOrders = { &DirectionsOrder1, &DirectionsOrder2, &DirectionsOrder3, &DirectionsOrder4, &DirectionsOrder5, &DirectionsOrder6 };
+static TArray<EATAttachmentDirection> CurrentDirectionsOrder = DirectionsOrder1;
+
+static uint8 MaxRecursionLevel = 24u;
+
 void AATVoxelChunk::UpdateStabilityRecursive(int32& InOutUpdatesLeft)
 {
-	if (!QueuedRecursiveStabilityUpdatePoints.IsEmpty())
+	/*if (!QueuedRecursiveStabilityUpdatePoints.IsEmpty())
 	{
 		VoxelISMC->RegenerateCompoundData();
-	}
-	static EATAttachmentDirection DirectionsOrder1[6] = { EATAttachmentDirection::Bottom, EATAttachmentDirection::Right, EATAttachmentDirection::Left, EATAttachmentDirection::Front, EATAttachmentDirection::Back, EATAttachmentDirection::Top };
-	static EATAttachmentDirection DirectionsOrder2[6] = { EATAttachmentDirection::Top, EATAttachmentDirection::Back, EATAttachmentDirection::Front, EATAttachmentDirection::Left, EATAttachmentDirection::Right, EATAttachmentDirection::Bottom };
-	static EATAttachmentDirection DirectionsOrder3[6] = { EATAttachmentDirection::Left, EATAttachmentDirection::Right, EATAttachmentDirection::Front, EATAttachmentDirection::Back, EATAttachmentDirection::Top, EATAttachmentDirection::Bottom };
-	static EATAttachmentDirection DirectionsOrder4[6] = { EATAttachmentDirection::Right, EATAttachmentDirection::Left, EATAttachmentDirection::Back, EATAttachmentDirection::Front, EATAttachmentDirection::Top, EATAttachmentDirection::Bottom };
-	static EATAttachmentDirection DirectionsOrder5[6] = { EATAttachmentDirection::Front, EATAttachmentDirection::Back, EATAttachmentDirection::Bottom, EATAttachmentDirection::Top, EATAttachmentDirection::Left, EATAttachmentDirection::Right };
-	static EATAttachmentDirection DirectionsOrder6[6] = { EATAttachmentDirection::Back, EATAttachmentDirection::Front, EATAttachmentDirection::Top, EATAttachmentDirection::Bottom, EATAttachmentDirection::Right, EATAttachmentDirection::Left };
-	
+	}*/
 	while (!QueuedRecursiveStabilityUpdatePoints.IsEmpty() && InOutUpdatesLeft > 0)
 	{
 		const FIntVector& SamplePoint = QueuedRecursiveStabilityUpdatePoints.Pop();
@@ -456,33 +461,20 @@ void AATVoxelChunk::UpdateStabilityRecursive(int32& InOutUpdatesLeft)
 		//SampleData.Stability = UpdateStabilityRecursive_GetStabilityFromAllNeighbors(DummySubChain, 0, SamplePoint);
 		//UpdateStabilityRecursive_CachedSubchainStabilities.Empty();
 		
-		SampleData.Stability = UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, DirectionsOrder1);
-		UpdateStabilityRecursive_ThisOrderUpdatedPoints.Empty();
+		SampleData.Stability = 0.0f;
 
-		if (SampleData.Stability < 1.0f)
+		for (int32 SampleOrderIndex = 0; SampleOrderIndex < UsedDirectionsOrders.Num(); ++SampleOrderIndex)
 		{
-			SampleData.Stability = FMath::Max(UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, DirectionsOrder2), SampleData.Stability);
-			UpdateStabilityRecursive_ThisOrderUpdatedPoints.Empty();
-		}
-		if (SampleData.Stability < 1.0f)
-		{
-			SampleData.Stability = FMath::Max(UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, DirectionsOrder3), SampleData.Stability);
-			UpdateStabilityRecursive_ThisOrderUpdatedPoints.Empty();
-		}
-		if (SampleData.Stability < 1.0f)
-		{
-			SampleData.Stability = FMath::Max(UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, DirectionsOrder4), SampleData.Stability);
-			UpdateStabilityRecursive_ThisOrderUpdatedPoints.Empty();
-		}
-		if (SampleData.Stability < 1.0f)
-		{
-			SampleData.Stability = FMath::Max(UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, DirectionsOrder5), SampleData.Stability);
-			UpdateStabilityRecursive_ThisOrderUpdatedPoints.Empty();
-		}
-		if (SampleData.Stability < 1.0f)
-		{
-			SampleData.Stability = FMath::Max(UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, DirectionsOrder6), SampleData.Stability);
-			UpdateStabilityRecursive_ThisOrderUpdatedPoints.Empty();
+			if (SampleData.Stability < 1.0f)
+			{
+				CurrentDirectionsOrder = *UsedDirectionsOrders[SampleOrderIndex];
+				SampleData.Stability = FMath::Max(UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint), SampleData.Stability);
+				UpdateStabilityRecursive_ThisOrderUpdatedPoints.Empty();
+			}
+			else
+			{
+				break;
+			}
 		}
 		//UpdateStabilityRecursive_CachedSubchainStabilities.Empty();
 		//UpdateStabilityRecursive_CachedPointStabilities.Add(SamplePoint, SampleData.Stability);
@@ -496,11 +488,15 @@ void AATVoxelChunk::UpdateStabilityRecursive(int32& InOutUpdatesLeft)
 	//UpdateStabilityRecursive_CachedPointStabilities.Empty();
 }
 
-float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& FromPoint, EATAttachmentDirection InDirectionsOrder[6], EATAttachmentDirection InNeighborDirection)
+float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, EATAttachmentDirection InNeighborDirection, uint8 InCurrentRecursionLevel)
 {
-	FIntVector SamplePoint = FromPoint + EATAttachmentDirection_Utils::IntOffsets[InNeighborDirection];
-	TArray<FIntVector> SampleCompoundOrigins;
-	VoxelISMC->GetAdjacentCompoundOriginsAt(FromPoint, InNeighborDirection);
+	++InCurrentRecursionLevel;
+
+	if (InCurrentRecursionLevel > MaxRecursionLevel)
+	{
+		return 1.0f * EATAttachmentDirection_Utils::AttachmentMuls[InNeighborDirection];
+	}
+	FIntVector SamplePoint = InTargetPoint + EATAttachmentDirection_Utils::IntOffsets[InNeighborDirection];
 
 	if (UpdateStabilityRecursive_ThisOrderUpdatedPoints.Contains(SamplePoint))
 	{
@@ -518,18 +514,18 @@ float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const
 			UpdateStabilityRecursive_ThisOrderUpdatedPoints.Add(SamplePoint);
 			float AccumulatedStability = 0.0f;
 
-			AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InDirectionsOrder, InDirectionsOrder[0]);
+			AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[0], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InDirectionsOrder, InDirectionsOrder[1]);
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[1], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InDirectionsOrder, InDirectionsOrder[2]);
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[2], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InDirectionsOrder, InDirectionsOrder[3]);
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[3], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InDirectionsOrder, InDirectionsOrder[4]);
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[4], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InDirectionsOrder, InDirectionsOrder[5]);
-			
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[5], InCurrentRecursionLevel);
+
 			float OutStability = FMath::Min(AccumulatedStability * EATAttachmentDirection_Utils::AttachmentMuls[InNeighborDirection], 1.0f);
 			return OutStability;
 		}
@@ -537,6 +533,62 @@ float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const
 	UpdateStabilityRecursive_ThisOrderUpdatedPoints.Add(SamplePoint);
 	return 0.0f;
 }
+
+/*float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, EATAttachmentDirection InNeighborDirection)
+{
+	TArray<FIntVector> SampleCompoundOrigins;
+	VoxelISMC->GetAdjacentCompoundOriginsAt(InTargetPoint, InNeighborDirection, SampleCompoundOrigins);
+
+	// Those are all compounds (their origins) on the InNeighborDirection side
+	for (const FIntVector& SampleOrigin : SampleCompoundOrigins)
+	{
+		UpdateStabilityRecursive_GetStabilityFromAllNeighbors_HandleCompound(SampleOrigin, InNeighborDirection);
+	}
+	return 0.0f;
+}
+
+float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors_HandleCompound(const FIntVector& InOrigin, EATAttachmentDirection InNeighborDirection)
+{
+	const FVoxelCompoundData& SampleCompoundData = VoxelISMC->GetCompoundDataAt(InOrigin);
+
+	if (UpdateStabilityRecursive_ThisOrderUpdatedPoints.Contains(InOrigin))
+	{
+		return 0.0f;
+	}
+	TArray<FIntVector> SampleCompoundPoints;
+	SampleCompoundData.GetAllPoints(SampleCompoundPoints);
+
+	FVoxelInstanceData& SampleData = VoxelISMC->GetVoxelInstanceDataAtPoint(InOrigin, false);
+	if (SampleData.IsTypeDataValid())
+	{
+		if (SampleData.TypeData->IsFoundation)
+		{
+			return 1.0f * EATAttachmentDirection_Utils::AttachmentMuls[InNeighborDirection];
+		}
+		else
+		{
+			UpdateStabilityRecursive_ThisOrderUpdatedPoints.Append(SampleCompoundPoints);
+			float AccumulatedStability = 0.0f;
+
+			AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[0]);
+			if (AccumulatedStability < 1.0f)
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[1]);
+			if (AccumulatedStability < 1.0f)
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[2]);
+			if (AccumulatedStability < 1.0f)
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[3]);
+			if (AccumulatedStability < 1.0f)
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[4]);
+			if (AccumulatedStability < 1.0f)
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[5]);
+
+			float OutStability = FMath::Min(AccumulatedStability * EATAttachmentDirection_Utils::AttachmentMuls[InNeighborDirection], 1.0f);
+			return OutStability;
+		}
+	}
+	UpdateStabilityRecursive_ThisOrderUpdatedPoints.Append(SampleCompoundPoints);
+	return 0.0f;
+}*/
 
 /*float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(TSet<FIntVector>& InOutCurrentSubChain, int32 InSubChainHash, const FIntVector& FromPoint, EATAttachmentDirection InNeighborDirection)
 {
@@ -614,12 +666,19 @@ void AATVoxelChunk::QueueRecursiveStabilityUpdate(const FIntVector& InPoint, con
 
 	if (bInQueueNeighborsToo)
 	{
-		QueuedRecursiveStabilityUpdatePoints.Add(InPoint + FIntVector(1, 0, 0));
+		TArray<FIntVector> PointsInRadius;
+		GetAllPointsInRadius(InPoint, 6, PointsInRadius);
+
+		for (const FIntVector& SamplePoint : PointsInRadius)
+		{
+			QueuedRecursiveStabilityUpdatePoints.Add(SamplePoint);
+		}
+		/*QueuedRecursiveStabilityUpdatePoints.Add(InPoint + FIntVector(1, 0, 0));
 		QueuedRecursiveStabilityUpdatePoints.Add(InPoint + FIntVector(-1, 0, 0));
 		QueuedRecursiveStabilityUpdatePoints.Add(InPoint + FIntVector(0, 1, 0));
 		QueuedRecursiveStabilityUpdatePoints.Add(InPoint + FIntVector(0, -1, 0));
 		QueuedRecursiveStabilityUpdatePoints.Add(InPoint + FIntVector(0, 0, 1));
-		QueuedRecursiveStabilityUpdatePoints.Add(InPoint + FIntVector(0, 0, -1));
+		QueuedRecursiveStabilityUpdatePoints.Add(InPoint + FIntVector(0, 0, -1));*/
 	}
 }
 

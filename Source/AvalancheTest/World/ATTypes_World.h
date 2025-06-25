@@ -136,7 +136,7 @@ struct FVoxelCompoundData
 	void GetAllPoints(TArray<FIntVector>& OutPoints) const;
 	void GetPointsAtSide(EATAttachmentDirection InSide, TArray<FIntVector>& OutPoints, const bool bInOutside = false) const;
 
-	FVoxelInstanceData(const FIntVector& InOrigin = FIntVector::ZeroVector, int32 InSize = 0)
+	FVoxelCompoundData(const FIntVector& InOrigin = FIntVector::ZeroValue, int32 InSize = 0)
 		: Origin(InOrigin), Size(InSize) {}
 
 	static const FVoxelCompoundData Invalid;

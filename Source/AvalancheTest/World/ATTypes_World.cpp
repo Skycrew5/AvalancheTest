@@ -32,7 +32,7 @@ void FVoxelCompoundData::GetPointsAtSide(EATAttachmentDirection InSide, TArray<F
 	{
 		case EATAttachmentDirection::None:
 		{
-			OutPoints = GetAllPoints();
+			GetAllPoints(OutPoints);
 			break;
 		}
 		case EATAttachmentDirection::Front:
