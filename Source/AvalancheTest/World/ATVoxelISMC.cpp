@@ -10,6 +10,7 @@
 #endif // DEBUG_VOXELS
 
 FVoxelInstanceData UATVoxelISMC::InvalidInstanceData_NonConst = FVoxelInstanceData::Invalid;
+FVoxelCompoundData UATVoxelISMC::InvalidCompoundData_NonConst = FVoxelCompoundData::Invalid;
 
 UATVoxelISMC::UATVoxelISMC()
 {
@@ -80,6 +81,41 @@ bool UATVoxelISMC::HasVoxelAtPoint(const FIntVector& InPoint) const
 {
 	return LocalPoint_To_InstanceData_Map.Contains(InPoint);
 }
+
+FVoxelCompoundData& UATVoxelISMC::GetCompoundDataAt(const FIntVector& InTargetPoint, const bool bInChecked) const
+{
+	if (const FVoxelCompoundData* SampleCompoundDataPtr = LocalPoint_To_CompoundData_Map.Find(InTargetPoint))
+	{
+		return *const_cast<FVoxelCompoundData*>(SampleCompoundDataPtr);
+	}
+	else
+	{
+		ensure(!bInChecked);
+		return InvalidCompoundData_NonConst;
+	}
+}
+
+bool UATVoxelISMC::HasCompoundAtPoint(const FIntVector& InPoint) const
+{
+	return LocalPoint_To_CompoundData_Map.Contains(InPoint);
+}
+
+void UATVoxelISMC::GetAdjacentCompoundOriginsAt(const FIntVector& InTargetPoint, EATAttachmentDirection InSide, TArray<FIntVector>& OutCompoundOrigins) const
+{
+	const FVoxelCompoundData& TargetCompoundData = GetCompoundDataAt(InTargetPoint);
+
+	TArray<FIntVector> SidePoints;
+	TargetCompoundData.GetPointsAtSide(InSide, SidePoints);
+
+	for (const FIntVector& SampleSidePoint : SidePoints)
+	{
+		const FVoxelCompoundData& SampleSideCompoundData = GetCompoundDataAt(SampleSidePoint);
+		if (SampleSideCompoundData.IsValid())
+		{
+			OutCompoundOrigins.AddUnique(SampleSideCompoundData.Origin);
+		}
+	}
+}
 //~ End Getters
 
 //~ Begin Setters
@@ -102,8 +138,9 @@ bool UATVoxelISMC::SetVoxelAtPoint(const FIntVector& InPoint, const UATVoxelType
 	FVoxelInstanceData& NewInstanceData = LocalPoint_To_InstanceData_Map.Add(InPoint, InTypeData->BP_InitializeInstanceData(OwnerChunk, InPoint));
 
 	QueuePointForVisibilityUpdate(InPoint);
-	OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
-	OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
+	//OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
+	//OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
+	OwnerChunk->QueueRecursiveStabilityUpdate(InPoint);
 	return true;
 }
 
@@ -134,8 +171,9 @@ bool UATVoxelISMC::RemoveVoxelAtPoint(const FIntVector& InPoint, const bool bInC
 		}
 		LocalPoint_To_InstanceData_Map.Remove(InPoint);
 		QueuePointForVisibilityUpdate(InPoint);
-		OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
-		OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
+		//OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
+		//OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
+		OwnerChunk->QueueRecursiveStabilityUpdate(InPoint);
 		return true;
 	}
 	return false;
@@ -185,6 +223,83 @@ bool UATVoxelISMC::RelocateInstanceIndex(int32 InPrevIndex, int32 InNewIndex, co
 	ensure(TargetInstanceData.SMI_Index == InPrevIndex);
 	TargetInstanceData.SMI_Index = InNewIndex;
 	return true;
+}
+
+void UATVoxelISMC::RegenerateCompoundData()
+{
+	TArray<FIntVector> AllPoints;
+	GetAllLocalPoints(AllPoints);
+
+	LocalPoint_To_CompoundData_Map.Empty();
+
+	for (const FIntVector& SampleCompoundOrigin : AllPoints)
+	{
+		if (HasCompoundAtPoint(SampleCompoundOrigin))
+		{
+			continue;
+		}
+		int32 NewCompoundSize = CalcMaxFittingCompoundSizeAt(SampleCompoundOrigin);
+		SetCompoundData(SampleCompoundOrigin, NewCompoundSize);
+	}
+}
+
+bool UATVoxelISMC::SetCompoundData(const FIntVector& InOrigin, int32 InSize, const bool bInChecked)
+{
+	if (InSize <= 0)
+	{
+		ensure(false);
+		return false;
+	}
+	FVoxelCompoundData NewCompoundData = FVoxelCompoundData(InOrigin, InSize);
+
+	for (int32 SampleCompoundX = 0; SampleCompoundX < NewCompoundData.Size; ++SampleCompoundX)
+	{
+		for (int32 SampleCompoundY = 0; SampleCompoundY < NewCompoundData.Size; ++SampleCompoundY)
+		{
+			for (int32 SampleCompoundZ = 0; SampleCompoundZ < NewCompoundData.Size; ++SampleCompoundZ)
+			{
+				ensure(!bInChecked || !LocalPoint_To_CompoundData_Map.Contains(InOrigin));
+				LocalPoint_To_CompoundData_Map.Add(InOrigin, NewCompoundData);
+			}
+		}
+	}
+	//QueuePointForVisibilityUpdate(InPoint);
+	//OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
+	//OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
+	//OwnerChunk->QueueRecursiveStabilityUpdate(InPoint);
+	return true;
+}
+
+int32 UATVoxelISMC::CalcMaxFittingCompoundSizeAt(const FIntVector& InOrigin)
+{
+	const int32 CompoundMaxSize = OwnerChunk->ChunkSize;
+	int32 OutSize = 0;
+	for (int32 CompoundSizeMinusOne = 0; CompoundSizeMinusOne < CompoundMaxSize; ++CompoundSizeMinusOne)
+	{
+		bool bSuccess = true;
+
+		for (int32 OffsetX = 0; (OffsetX < CompoundSizeMinusOne + 1) && bSuccess; ++OffsetX)
+		{
+			for (int32 OffsetY = 0; (OffsetY < CompoundSizeMinusOne + 1) && bSuccess; ++OffsetY)
+			{
+				for (int32 OffsetZ = 0; (OffsetZ < CompoundSizeMinusOne + 1) && bSuccess; ++OffsetZ)
+				{
+					FIntVector SampleCompoundPoint = InOrigin + FIntVector(OffsetX, OffsetY, OffsetZ);
+
+					if (!HasVoxelAtPoint(SampleCompoundPoint) || HasCompoundAtPoint(SampleCompoundPoint))
+					{
+						bSuccess = false;
+						break;
+					}
+				}
+			}
+		}
+		if (bSuccess)
+		{
+			OutSize = CompoundSizeMinusOne + 1;
+		}
+	}
+	return OutSize + 1;
 }
 //~ End Setters
 

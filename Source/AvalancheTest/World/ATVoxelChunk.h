@@ -171,6 +171,18 @@ public:
 
 	void HandleVoxelDataUpdatesTick(int32& InOutMaxUpdates);
 
+	void QueueRecursiveStabilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
+	TArraySetPair<FIntVector> QueuedRecursiveStabilityUpdatePoints;
+
+	void UpdateStabilityRecursive(int32& InOutUpdatesLeft);
+	TSet<FIntVector> UpdateStabilityRecursive_ThisOrderUpdatedPoints;
+	TMap<FIntVector, float> UpdateStabilityRecursive_CachedPointStabilities;
+
+	float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, EATAttachmentDirection InDirectionsOrder[6], EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None);
+	
+	//float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(TSet<FIntVector>& InOutCurrentSubChain, int32 InOutSubChainHash, const FIntVector& InTargetPoint, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None);
+	TMap<int32, float> UpdateStabilityRecursive_CachedSubchainStabilities;
+
 	UFUNCTION(Category = "Data | Attachment", BlueprintCallable)
 	int32 UpdatePendingAttachmentData(int32 InMaxUpdates);
 	/*FORCEINLINE*/ void UpdatePendingAttachmentData_UpdateFromAllNeighbors(const FIntVector& InTargetPoint, TMap<FIntVector, EATAttachmentDirection>& InOutAttachedNeighborsAndDirections);

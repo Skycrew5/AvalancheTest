@@ -56,6 +56,15 @@ public:
 
 	UFUNCTION(Category = "Getters", BlueprintCallable)
 	bool HasVoxelAtPoint(const FIntVector& InPoint) const;
+
+	UFUNCTION(Category = "Getters | Compounds", BlueprintCallable)
+	FVoxelCompoundData& GetCompoundDataAt(const FIntVector& InTargetPoint, const bool bInChecked = true) const;
+
+	UFUNCTION(Category = "Getters | Compounds", BlueprintCallable)
+	bool HasCompoundAtPoint(const FIntVector& InPoint) const;
+
+	UFUNCTION(Category = "Getters | Compounds", BlueprintCallable)
+	void GetAdjacentCompoundOriginsAt(const FIntVector& InTargetPoint, EATAttachmentDirection InSide, TArray<FIntVector>& OutCompoundOrigins) const;
 //~ End Getters
 
 //~ Begin Setters
@@ -77,6 +86,15 @@ public:
 	void RemoveAllVoxels();
 
 	bool RelocateInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked = true);
+
+	UFUNCTION(Category = "Setters | Compounds", BlueprintCallable)
+	void RegenerateCompoundData();
+
+	UFUNCTION(Category = "Setters | Compounds", BlueprintCallable)
+	bool SetCompoundData(const FIntVector& InOrigin, int32 InSize, const bool bInChecked = true);
+
+protected:
+	int32 CalcMaxFittingCompoundSizeAt(const FIntVector& InOrigin);
 //~ End Setters
 	
 //~ Begin Data
@@ -100,10 +118,14 @@ protected:
 	TMap<FIntVector, FVoxelInstanceData> LocalPoint_To_InstanceData_Map;
 
 	UPROPERTY(Transient)
+	TMap<FIntVector, FVoxelCompoundData> LocalPoint_To_CompoundData_Map;
+
+	UPROPERTY(Transient)
 	TMap<int32, FIntVector> InstanceIndex_To_LocalPoint_Map;
 	
 	TArraySetPair<FIntVector> QueuedVisibilityUpdatePoints;
 
 	static FVoxelInstanceData InvalidInstanceData_NonConst;
+	static FVoxelCompoundData InvalidCompoundData_NonConst;
 //~ End Data
 };
