@@ -8,15 +8,6 @@
 
 #include "ATVoxelChunk.generated.h"
 
-USTRUCT()
-struct FVoxelChunkContainers
-{
-	GENERATED_BODY()
-
-private:
-
-};
-
 #if DEBUG_VOXELS
 	#pragma optimize("", off)
 #endif // DEBUG_VOXELS
@@ -28,21 +19,21 @@ struct FVoxelChunkPendingUpdates
 
 private:
 
-	TArraySetPair<int32> PendingInstanceIndices;
-	TArraySetPair<int32> ThisTickSelectedInstanceIndices;
-	TArraySetPair<int32> ThisTickAlreadyUpdatedInstanceIndices;
-	TArraySetPair<int32> NextTickNewPendingIndices;
+	TArraySetPair<FIntVector> PendingPoints;
+	TArraySetPair<FIntVector> ThisTickSelectedPoints;
+	TArraySetPair<FIntVector> ThisTickAlreadyUpdatedPoints;
+	TArraySetPair<FIntVector> NextTickNewPendingIndices;
 
 	UPROPERTY()
 	bool bIsInsideUpdateSequence;
 
 public:
 
-	const TArray<int32>& GetPendingInstanceIndicesConstArray() const { return PendingInstanceIndices.GetConstArray(); }
-	const TArray<int32>& GetThisTickSelectedInstanceIndicesConstArray() const { return ThisTickSelectedInstanceIndices.GetConstArray(); }
+	const TArray<FIntVector>& GetPendingPointsConstArray() const { return PendingPoints.GetConstArray(); }
+	const TArray<FIntVector>& GetThisTickSelectedPointsConstArray() const { return ThisTickSelectedPoints.GetConstArray(); }
 
 	UPROPERTY()
-	TObjectPtr<UInstancedStaticMeshComponent> TargetISMC;
+	TObjectPtr<class UATVoxelISMC> TargetISMC;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 DebugVoxelCustomData_ThisTickSelected = 1;
@@ -53,95 +44,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bDebugDeMarkThisTickSelectedIndices = true;
 
-	void QueueInstanceIndexIfRelevant(int32 InInstanceIndex)
-	{
-		if (bIsInsideUpdateSequence)
-		{
-			if (IsInstanceWaitingToUpdateThisTick(InInstanceIndex))
-			{
-				// Index is going to be updated soon anyway - no need to queue it
-			}
-			else
-			{
-				NextTickNewPendingIndices.Add(InInstanceIndex);
-			}
-		}
-		else
-		{
-			PendingInstanceIndices.Add(InInstanceIndex);
-		}
-	}
-
-	void MarkInstanceIndexAsUpdatedThisTick(int32 InInstanceIndex)
-	{
-		ensure(!ThisTickAlreadyUpdatedInstanceIndices.Contains(InInstanceIndex));
-		ThisTickAlreadyUpdatedInstanceIndices.Add(InInstanceIndex);
-	}
-
-	bool PrepareThisTickSelectedInstanceIndices(int32 InDesiredUpdatesNum)
-	{
-		if (bDebugDeMarkThisTickSelectedIndices && !ThisTickSelectedInstanceIndices.IsEmpty())
-		{
-			for (int32 SampleInstanceIndex : ThisTickSelectedInstanceIndices.GetConstArray())
-			{
-				TargetISMC->SetCustomDataValue(SampleInstanceIndex, DebugVoxelCustomData_ThisTickSelected, 0.0f, false);
-			}
-			TargetISMC->MarkRenderStateDirty();
-		}
-		ThisTickSelectedInstanceIndices.Empty(InDesiredUpdatesNum);
-		PendingInstanceIndices.AddTailTo(InDesiredUpdatesNum, ThisTickSelectedInstanceIndices);
-
-		bIsInsideUpdateSequence = !ThisTickSelectedInstanceIndices.IsEmpty();
-		return bIsInsideUpdateSequence;
-	}
-
-	bool IsInstanceWaitingToUpdateThisTick(int32 InInstanceIndex) const
-	{
-		return ThisTickSelectedInstanceIndices.Contains(InInstanceIndex) && !ThisTickAlreadyUpdatedInstanceIndices.Contains(InInstanceIndex);
-	}
-
-	void ResolveThisTickSelectedInstanceIndices()
-	{
-		if (bDebugMarkThisTickSelectedIndices && !ThisTickSelectedInstanceIndices.IsEmpty())
-		{
-			for (int32 SampleInstanceIndex : ThisTickSelectedInstanceIndices.GetConstArray())
-			{
-				TargetISMC->SetCustomDataValue(SampleInstanceIndex, DebugVoxelCustomData_ThisTickSelected, 1.0f, false);
-			}
-			TargetISMC->MarkRenderStateDirty();
-		}
-		PendingInstanceIndices.RemoveFromOther(ThisTickSelectedInstanceIndices);
-		PendingInstanceIndices.AddFromOther(NextTickNewPendingIndices);
-
-		NextTickNewPendingIndices.Empty();
-		bIsInsideUpdateSequence = false;
-	}
-
-	int32 ResolveThisTickAlreadyUpdatedInstanceIndices()
-	{
-		int32 OutIndicesNum = ThisTickAlreadyUpdatedInstanceIndices.Num();
-		ThisTickAlreadyUpdatedInstanceIndices.Empty();
-		return OutIndicesNum;
-	}
-
-	void RelocateInstanceIndex(int32 InPrevIndex, int32 InNewIndex)
-	{
-		PendingInstanceIndices.Replace(InPrevIndex, InNewIndex);
-		ThisTickSelectedInstanceIndices.Replace(InPrevIndex, InNewIndex);
-
-		ensure(NextTickNewPendingIndices.IsEmpty());
-	}
-
-	void DebugInstanceAttachmentDirection(const FVoxelInstanceData& InInstanceData)
-	{
-		FTransform NewInstanceTransform;
-		TargetISMC->GetInstanceTransform(InInstanceData.SMI_Index, NewInstanceTransform);
-
-		FVector AttachmentVector = EATAttachmentDirection_Utils::CreateVectorFromAttachmentDirections(InInstanceData.AttachmentDirections);
-		NewInstanceTransform.SetRotation(AttachmentVector.ToOrientationQuat());
-		NewInstanceTransform.SetScale3D(FVector(0.1f + AttachmentVector.Length(), 0.5f, 0.5f));
-		TargetISMC->UpdateInstanceTransform(InInstanceData.SMI_Index, NewInstanceTransform);
-	}
+	void QueuePointIfRelevant(const FIntVector& InPoint);
+	void MarkPointAsUpdatedThisTick(const FIntVector& InPoint);
+	bool PrepareThisTickSelectedPoints(int32 InDesiredUpdatesNum);
+	bool IsInstanceWaitingToUpdateThisTick(const FIntVector& InPoint) const;
+	void ResolveThisTickSelectedPoints();
+	int32 ResolveThisTickAlreadyUpdatedPoints();
 };
 
 #if DEBUG_VOXELS
@@ -162,10 +70,15 @@ public:
 	
 //~ Begin Initialize
 protected:
+	virtual void PostInitializeComponents() override; // AActor
 	virtual void OnConstruction(const FTransform& InTransform) override; // AActor
 	virtual void BeginPlay() override; // AActor
 	virtual void Tick(float InDeltaSeconds)  override; // AActor
 	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // AActor
+
+	// Called both in editor (upon creation and when something has changed) and in game on BeginPlay()
+	UFUNCTION(Category = "Initialize", BlueprintNativeEvent, meta = (DisplayName = "CommonInitChunk"))
+	void BP_CommonInitChunk();
 //~ End Initialize
 	
 //~ Begin Components
@@ -252,15 +165,20 @@ public:
 
 //~ Begin Voxel Data
 public:
+
+	UFUNCTION(Category = "Data | Attachment", BlueprintCallable)
+	void QueueFullUpdate();
+
 	void HandleVoxelDataUpdatesTick(int32& InOutMaxUpdates);
 
 	UFUNCTION(Category = "Data | Attachment", BlueprintCallable)
 	int32 UpdatePendingAttachmentData(int32 InMaxUpdates);
-	/*FORCEINLINE*/ void UpdatePendingAttachmentData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, const FVector& InAttachmentDirection, EAxis::Type InAxis, float InAxisMul, float InAttachmentStrengthMul, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection);
+	/*FORCEINLINE*/ void UpdatePendingAttachmentData_UpdateFromAllNeighbors(const FIntVector& InTargetPoint, TMap<FIntVector, EATAttachmentDirection>& InOutAttachedNeighborsAndDirections);
+	/*FORCEINLINE*/ void UpdatePendingAttachmentData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection, TMap<FIntVector, EATAttachmentDirection>& InOutAttachedNeighborsAndDirections);
 
 	UFUNCTION(Category = "Data | Stability", BlueprintCallable)
 	int32 UpdatePendingStabilityData(int32 InMaxUpdates);
-	/*FORCEINLINE*/ void UpdatePendingStabilityData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, const FVector& InAttachmentDirection, EAxis::Type InAxis, float InAxisMul, float InAttachmentStrengthMul, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection, TArray<int32>& InOutAttachedNeighbors);
+	/*FORCEINLINE*/ void UpdatePendingStabilityData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, float InAttachmentStrengthMul, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection, TArray<FIntVector>& InOutAttachedOrInvalidNeighbors);
 
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
 	bool bHandleVoxelDataUpdatesTick;
@@ -279,6 +197,12 @@ public:
 
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<const class UATVoxelTypeData> FoundationVoxelTypeData;
+
+	UPROPERTY(Category = "Data | Attachment", EditAnywhere, BlueprintReadWrite)
+	FVoxelChunkPendingUpdates AttachmentUpdates;
+
+	UPROPERTY(Category = "Data | Stability", EditAnywhere, BlueprintReadWrite)
+	FVoxelChunkPendingUpdates StabilityUpdates;
 
 protected:
 	static void Static_OnISMInstanceIndicesUpdated(UInstancedStaticMeshComponent* InUpdatedComponent, TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData> InIndexUpdates);
@@ -303,21 +227,20 @@ protected:
 
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
 	int32 DebugVoxelCustomData_Stability;
-
-	UPROPERTY()
-	FVoxelChunkContainers Data;
-
-	UPROPERTY(Category = "Data | Attachment", EditAnywhere, BlueprintReadWrite)
-	FVoxelChunkPendingUpdates AttachmentUpdates;
-
-	UPROPERTY(Category = "Data | Stability", EditAnywhere, BlueprintReadWrite)
-	FVoxelChunkPendingUpdates StabilityUpdates;
 //~ End Voxel Data
 
 //~ Begin Debug
 public:
-
 	UFUNCTION(Category = "Debug", BlueprintNativeEvent, BlueprintCallable, meta = (DisplayName = "CollectDataForGameplayDebugger"))
 	void BP_CollectDataForGameplayDebugger(APlayerController* ForPlayerController, FVoxelChunkDebugData& InOutData) const;
+
+protected:
+	void HandleDebugInstancesAttachmentDirections();
+	void DebugInstanceAttachmentDirection(int32 InInstanceIndex);
+	TArray<int32> DebugInstancesAttachmentDirections_QueuedIndices;
+
+	void HandleDebugInstancesStabilityValues();
+	void DebugInstanceStabilityValue(int32 InInstanceIndex);
+	TArray<int32> DebugInstancesStablityValues_QueuedIndices;
 //~ End Debug
 };

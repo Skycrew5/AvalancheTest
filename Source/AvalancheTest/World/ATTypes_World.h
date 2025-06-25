@@ -19,6 +19,19 @@ enum class EATAttachmentDirection : uint8
 
 namespace EATAttachmentDirection_Utils
 {
+	static EATAttachmentDirection GetOpposite(EATAttachmentDirection InDirection)
+	{
+		switch (InDirection)
+		{
+			case EATAttachmentDirection::Front: return EATAttachmentDirection::Back;
+			case EATAttachmentDirection::Back: return EATAttachmentDirection::Front;
+			case EATAttachmentDirection::Right: return EATAttachmentDirection::Left;
+			case EATAttachmentDirection::Left: return EATAttachmentDirection::Right;
+			case EATAttachmentDirection::Top: return EATAttachmentDirection::Back;
+			case EATAttachmentDirection::Bottom: default: return EATAttachmentDirection::Top;
+		}
+	}
+
 	static FVector CreateVectorFromAttachmentDirections(const TSet<EATAttachmentDirection>& InDirectionsSet)
 	{
 		FVector OutVector = FVector::ZeroVector;
@@ -74,7 +87,7 @@ struct FVoxelInstanceData
 	int32 SMI_Index = INDEX_NONE;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	float Stability = 1.0f;
+	float Stability = 0.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TSet<EATAttachmentDirection> AttachmentDirections = TSet<EATAttachmentDirection>();
@@ -165,29 +178,29 @@ public:
 		}
 	}
 
-	void AddHeadTo(Type InDesiredElementsNum, TArraySetPair<Type>& InOutOther)
+	void AddHeadTo(int32 InDesiredElementsNum, TArraySetPair<Type>& InOutOther)
 	{
-		Type FirstIndex = 0;
-		Type LastIndex = FMath::Min(InDesiredElementsNum, Array.Num()) - 1;
+		int32 FirstIndex = 0;
+		int32 LastIndex = FMath::Min(InDesiredElementsNum, Array.Num()) - 1;
 
-		for (Type SampleIndex = FirstIndex; SampleIndex <= LastIndex; ++SampleIndex)
+		for (int32 SampleIndex = FirstIndex; SampleIndex <= LastIndex; ++SampleIndex)
 		{
 			InOutOther.Add(Array[SampleIndex]);
 		}
 	}
 
-	void AddTailTo(Type InDesiredElementsNum, TArraySetPair<Type>& InOutOther)
+	void AddTailTo(int32 InDesiredElementsNum, TArraySetPair<Type>& InOutOther)
 	{
-		Type FirstIndex = Array.Num() - 1;
-		Type LastIndex = Array.Num() - FMath::Min(InDesiredElementsNum, Array.Num());
+		int32 FirstIndex = Array.Num() - 1;
+		int32 LastIndex = Array.Num() - FMath::Min(InDesiredElementsNum, Array.Num());
 
-		for (Type SampleIndex = FirstIndex; SampleIndex >= LastIndex; --SampleIndex)
+		for (int32 SampleIndex = FirstIndex; SampleIndex >= LastIndex; --SampleIndex)
 		{
 			InOutOther.Add(Array[SampleIndex]);
 		}
 	}
 
-	Type Num() const { return Array.Num(); }
+	int32 Num() const { return Array.Num(); }
 	bool Contains(Type InItem) const { return Set.Contains(InItem); }
 	bool IsEmpty() const { return Array.IsEmpty(); }
 

@@ -102,6 +102,8 @@ bool UATVoxelISMC::SetVoxelAtPoint(const FIntVector& InPoint, const UATVoxelType
 	FVoxelInstanceData& NewInstanceData = LocalPoint_To_InstanceData_Map.Add(InPoint, InTypeData->BP_InitializeInstanceData(OwnerChunk, InPoint));
 
 	QueuePointForVisibilityUpdate(InPoint);
+	OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
+	OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
 	return true;
 }
 
@@ -132,6 +134,8 @@ bool UATVoxelISMC::RemoveVoxelAtPoint(const FIntVector& InPoint, const bool bInC
 		}
 		LocalPoint_To_InstanceData_Map.Remove(InPoint);
 		QueuePointForVisibilityUpdate(InPoint);
+		OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
+		OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
 		return true;
 	}
 	return false;
@@ -153,6 +157,11 @@ void UATVoxelISMC::RemoveAllVoxels()
 	TArray<FIntVector> AllPoints;
 	GetAllLocalPoints(AllPoints);
 	RemoveVoxelsAtPoints(AllPoints);
+
+	ensure(LocalPoint_To_InstanceData_Map.IsEmpty());
+	ensure(InstanceIndex_To_LocalPoint_Map.IsEmpty());
+
+	ClearInstances();
 }
 
 bool UATVoxelISMC::RelocateInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked)

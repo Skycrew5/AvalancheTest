@@ -88,17 +88,18 @@ public:
 	UFUNCTION(Category = "Data", BlueprintCallable)
 	void UpdateVoxelsVisibilityState();
 
-	UPROPERTY(Category = "Data", BlueprintReadOnly)
+	UPROPERTY(Transient)
 	TArray<FIntVector> FoundationLocalPoints;
+
 protected:
 
-	//UPROPERTY(Category = "Data", BlueprintReadOnly)
+	//UPROPERTY(Transient)
 	//TArray<FVoxelInstanceData> VoxelDataArray;
 
-	UPROPERTY(Category = "Data", BlueprintReadOnly)
+	UPROPERTY(Transient)
 	TMap<FIntVector, FVoxelInstanceData> LocalPoint_To_InstanceData_Map;
 
-	UPROPERTY(Category = "Data", BlueprintReadOnly)
+	UPROPERTY(Transient)
 	TMap<int32, FIntVector> InstanceIndex_To_LocalPoint_Map;
 	
 	TArraySetPair<FIntVector> QueuedVisibilityUpdatePoints;
