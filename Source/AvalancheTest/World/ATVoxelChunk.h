@@ -8,6 +8,8 @@
 
 #include "ATVoxelChunk.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBreakVoxelEventSignature, const FIntVector&, InPoint, const bool, bInForced);
+
 #if DEBUG_VOXELS
 	#pragma optimize("", off)
 #endif // DEBUG_VOXELS
@@ -154,17 +156,28 @@ public:
 	void RemoveAllVoxels();
 
 	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelAt, DeleteVoxelAt"))
-	bool BreakVoxelAtLocalPoint(const FIntVector& InPoint, const bool bInForced = false);
+	bool BreakVoxelAtLocalPoint(const FIntVector& InPoint, const bool bInForced = false, const bool bInNotify = false);
 
 	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelsAt, DeleteVoxelsAt"))
-	bool BreakVoxelsAtLocalPoints(const TArray<FIntVector>& InPoints, const bool bInForced = false);
+	bool BreakVoxelsAtLocalPoints(const TArray<FIntVector>& InPoints, const bool bInForced = false, const bool bInNotify = false);
 
 	UFUNCTION(Category = "Setters", BlueprintCallable)
 	void CreateFoundation();
+
+	UPROPERTY(Category = "Setters", BlueprintAssignable)
+	FBreakVoxelEventSignature OnBreakVoxelAtLocalPoint;
 //~ End Setters
 
 //~ Begin Voxel Data
 public:
+
+	struct FRecursiveThreadData
+	{
+		const TArray<EATAttachmentDirection>& DirectionsOrder;
+		TSet<FIntVector> ThisOrderUpdatedPoints;
+
+		FRecursiveThreadData(const TArray<EATAttachmentDirection>& InOrder) : DirectionsOrder(InOrder), ThisOrderUpdatedPoints({}) {}
+	};
 
 	UFUNCTION(Category = "Data | Attachment", BlueprintCallable)
 	void QueueFullUpdate();
@@ -175,14 +188,16 @@ public:
 	TArraySetPair<FIntVector> QueuedRecursiveStabilityUpdatePoints;
 
 	void UpdateStabilityRecursive(int32& InOutUpdatesLeft);
-	TSet<FIntVector> UpdateStabilityRecursive_ThisOrderUpdatedPoints;
 	TMap<FIntVector, float> UpdateStabilityRecursive_CachedPointStabilities;
 
-	float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None, uint8 InCurrentRecursionLevel = 0u);
+	float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None, uint8 InCurrentRecursionLevel = 0u);
 	//float UpdateStabilityRecursive_GetStabilityFromAllNeighbors_HandleCompound(const FIntVector& InOrigin, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None);
 	
 	//float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(TSet<FIntVector>& InOutCurrentSubChain, int32 InOutSubChainHash, const FIntVector& InTargetPoint, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None);
 	TMap<int32, float> UpdateStabilityRecursive_CachedSubchainStabilities;
+
+	void UpdateHealth(int32& InOutUpdatesLeft);
+	TArraySetPair<FIntVector> InDangerGroupHealthUpdatePoints;
 
 	UFUNCTION(Category = "Data | Attachment", BlueprintCallable)
 	int32 UpdatePendingAttachmentData(int32 InMaxUpdates);
@@ -238,8 +253,14 @@ protected:
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
 	bool bDebugInstancesStabilityValues;
 
+	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
+	bool bDebugInstancesHealthValues;
+
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
 	int32 DebugVoxelCustomData_Stability;
+
+	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
+	int32 DebugVoxelCustomData_Health;
 //~ End Voxel Data
 
 //~ Begin Debug
@@ -255,5 +276,9 @@ protected:
 	void HandleDebugInstancesStabilityValues();
 	void DebugInstanceStabilityValue(int32 InInstanceIndex);
 	TArray<int32> DebugInstancesStablityValues_QueuedIndices;
+
+	void HandleDebugInstancesHealthValues();
+	void DebugInstanceHealthValue(int32 InInstanceIndex);
+	TArray<int32> DebugInstancesHealthValues_QueuedIndices;
 //~ End Debug
 };

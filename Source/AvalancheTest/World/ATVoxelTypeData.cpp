@@ -9,7 +9,7 @@ UATVoxelTypeData::UATVoxelTypeData()
 	DisplayName = FText::FromString(TEXT("Unnamed Voxel Type"));
 
 	IsFoundation = false;
-	MaxHealth = 1.0f;
+	MaxHealth = 10.0f;
 }
 
 FVoxelInstanceData UATVoxelTypeData::BP_InitializeInstanceData_Implementation(AATVoxelChunk* InVoxelChunk, const FIntVector& InPoint) const

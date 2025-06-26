@@ -101,7 +101,7 @@ AATVoxelChunk::AATVoxelChunk()
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent"));
 	VoxelISMC = CreateDefaultSubobject<UATVoxelISMC>(TEXT("VoxelISMC"));
-	VoxelISMC->SetNumCustomDataFloats(3);
+	VoxelISMC->SetNumCustomDataFloats(4);
 	VoxelISMC->SetupAttachment(RootComponent);
 
 	bHandleISMCUpdatesTick = true;
@@ -120,6 +120,12 @@ AATVoxelChunk::AATVoxelChunk()
 
 	StabilityUpdatePropagationThreshold = 0.1f;
 	StabilityUpdatePropagationSkipProbability = 0.0f;
+
+	bDebugInstancesStabilityValues = true;
+	bDebugInstancesHealthValues = true;
+
+	DebugVoxelCustomData_Stability = 0;
+	DebugVoxelCustomData_Health = 3;
 }
 
 //~ Begin Initialize
@@ -175,6 +181,10 @@ void AATVoxelChunk::Tick(float InDeltaSeconds) // AActor
 	if (bDebugInstancesStabilityValues)
 	{
 		HandleDebugInstancesStabilityValues();
+	}
+	if (bDebugInstancesHealthValues)
+	{
+		HandleDebugInstancesHealthValues();
 	}
 }
 
@@ -363,30 +373,44 @@ void AATVoxelChunk::RemoveAllVoxels()
 	VoxelISMC->RemoveAllVoxels();
 }
 
-bool AATVoxelChunk::BreakVoxelAtLocalPoint(const FIntVector& InPoint, const bool bInForced)
+bool AATVoxelChunk::BreakVoxelAtLocalPoint(const FIntVector& InPoint, const bool bInForced, const bool bInNotify)
 {
 	if (bInForced)
 	{
-		return VoxelISMC->RemoveVoxelAtPoint(InPoint, false);
+		if (VoxelISMC->RemoveVoxelAtPoint(InPoint, false))
+		{
+			if (bInNotify)
+			{
+				OnBreakVoxelAtLocalPoint.Broadcast(InPoint, bInForced);
+			}
+			return true;
+		}
 	}
 	else
 	{
 		const FVoxelInstanceData& TargetData = VoxelISMC->GetVoxelInstanceDataAtPoint(InPoint, false);
 		if (TargetData.IsTypeDataValid() && !TargetData.TypeData->IsFoundation)
 		{
-			return VoxelISMC->RemoveVoxelAtPoint(InPoint);
+			if (VoxelISMC->RemoveVoxelAtPoint(InPoint))
+			{
+				if (bInNotify)
+				{
+					OnBreakVoxelAtLocalPoint.Broadcast(InPoint, bInForced);
+				}
+				return true;
+			}
 		}
-		return false;
 	}
+	return false;
 }
 
-bool AATVoxelChunk::BreakVoxelsAtLocalPoints(const TArray<FIntVector>& InPoints, const bool bInForced)
+bool AATVoxelChunk::BreakVoxelsAtLocalPoints(const TArray<FIntVector>& InPoints, const bool bInForced, const bool bInNotify)
 {
 	bool bAnyBroken = false;
 
 	for (const FIntVector& SamplePoint : InPoints)
 	{
-		bAnyBroken |= BreakVoxelAtLocalPoint(SamplePoint, bInForced);
+		bAnyBroken |= BreakVoxelAtLocalPoint(SamplePoint, bInForced, bInNotify);
 	}
 	return bAnyBroken;
 }
@@ -432,6 +456,7 @@ void AATVoxelChunk::HandleVoxelDataUpdatesTick(int32& InOutUpdatesLeft)
 	//InOutMaxUpdates -= UpdatePendingAttachmentData(InOutMaxUpdates);
 	//InOutMaxUpdates -= UpdatePendingStabilityData(InOutMaxUpdates);
 	UpdateStabilityRecursive(InOutUpdatesLeft);
+	UpdateHealth(InOutUpdatesLeft);
 }
 
 static TArray<EATAttachmentDirection> DirectionsOrder1 = { EATAttachmentDirection::Bottom, EATAttachmentDirection::Right, EATAttachmentDirection::Left, EATAttachmentDirection::Front, EATAttachmentDirection::Back, EATAttachmentDirection::Top };
@@ -442,7 +467,6 @@ static TArray<EATAttachmentDirection> DirectionsOrder5 = { EATAttachmentDirectio
 static TArray<EATAttachmentDirection> DirectionsOrder6 = { EATAttachmentDirection::Back, EATAttachmentDirection::Front, EATAttachmentDirection::Top, EATAttachmentDirection::Bottom, EATAttachmentDirection::Right, EATAttachmentDirection::Left };
 
 static TArray<TArray<EATAttachmentDirection>*> UsedDirectionsOrders = { &DirectionsOrder1, &DirectionsOrder2, &DirectionsOrder3, &DirectionsOrder4, &DirectionsOrder5, &DirectionsOrder6 };
-static TArray<EATAttachmentDirection> CurrentDirectionsOrder = DirectionsOrder1;
 
 static uint8 MaxRecursionLevel = 24u;
 
@@ -452,24 +476,27 @@ void AATVoxelChunk::UpdateStabilityRecursive(int32& InOutUpdatesLeft)
 	{
 		VoxelISMC->RegenerateCompoundData();
 	}*/
-	while (!QueuedRecursiveStabilityUpdatePoints.IsEmpty() && InOutUpdatesLeft > 0)
+
+	TArraySetPair<FIntVector> SelectedUpdatePoints;
+	QueuedRecursiveStabilityUpdatePoints.AddHeadTo(InOutUpdatesLeft, SelectedUpdatePoints, true);
+
+	ParallelFor(SelectedUpdatePoints.Num(), [&](int32 InIndex)
 	{
-		const FIntVector& SamplePoint = QueuedRecursiveStabilityUpdatePoints.Pop();
+		const FIntVector& SamplePoint = SelectedUpdatePoints.GetConstArray()[InIndex];
 		FVoxelInstanceData& SampleData = VoxelISMC->GetVoxelInstanceDataAtPoint(SamplePoint, false);
 
 		//TSet<FIntVector> DummySubChain;
 		//SampleData.Stability = UpdateStabilityRecursive_GetStabilityFromAllNeighbors(DummySubChain, 0, SamplePoint);
 		//UpdateStabilityRecursive_CachedSubchainStabilities.Empty();
-		
+
 		SampleData.Stability = 0.0f;
 
-		for (int32 SampleOrderIndex = 0; SampleOrderIndex < UsedDirectionsOrders.Num(); ++SampleOrderIndex)
+		for (uint8 SampleOrderIndex = 0; SampleOrderIndex < UsedDirectionsOrders.Num(); ++SampleOrderIndex)
 		{
 			if (SampleData.Stability < 1.0f)
 			{
-				CurrentDirectionsOrder = *UsedDirectionsOrders[SampleOrderIndex];
-				SampleData.Stability = FMath::Max(UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint), SampleData.Stability);
-				UpdateStabilityRecursive_ThisOrderUpdatedPoints.Empty();
+				FRecursiveThreadData ThreadData = FRecursiveThreadData(*UsedDirectionsOrders[SampleOrderIndex]);
+				SampleData.Stability = FMath::Max(UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, ThreadData), SampleData.Stability);
 			}
 			else
 			{
@@ -479,16 +506,25 @@ void AATVoxelChunk::UpdateStabilityRecursive(int32& InOutUpdatesLeft)
 		//UpdateStabilityRecursive_CachedSubchainStabilities.Empty();
 		//UpdateStabilityRecursive_CachedPointStabilities.Add(SamplePoint, SampleData.Stability);
 
+	});
+
+	for (const FIntVector& SamplePoint : SelectedUpdatePoints.GetConstArray())
+	{
+		FVoxelInstanceData& SampleData = VoxelISMC->GetVoxelInstanceDataAtPoint(SamplePoint, false);
 		if (bDebugInstancesStabilityValues && SampleData.HasMesh())
 		{
 			DebugInstancesStablityValues_QueuedIndices.Add(SampleData.SMI_Index);
 		}
-		InOutUpdatesLeft -= 1;
+		if (SampleData.Stability < 0.25f)
+		{
+			InDangerGroupHealthUpdatePoints.Add(SamplePoint);
+		}
 	}
+	InOutUpdatesLeft -= SelectedUpdatePoints.Num();
 	//UpdateStabilityRecursive_CachedPointStabilities.Empty();
 }
 
-float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, EATAttachmentDirection InNeighborDirection, uint8 InCurrentRecursionLevel)
+float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection, uint8 InCurrentRecursionLevel)
 {
 	++InCurrentRecursionLevel;
 
@@ -498,7 +534,7 @@ float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const
 	}
 	FIntVector SamplePoint = InTargetPoint + EATAttachmentDirection_Utils::IntOffsets[InNeighborDirection];
 
-	if (UpdateStabilityRecursive_ThisOrderUpdatedPoints.Contains(SamplePoint))
+	if (InThreadData.ThisOrderUpdatedPoints.Contains(SamplePoint))
 	{
 		return 0.0f;
 	}
@@ -511,27 +547,67 @@ float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const
 		}
 		else
 		{
-			UpdateStabilityRecursive_ThisOrderUpdatedPoints.Add(SamplePoint);
+			InThreadData.ThisOrderUpdatedPoints.Add(SamplePoint);
 			float AccumulatedStability = 0.0f;
 
-			AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[0], InCurrentRecursionLevel);
+			AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InThreadData, InThreadData.DirectionsOrder[0], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[1], InCurrentRecursionLevel);
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InThreadData, InThreadData.DirectionsOrder[1], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[2], InCurrentRecursionLevel);
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InThreadData, InThreadData.DirectionsOrder[2], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[3], InCurrentRecursionLevel);
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InThreadData, InThreadData.DirectionsOrder[3], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[4], InCurrentRecursionLevel);
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InThreadData, InThreadData.DirectionsOrder[4], InCurrentRecursionLevel);
 			if (AccumulatedStability < 1.0f)
-				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, CurrentDirectionsOrder[5], InCurrentRecursionLevel);
+				AccumulatedStability += UpdateStabilityRecursive_GetStabilityFromAllNeighbors(SamplePoint, InThreadData, InThreadData.DirectionsOrder[5], InCurrentRecursionLevel);
 
 			float OutStability = FMath::Min(AccumulatedStability * EATAttachmentDirection_Utils::AttachmentMuls[InNeighborDirection], 1.0f);
 			return OutStability;
 		}
 	}
-	UpdateStabilityRecursive_ThisOrderUpdatedPoints.Add(SamplePoint);
+	InThreadData.ThisOrderUpdatedPoints.Add(SamplePoint);
 	return 0.0f;
+}
+
+void AATVoxelChunk::UpdateHealth(int32& InOutUpdatesLeft)
+{
+	//TArraySetPair<FIntVector> SelectedUpdatePoints;
+	//InDangerGroupHealthUpdatePoints.AddHeadTo(InOutUpdatesLeft, SelectedUpdatePoints, true);
+
+	float DeltaTime = GetWorld()->DeltaTimeSeconds;
+
+	ParallelFor(InDangerGroupHealthUpdatePoints.Num(), [&](int32 InIndex)
+	{
+		const FIntVector& SamplePoint = InDangerGroupHealthUpdatePoints.GetConstArray()[InIndex];
+		FVoxelInstanceData& SampleData = VoxelISMC->GetVoxelInstanceDataAtPoint(SamplePoint, false);
+
+		//ensure(SampleData.Stability < 0.25f);
+
+		float HealthDrainMul = FMath::Square(FMath::Max(0.25f - SampleData.Stability, 0.1f) * 8.0f);
+		SampleData.Health -= HealthDrainMul * DeltaTime;
+	});
+
+	TArraySetPair<FIntVector> BrokenPoints;
+	for (const FIntVector& SamplePoint : InDangerGroupHealthUpdatePoints.GetConstArray())
+	{
+		FVoxelInstanceData& SampleData = VoxelISMC->GetVoxelInstanceDataAtPoint(SamplePoint, false);
+
+		if (SampleData.Health > 0.0f)
+		{
+			if (bDebugInstancesHealthValues && SampleData.HasMesh())
+			{
+				DebugInstancesHealthValues_QueuedIndices.Add(SampleData.SMI_Index);
+			}
+		}
+		else
+		{
+			BrokenPoints.Add(SamplePoint);
+			BreakVoxelAtLocalPoint(SamplePoint, true, true);
+		}
+	}
+	InDangerGroupHealthUpdatePoints.RemoveFromOther(BrokenPoints);
+	//InOutUpdatesLeft -= SelectedUpdatePoints.Num();
 }
 
 /*float AATVoxelChunk::UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, EATAttachmentDirection InNeighborDirection)
@@ -977,6 +1053,10 @@ void AATVoxelChunk::HandleInstanceIndicesUpdates(const TArrayView<const FInstanc
 			{
 				DebugInstancesStablityValues_QueuedIndices.Add(SampleUpdate.Index);
 			}
+			if (bDebugInstancesHealthValues)
+			{
+				DebugInstancesHealthValues_QueuedIndices.Add(SampleUpdate.Index);
+			}
 		}
 	}
 }
@@ -985,11 +1065,15 @@ void AATVoxelChunk::HandleInstanceIndicesUpdates(const TArrayView<const FInstanc
 //~ Begin Debug
 void AATVoxelChunk::HandleDebugInstancesAttachmentDirections()
 {
-	for (int32 SampleQueuedInstanceIndex : DebugInstancesAttachmentDirections_QueuedIndices)
+	if (!DebugInstancesAttachmentDirections_QueuedIndices.IsEmpty())
 	{
-		DebugInstanceAttachmentDirection(SampleQueuedInstanceIndex);
+		for (int32 SampleQueuedInstanceIndex : DebugInstancesAttachmentDirections_QueuedIndices)
+		{
+			DebugInstanceAttachmentDirection(SampleQueuedInstanceIndex);
+		}
+		DebugInstancesAttachmentDirections_QueuedIndices.Empty();
+		VoxelISMC->MarkRenderStateDirty();
 	}
-	DebugInstancesAttachmentDirections_QueuedIndices.Empty();
 }
 
 void AATVoxelChunk::DebugInstanceAttachmentDirection(int32 InInstanceIndex)
@@ -1009,11 +1093,15 @@ void AATVoxelChunk::DebugInstanceAttachmentDirection(int32 InInstanceIndex)
 
 void AATVoxelChunk::HandleDebugInstancesStabilityValues()
 {
-	for (int32 SampleQueuedInstanceIndex : DebugInstancesStablityValues_QueuedIndices)
+	if (!DebugInstancesStablityValues_QueuedIndices.IsEmpty())
 	{
-		DebugInstanceStabilityValue(SampleQueuedInstanceIndex);
+		for (int32 SampleQueuedInstanceIndex : DebugInstancesStablityValues_QueuedIndices)
+		{
+			DebugInstanceStabilityValue(SampleQueuedInstanceIndex);
+		}
+		DebugInstancesStablityValues_QueuedIndices.Empty();
+		VoxelISMC->MarkRenderStateDirty();
 	}
-	DebugInstancesStablityValues_QueuedIndices.Empty();
 }
 
 void AATVoxelChunk::DebugInstanceStabilityValue(int32 InInstanceIndex)
@@ -1022,6 +1110,28 @@ void AATVoxelChunk::DebugInstanceStabilityValue(int32 InInstanceIndex)
 	if (SampleData.HasMesh())
 	{
 		VoxelISMC->SetCustomDataValue(SampleData.SMI_Index, DebugVoxelCustomData_Stability, SampleData.Stability, false);
+	}
+}
+
+void AATVoxelChunk::HandleDebugInstancesHealthValues()
+{
+	if (!DebugInstancesHealthValues_QueuedIndices.IsEmpty())
+	{
+		for (int32 SampleQueuedInstanceIndex : DebugInstancesHealthValues_QueuedIndices)
+		{
+			DebugInstanceHealthValue(SampleQueuedInstanceIndex);
+		}
+		DebugInstancesHealthValues_QueuedIndices.Empty();
+		VoxelISMC->MarkRenderStateDirty();
+	}
+}
+
+void AATVoxelChunk::DebugInstanceHealthValue(int32 InInstanceIndex)
+{
+	const FVoxelInstanceData& SampleData = VoxelISMC->GetVoxelInstanceDataAtPoint(VoxelISMC->GetVoxelInstancePointAtIndex(InInstanceIndex, false), false);
+	if (SampleData.HasMesh())
+	{
+		VoxelISMC->SetCustomDataValue(SampleData.SMI_Index, DebugVoxelCustomData_Health, SampleData.Health, false);
 	}
 }
 

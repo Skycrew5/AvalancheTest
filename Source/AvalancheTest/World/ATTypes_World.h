@@ -98,7 +98,7 @@ struct FVoxelInstanceData
 	TObjectPtr<const class UATVoxelTypeData> TypeData = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Health = 1.0f;
+	float Health = 10.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	int32 SMI_Index = INDEX_NONE;
@@ -217,7 +217,7 @@ public:
 		}
 	}
 
-	void AddHeadTo(int32 InDesiredElementsNum, TArraySetPair<ElementType>& InOutOther)
+	void AddHeadTo(int32 InDesiredElementsNum, TArraySetPair<ElementType>& InOutOther, const bool bInPopElements = false)
 	{
 		int32 FirstIndex = 0;
 		int32 LastIndex = FMath::Min(InDesiredElementsNum, Array.Num()) - 1;
@@ -226,9 +226,13 @@ public:
 		{
 			InOutOther.Add(Array[SampleIndex]);
 		}
+		if (bInPopElements)
+		{
+			RemoveFromOther(InOutOther);
+		}
 	}
 
-	void AddTailTo(int32 InDesiredElementsNum, TArraySetPair<ElementType>& InOutOther)
+	void AddTailTo(int32 InDesiredElementsNum, TArraySetPair<ElementType>& InOutOther, const bool bInPopElements = false)
 	{
 		int32 FirstIndex = Array.Num() - 1;
 		int32 LastIndex = Array.Num() - FMath::Min(InDesiredElementsNum, Array.Num());
@@ -236,6 +240,10 @@ public:
 		for (int32 SampleIndex = FirstIndex; SampleIndex >= LastIndex; --SampleIndex)
 		{
 			InOutOther.Add(Array[SampleIndex]);
+		}
+		if (bInPopElements)
+		{
+			RemoveFromOther(InOutOther);
 		}
 	}
 
