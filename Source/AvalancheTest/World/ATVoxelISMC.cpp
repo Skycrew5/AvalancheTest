@@ -202,6 +202,48 @@ void UATVoxelISMC::RemoveAllVoxels()
 	ClearInstances();
 }
 
+bool UATVoxelISMC::BreakVoxelAtPoint(const FIntVector& InPoint, const bool bInForced, const bool bInNotify)
+{
+	if (bInForced)
+	{
+		if (RemoveVoxelAtPoint(InPoint, false))
+		{
+			if (bInNotify)
+			{
+				OnBreakVoxelAtLocalPoint.Broadcast(InPoint, bInForced);
+			}
+			return true;
+		}
+	}
+	else
+	{
+		const FVoxelInstanceData& TargetData = GetVoxelInstanceDataAtPoint(InPoint, false);
+		if (TargetData.IsTypeDataValid() && !TargetData.TypeData->IsFoundation)
+		{
+			if (RemoveVoxelAtPoint(InPoint))
+			{
+				if (bInNotify)
+				{
+					OnBreakVoxelAtLocalPoint.Broadcast(InPoint, bInForced);
+				}
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool UATVoxelISMC::BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const bool bInForced, const bool bInNotify)
+{
+	bool bAnyBroken = false;
+
+	for (const FIntVector& SamplePoint : InPoints)
+	{
+		bAnyBroken |= BreakVoxelAtPoint(SamplePoint, bInForced, bInNotify);
+	}
+	return bAnyBroken;
+}
+
 bool UATVoxelISMC::RelocateInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked)
 {
 	if (!InstanceIndex_To_LocalPoint_Map.Contains(InPrevIndex))

@@ -7,7 +7,6 @@
 #include "Framework/ScWPlayerController.h"
 
 #include "World/ATVoxelChunk.h"
-#include "World/ScWTypes_World.h"
 
 #include "DrawDebugHelpers.h"
 

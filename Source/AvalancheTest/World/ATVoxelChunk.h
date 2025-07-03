@@ -4,78 +4,29 @@
 
 #include "AvalancheTest.h"
 
+#include "World/ATVoxelNode.h"
 #include "World/ATTypes_World.h"
 
 #include "ATVoxelChunk.generated.h"
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBreakVoxelEventSignature, const FIntVector&, InPoint, const bool, bInForced);
-
-#if DEBUG_VOXELS
-	#pragma optimize("", off)
-#endif // DEBUG_VOXELS
-
-USTRUCT(BlueprintType)
-struct FVoxelChunkPendingUpdates
-{
-	GENERATED_BODY()
-
-private:
-
-	TArraySetPair<FIntVector> PendingPoints;
-	TArraySetPair<FIntVector> ThisTickSelectedPoints;
-	TArraySetPair<FIntVector> ThisTickAlreadyUpdatedPoints;
-	TArraySetPair<FIntVector> NextTickNewPendingIndices;
-
-	UPROPERTY()
-	bool bIsInsideUpdateSequence;
-
-public:
-
-	const TArray<FIntVector>& GetPendingPointsConstArray() const { return PendingPoints.GetConstArray(); }
-	const TArray<FIntVector>& GetThisTickSelectedPointsConstArray() const { return ThisTickSelectedPoints.GetConstArray(); }
-
-	UPROPERTY()
-	TObjectPtr<class UATVoxelISMC> TargetISMC;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 DebugVoxelCustomData_ThisTickSelected = 1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bDebugMarkThisTickSelectedIndices = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bDebugDeMarkThisTickSelectedIndices = true;
-
-	void QueuePointIfRelevant(const FIntVector& InPoint);
-	void MarkPointAsUpdatedThisTick(const FIntVector& InPoint);
-	bool PrepareThisTickSelectedPoints(int32 InDesiredUpdatesNum);
-	bool IsInstanceWaitingToUpdateThisTick(const FIntVector& InPoint) const;
-	void ResolveThisTickSelectedPoints();
-	int32 ResolveThisTickAlreadyUpdatedPoints();
-};
-
-#if DEBUG_VOXELS
-	#pragma optimize("", on)
-#endif // DEBUG_VOXELS
 
 /**
  * 
  */
 UCLASS(Abstract, meta = (DisplayName = "[AT] Voxel Chunk"))
-class AVALANCHETEST_API AATVoxelChunk : public AActor
+class AVALANCHETEST_API AATVoxelChunk : public AATVoxelNode
 {
 	GENERATED_BODY()
 	
 public:
 
-	AATVoxelChunk();
+	AATVoxelChunk(const FObjectInitializer& InObjectInitializer = FObjectInitializer::Get());
 	
 //~ Begin Initialize
 protected:
 	virtual void PostInitializeComponents() override; // AActor
 	virtual void OnConstruction(const FTransform& InTransform) override; // AActor
 	virtual void BeginPlay() override; // AActor
-	virtual void Tick(float InDeltaSeconds)  override; // AActor
+	virtual void Tick(float InDeltaSeconds) override; // AActor
 	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // AActor
 
 	// Called both in editor (upon creation and when something has changed) and in game on BeginPlay()
@@ -83,21 +34,37 @@ protected:
 	void BP_CommonInitChunk();
 //~ End Initialize
 	
-//~ Begin Components
+//~ Begin Parent Tree
 public:
+	virtual void InitFromParentTree(class AATVoxelTree* InTree, const FIntVector& InInsideParentLocalPoint) override; // AATVoxelNode
+//~ End Parent Tree
+	
+//~ Begin Voxel Bounds
+protected:
+	virtual FIntVector GetNodeSizeInVoxels() const override; // AATVoxelNode
+//~ End Voxel Bounds
 
-	UFUNCTION(Category = "Components", BlueprintCallable, meta = (KeyWords = "GetInstanced, GetVoxelInstanced"))
+//~ Begin Voxel Components
+public:
+	virtual class UATVoxelISMC* GetVoxelComponentAtPoint(const FIntVector& InThisNodeScopePoint) const override; // AATVoxelNode
+
+	UFUNCTION(Category = "Voxel Components", BlueprintCallable, meta = (KeyWords = "GetInstanced, GetVoxelInstanced"))
 	class UATVoxelISMC* GetVoxelISMC() const { return VoxelISMC; }
 
 protected:
 	void HandleISMCUpdatesTick(int32& InOutMaxUpdates);
 
-	UPROPERTY(Category = "Components", EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Voxel Components", EditAnywhere, BlueprintReadOnly)
 	bool bHandleISMCUpdatesTick;
 
-	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Voxel Components", VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<class UATVoxelISMC> VoxelISMC;
 //~ End Components
+
+//~ Begin Voxel Chunks
+public:
+	virtual class AATVoxelChunk* GetVoxelChunkAtPoint(const FIntVector& InThisNodeScopePoint) const override { return const_cast<AATVoxelChunk*>(this); } // AATVoxelNode
+//~ End Voxel Chunks
 
 //~ Begin Locations
 public:
@@ -120,52 +87,18 @@ public:
 	UFUNCTION(Category = "Getters", BlueprintCallable)
 	FVector GetVoxelCenterWorldLocation(const FIntVector& InPoint) const;
 //~ End Locations
-
-//~ Begin Getters
-public:
-
-	UFUNCTION(Category = "Getters", BlueprintCallable)
-	const FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint) const;
-
-	UFUNCTION(Category = "Getters", BlueprintCallable)
-	bool HasVoxelAtPoint(const FIntVector& InPoint) const;
-
-	UFUNCTION(Category = "Getters", BlueprintCallable)
-	int32 GetVoxelNeighborsNumAtLocalPoint(const FIntVector& InPoint) const;
-
-	UFUNCTION(Category = "Getters", BlueprintCallable)
-	bool IsVoxelAtPointFullyClosed(const FIntVector& InPoint) const;
-
-	UFUNCTION(Category = "Getters", BlueprintCallable)
-	void GetAllPointsInRadius(const FIntVector& InCenterPoint, int32 InRadius, TArray<FIntVector>& OutPoints) const;
-//~ End Getters
 	
 //~ Begin Setters
 public:
 
-	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "AddVoxelAt, PlaceVoxelAt"))
-	bool SetVoxelAtLocalPoint(const FIntVector& InPoint, const class UATVoxelTypeData* InTypeData, const bool bInForced = false);
-
-	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "AddVoxelsAt, PlaceVoxelsAt"))
-	bool SetVoxelsAtLocalPoints(const TArray<FIntVector>& InPoints, const class UATVoxelTypeData* InTypeData, const bool bInForced = false);
-
 	UFUNCTION(Category = "Setters", BlueprintCallable)
-	void FillWithVoxels(const UATVoxelTypeData* InTypeData);
+	void FillWithVoxels(const UATVoxelTypeData* InTypeData, const bool bInForced = false);
 
 	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "ClearAll, BreakAllVoxels"))
 	void RemoveAllVoxels();
 
-	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelAt, DeleteVoxelAt"))
-	bool BreakVoxelAtLocalPoint(const FIntVector& InPoint, const bool bInForced = false, const bool bInNotify = false);
-
-	UFUNCTION(Category = "Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelsAt, DeleteVoxelsAt"))
-	bool BreakVoxelsAtLocalPoints(const TArray<FIntVector>& InPoints, const bool bInForced = false, const bool bInNotify = false);
-
 	UFUNCTION(Category = "Setters", BlueprintCallable)
 	void CreateFoundation();
-
-	UPROPERTY(Category = "Setters", BlueprintAssignable)
-	FBreakVoxelEventSignature OnBreakVoxelAtLocalPoint;
 //~ End Setters
 
 //~ Begin Voxel Data
@@ -173,10 +106,32 @@ public:
 
 	struct FRecursiveThreadData
 	{
-		const TArray<EATAttachmentDirection>& DirectionsOrder;
+		const TArray<EATAttachmentDirection>* DirectionsOrderPtr;
 		TSet<FIntVector> ThisOrderUpdatedPoints;
 
-		FRecursiveThreadData(const TArray<EATAttachmentDirection>& InOrder) : DirectionsOrder(InOrder), ThisOrderUpdatedPoints({}) {}
+		FRecursiveThreadData(const TArray<EATAttachmentDirection>& InOrder)
+			: DirectionsOrderPtr(&InOrder), ThisOrderUpdatedPoints({}) {}
+	};
+
+	struct FRecursivePointCache
+	{
+		float Stability;
+		TSet<FIntVector> FinalUpdatedPoints;
+
+		bool Intersects(const TSet<FIntVector>& InOther) const
+		{
+			const TSet<FIntVector>& SmallerSet = (FinalUpdatedPoints.Num() < InOther.Num()) ? FinalUpdatedPoints : InOther;
+			const TSet<FIntVector>& LargerSet = (FinalUpdatedPoints.Num() < InOther.Num()) ? InOther : FinalUpdatedPoints;
+
+			for (const FIntVector& SampleItem : SmallerSet)
+			{
+				if (LargerSet.Contains(SampleItem))
+				{
+					return true;
+				}
+			}
+			return false;
+		}
 	};
 
 	UFUNCTION(Category = "Data | Attachment", BlueprintCallable)
@@ -184,11 +139,11 @@ public:
 
 	void HandleVoxelDataUpdatesTick(int32& InOutMaxUpdates);
 
-	void QueueRecursiveStabilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
+	void QueueRecursiveStabilityUpdate(const FIntVector& InChunkLocalPoint, const bool bInQueueNeighborsToo = true);
 	TArraySetPair<FIntVector> QueuedRecursiveStabilityUpdatePoints;
 
 	void UpdateStabilityRecursive(int32& InOutUpdatesLeft);
-	TMap<FIntVector, float> UpdateStabilityRecursive_CachedPointStabilities;
+	TMap<FIntVector, FRecursivePointCache> UpdateStabilityRecursive_PointsCache;
 
 	float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None, uint8 InCurrentRecursionLevel = 0u);
 	//float UpdateStabilityRecursive_GetStabilityFromAllNeighbors_HandleCompound(const FIntVector& InOrigin, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None);
@@ -199,23 +154,17 @@ public:
 	void UpdateHealth(int32& InOutUpdatesLeft);
 	TArraySetPair<FIntVector> InDangerGroupHealthUpdatePoints;
 
-	UFUNCTION(Category = "Data | Attachment", BlueprintCallable)
-	int32 UpdatePendingAttachmentData(int32 InMaxUpdates);
-	/*FORCEINLINE*/ void UpdatePendingAttachmentData_UpdateFromAllNeighbors(const FIntVector& InTargetPoint, TMap<FIntVector, EATAttachmentDirection>& InOutAttachedNeighborsAndDirections);
-	/*FORCEINLINE*/ void UpdatePendingAttachmentData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection, TMap<FIntVector, EATAttachmentDirection>& InOutAttachedNeighborsAndDirections);
+	//UFUNCTION(Category = "Data | Attachment", BlueprintCallable)
+	//int32 UpdatePendingAttachmentData(int32 InMaxUpdates);
+	///*FORCEINLINE*/ void UpdatePendingAttachmentData_UpdateFromAllNeighbors(const FIntVector& InTargetPoint, TMap<FIntVector, EATAttachmentDirection>& InOutAttachedNeighborsAndDirections);
+	///*FORCEINLINE*/ void UpdatePendingAttachmentData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection, TMap<FIntVector, EATAttachmentDirection>& InOutAttachedNeighborsAndDirections);
 
-	UFUNCTION(Category = "Data | Stability", BlueprintCallable)
-	int32 UpdatePendingStabilityData(int32 InMaxUpdates);
-	/*FORCEINLINE*/ void UpdatePendingStabilityData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, float InAttachmentStrengthMul, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection, TArray<FIntVector>& InOutAttachedOrInvalidNeighbors);
+	//UFUNCTION(Category = "Data | Stability", BlueprintCallable)
+	//int32 UpdatePendingStabilityData(int32 InMaxUpdates);
+	///*FORCEINLINE*/ void UpdatePendingStabilityData_UpdateFromNeighbor(const FIntVector& InTargetPoint, const FIntVector& InNeighborOffset, float InAttachmentStrengthMul, EATAttachmentDirection ToTargetDirection, EATAttachmentDirection ToNeighborDirection, TArray<FIntVector>& InOutAttachedOrInvalidNeighbors);
 
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
 	bool bHandleVoxelDataUpdatesTick;
-
-	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
-	int32 ChunkSize;
-
-	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
-	float VoxelBaseSize;
 
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadOnly)
 	bool bIsOnFoundation;
@@ -266,7 +215,7 @@ protected:
 //~ Begin Debug
 public:
 	UFUNCTION(Category = "Debug", BlueprintNativeEvent, BlueprintCallable, meta = (DisplayName = "CollectDataForGameplayDebugger"))
-	void BP_CollectDataForGameplayDebugger(APlayerController* ForPlayerController, FVoxelChunkDebugData& InOutData) const;
+	void BP_CollectDataForGameplayDebugger(APlayerController* ForPlayerController, struct FVoxelChunkDebugData& InOutData) const;
 
 protected:
 	void HandleDebugInstancesAttachmentDirections();

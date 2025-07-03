@@ -8,6 +8,8 @@
 
 #include "ATVoxelISMC.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBreakVoxelEventSignature, const FIntVector&, InPoint, const bool, bInForced);
+
 /**
  *
  */
@@ -85,6 +87,12 @@ public:
 	UFUNCTION(Category = "Setters", BlueprintCallable)
 	void RemoveAllVoxels();
 
+	UFUNCTION(Category = "Setters", BlueprintCallable)
+	bool BreakVoxelAtPoint(const FIntVector& InPoint, const bool bInForced = false, const bool bInNotify = false);
+
+	UFUNCTION(Category = "Setters", BlueprintCallable)
+	bool BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const bool bInForced = false, const bool bInNotify = false);
+
 	bool RelocateInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked = true);
 
 	UFUNCTION(Category = "Setters | Compounds", BlueprintCallable)
@@ -95,6 +103,9 @@ public:
 
 protected:
 	int32 CalcMaxFittingCompoundSizeAt(const FIntVector& InOrigin);
+
+	UPROPERTY(Category = "Setters", BlueprintAssignable)
+	FBreakVoxelEventSignature OnBreakVoxelAtLocalPoint;
 //~ End Setters
 	
 //~ Begin Data

@@ -2,7 +2,16 @@
 
 #include "World/ATTypes_World.h"
 
+#include "World/ATVoxelISMC.h"
+#include "World/ATVoxelChunk.h"
+
+#if DEBUG_VOXELS
+	#pragma optimize("", off)
+#endif // DEBUG_VOXELS
+
 const FVoxelInstanceData FVoxelInstanceData::Invalid = FVoxelInstanceData();
+FVoxelInstanceData FVoxelInstanceData::Invalid_NonConst = FVoxelInstanceData();
+
 const FVoxelCompoundData FVoxelCompoundData::Invalid = FVoxelCompoundData();
 
 void FVoxelCompoundData::GetAllPoints(TArray<FIntVector>& OutPoints) const
@@ -84,3 +93,88 @@ void FVoxelCompoundData::GetPointsAtSide(EATAttachmentDirection InSide, TArray<F
 		}
 	}
 }
+
+void FVoxelChunkPendingUpdates::QueuePointIfRelevant(const FIntVector& InPoint)
+{
+	if (bIsInsideUpdateSequence)
+	{
+		if (IsInstanceWaitingToUpdateThisTick(InPoint))
+		{
+			// Index is going to be updated soon anyway - no need to queue it
+		}
+		else
+		{
+			NextTickNewPendingIndices.Add(InPoint);
+		}
+	}
+	else
+	{
+		PendingPoints.Add(InPoint);
+	}
+}
+
+void FVoxelChunkPendingUpdates::MarkPointAsUpdatedThisTick(const FIntVector& InPoint)
+{
+	ensure(!ThisTickAlreadyUpdatedPoints.Contains(InPoint));
+	ThisTickAlreadyUpdatedPoints.Add(InPoint);
+}
+
+bool FVoxelChunkPendingUpdates::PrepareThisTickSelectedPoints(int32 InDesiredUpdatesNum)
+{
+	if (bDebugDeMarkThisTickSelectedIndices && !ThisTickSelectedPoints.IsEmpty())
+	{
+		for (const FIntVector& SamplePoint : ThisTickSelectedPoints.GetConstArray())
+		{
+			const FVoxelInstanceData& SampleData = TargetISMC->GetVoxelInstanceDataAtPoint(SamplePoint, false);
+			if (SampleData.HasMesh())
+			{
+				TargetISMC->SetCustomDataValue(SampleData.SMI_Index, DebugVoxelCustomData_ThisTickSelected, 0.0f, false);
+			}
+		}
+		TargetISMC->MarkRenderStateDirty();
+	}
+	int32 UpdatesNum = (TargetISMC->GetOwnerChunk()->MaxUpdatesPerSecond > 0) ? FMath::Min(InDesiredUpdatesNum, PendingPoints.Num()) : PendingPoints.Num();
+
+	ThisTickSelectedPoints.Empty(UpdatesNum);
+	PendingPoints.AddHeadTo(UpdatesNum, ThisTickSelectedPoints);
+
+	bIsInsideUpdateSequence = !ThisTickSelectedPoints.IsEmpty();
+	return bIsInsideUpdateSequence;
+}
+
+bool FVoxelChunkPendingUpdates::IsInstanceWaitingToUpdateThisTick(const FIntVector& InPoint) const
+{
+	return ThisTickSelectedPoints.Contains(InPoint) && !ThisTickAlreadyUpdatedPoints.Contains(InPoint);
+}
+
+void FVoxelChunkPendingUpdates::ResolveThisTickSelectedPoints()
+{
+	if (bDebugMarkThisTickSelectedIndices && !ThisTickSelectedPoints.IsEmpty())
+	{
+		for (const FIntVector& SamplePoint : ThisTickSelectedPoints.GetConstArray())
+		{
+			const FVoxelInstanceData& SampleData = TargetISMC->GetVoxelInstanceDataAtPoint(SamplePoint, false);
+			if (SampleData.HasMesh())
+			{
+				TargetISMC->SetCustomDataValue(SampleData.SMI_Index, DebugVoxelCustomData_ThisTickSelected, 1.0f, false);
+			}
+		}
+		TargetISMC->MarkRenderStateDirty();
+	}
+	PendingPoints.RemoveFromOther(ThisTickSelectedPoints);
+	PendingPoints.AddFromOther(NextTickNewPendingIndices);
+
+	NextTickNewPendingIndices.Empty();
+	bIsInsideUpdateSequence = false;
+}
+
+int32 FVoxelChunkPendingUpdates::ResolveThisTickAlreadyUpdatedPoints()
+{
+	int32 OutPointsNum = ThisTickAlreadyUpdatedPoints.Num();
+	ThisTickAlreadyUpdatedPoints.Empty();
+	return OutPointsNum;
+}
+
+#if DEBUG_VOXELS
+	#pragma optimize("", on)
+#endif // DEBUG_VOXELS

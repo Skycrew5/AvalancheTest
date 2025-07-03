@@ -4,7 +4,7 @@
 
 #include "AvalancheTest.h"
 
-#include "Characters/ScWCharacter.h"
+#include "Gameplay/Characters/ScWCharacter.h"
 
 #include "ATCharacter.generated.h"
 

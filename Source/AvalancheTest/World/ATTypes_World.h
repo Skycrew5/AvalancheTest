@@ -118,6 +118,7 @@ struct FVoxelInstanceData
 		: TypeData(InTypeData), Health(InHealth) {}
 
 	static const FVoxelInstanceData Invalid;
+	static FVoxelInstanceData Invalid_NonConst;
 };
 
 USTRUCT(BlueprintType)
@@ -265,10 +266,6 @@ public:
 	}
 };
 
-#if DEBUG_VOXELS
-	#pragma optimize("", on)
-#endif // DEBUG_VOXELS
-
 USTRUCT(BlueprintType)
 struct FVoxelChunkDebugData_Entry
 {
@@ -307,13 +304,13 @@ struct FVoxelChunkDebugData
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTransform ChunkHighlightTransform;
+	FTransform ChunkHighlightTransform = FTransform();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FString Label;
+	FString Label = FString();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FColor LabelColor;
+	FColor LabelColor = FColor::White;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FVoxelChunkDebugData_Entry> CommonEntries;
@@ -325,13 +322,13 @@ struct FVoxelChunkDebugData
 	TArray<FVoxelChunkDebugData_Entry> StabilityEntries;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FString InstanceLabel;
+	FString InstanceLabel = FString();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TArray<FVoxelChunkDebugData_Entry> InstanceEntries;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FTransform InstanceHighlightTransform;
+	FTransform InstanceHighlightTransform = FTransform();
 
 	void Reset()
 	{
@@ -348,3 +345,47 @@ struct FVoxelChunkDebugData
 		InstanceHighlightTransform = FTransform();
 	}
 };
+
+USTRUCT(BlueprintType)
+struct FVoxelChunkPendingUpdates
+{
+	GENERATED_BODY()
+
+private:
+
+	TArraySetPair<FIntVector> PendingPoints;
+	TArraySetPair<FIntVector> ThisTickSelectedPoints;
+	TArraySetPair<FIntVector> ThisTickAlreadyUpdatedPoints;
+	TArraySetPair<FIntVector> NextTickNewPendingIndices;
+
+	UPROPERTY()
+	bool bIsInsideUpdateSequence;
+
+public:
+
+	const TArray<FIntVector>& GetPendingPointsConstArray() const { return PendingPoints.GetConstArray(); }
+	const TArray<FIntVector>& GetThisTickSelectedPointsConstArray() const { return ThisTickSelectedPoints.GetConstArray(); }
+
+	UPROPERTY()
+	TObjectPtr<class UATVoxelISMC> TargetISMC;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 DebugVoxelCustomData_ThisTickSelected = 1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bDebugMarkThisTickSelectedIndices = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bDebugDeMarkThisTickSelectedIndices = true;
+
+	void QueuePointIfRelevant(const FIntVector& InPoint);
+	void MarkPointAsUpdatedThisTick(const FIntVector& InPoint);
+	bool PrepareThisTickSelectedPoints(int32 InDesiredUpdatesNum);
+	bool IsInstanceWaitingToUpdateThisTick(const FIntVector& InPoint) const;
+	void ResolveThisTickSelectedPoints();
+	int32 ResolveThisTickAlreadyUpdatedPoints();
+};
+
+#if DEBUG_VOXELS
+	#pragma optimize("", on)
+#endif // DEBUG_VOXELS
