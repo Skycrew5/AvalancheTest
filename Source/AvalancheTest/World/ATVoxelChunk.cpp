@@ -76,12 +76,12 @@ void AATVoxelChunk::BP_InitChunk_Implementation(AATVoxelTree* InOwnerTree, const
 }
 //~ End Initialize
 
-//~ Begin Components
+//~ Begin Voxel Components
 UATVoxelISMC* AATVoxelChunk::GetVoxelComponentAtPoint(const FIntVector& InPoint) const
 {
 	return VoxelComponent;
 }
-//~ End Components
+//~ End Voxel Components
 
 //~ Begin Voxel Getters
 FVector AATVoxelChunk::GetChunkCenterWorldLocation() const

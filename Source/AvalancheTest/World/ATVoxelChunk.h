@@ -32,18 +32,42 @@ public:
 	void BP_InitChunk(class AATVoxelTree* InOwnerTree, const FIntVector& InChunkCoords);
 //~ End Initialize
 	
-//~ Begin Components
+//~ Begin Voxel Tree
 public:
 
-	UFUNCTION(Category = "Components", BlueprintCallable, meta = (KeyWords = "GetInstancedStaticMesh, GetVoxelInstancedStaticMesh"))
+	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
+	class AATVoxelTree* GetOwnerTree() const { return OwnerTree; }
+
+	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
+	FIntVector GetChunkCoords() const { return ChunkCoords; }
+
+	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
+	int32 GetChunkSize() const;
+
+	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
+	float GetVoxelSize() const;
+
+protected:
+
+	UPROPERTY(Category = "Voxel Tree", EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<class AATVoxelTree> OwnerTree;
+
+	UPROPERTY(Category = "Voxel Tree", BlueprintReadOnly)
+	FIntVector ChunkCoords;
+//~ End Voxel Tree
+
+//~ Begin Voxel Components
+public:
+
+	UFUNCTION(Category = "Voxel Components", BlueprintCallable, meta = (KeyWords = "GetInstancedStaticMesh, GetVoxelInstancedStaticMesh"))
 	class UATVoxelISMC* GetVoxelComponentAtPoint(const FIntVector& InChunkPoint) const;
 	
 protected:
 	void HandleISMCUpdatesTick(int32& InOutMaxUpdates);
 	
-	UPROPERTY(Category = "Components", VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Voxel Components", VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<class UATVoxelISMC> VoxelComponent;
-//~ End Components
+//~ End Voxel Components
 
 //~ Begin Voxel Getters
 public:
@@ -72,28 +96,12 @@ public:
 public:
 	void HandleUpdates(int32& InOutUpdatesNum);
 
-	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
-	class AATVoxelTree* GetOwnerTree() const { return OwnerTree; }
-
-	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
-	FIntVector GetChunkCoords() const { return ChunkCoords; }
-
-	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
-	int32 GetChunkSize() const;
-
-	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
-	float GetVoxelSize() const;
-
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	bool bEnableVoxelComponentsUpdatesTick;
 
 protected:
 
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<class AATVoxelTree> OwnerTree;
-
-	UPROPERTY(Category = "Voxel Data", BlueprintReadOnly)
-	FIntVector ChunkCoords;
+	
 //~ End Voxel Data
 
 //~ Begin Debug

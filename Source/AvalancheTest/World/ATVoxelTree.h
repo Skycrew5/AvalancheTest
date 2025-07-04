@@ -4,6 +4,8 @@
 
 #include "AvalancheTest.h"
 
+#include "ScWTypes_Containers.h"
+
 #include "World/ATTypes_World.h"
 
 #include "ATVoxelTree.generated.h"
@@ -69,19 +71,19 @@ protected:
 public:
 
 	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
-	bool HasVoxelInstanceDataAtPoint(const FIntVector& InPoint) const { return Point_To_VoxelInstanceData_Map.Contains(InPoint); }
+	bool HasVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
 	UFUNCTION(Category = "Voxel Getters", BlueprintCallable, meta = (KeyWords = "GetInstanceData"))
-	struct FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked = true) const;
+	struct FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked = true, const bool bInIgnoreQueued = false) const;
 
 	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
-	int32 GetVoxelNeighborsNumAtPoint(const FIntVector& InPoint) const;
+	int32 GetVoxelNeighborsNumAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
 	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
 	void GetAllVoxelPointsInRadius(const FIntVector& InCenterPoint, int32 InRadius, TArray<FIntVector>& OutPoints) const;
 
 	UFUNCTION(Category = "Voxel Getters | Break", BlueprintCallable)
-	bool CanBreakVoxelAtPoint(const FIntVector& InPoint) const;
+	bool CanBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
 	UFUNCTION(Category = "Voxel Chunks | Bounds", BlueprintCallable)
 	const FIntVector& GetBoundsSize() const { return BoundsSize; }
@@ -124,6 +126,7 @@ public:
 public:
 
 protected:
+	void ApplyQueued_Point_To_VoxelInstanceData_Map();
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	bool bEnableVoxelDataUpdatesTick;
@@ -133,6 +136,9 @@ protected:
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<const class UATVoxelTypeData> FoundationVoxelTypeData;
+
+	UPROPERTY(Transient)
+	TMap<FIntVector, FVoxelInstanceData> Queued_Point_To_VoxelInstanceData_Map;
 
 	UPROPERTY(Transient)
 	TMap<FIntVector, FVoxelInstanceData> Point_To_VoxelInstanceData_Map;
@@ -158,6 +164,7 @@ protected:
 
 	struct FRecursivePointCache
 	{
+		bool bIsThreadSafe;
 		float Stability;
 		TSet<FIntVector> FinalUpdatedPoints;
 
@@ -179,7 +186,7 @@ protected:
 
 	void HandleVoxelDataUpdatesTick(int32& InOutMaxUpdates);
 
-	void QueueRecursiveStabilityUpdate(const FIntVector& InChunkPoint, const bool bInQueueNeighborsToo = true);
+	void QueueRecursiveStabilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
 	TArraySetPair<FIntVector> QueuedRecursiveStabilityUpdatePoints;
 
 	void UpdateStabilityRecursive(int32& InOutUpdatesLeft);

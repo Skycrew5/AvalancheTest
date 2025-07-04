@@ -4,6 +4,8 @@
 
 #include "AvalancheTest.h"
 
+#include "ScWTypes_Containers.h"
+
 #include "World/ATTypes_World.h"
 
 #include "ATVoxelISMC.generated.h"
