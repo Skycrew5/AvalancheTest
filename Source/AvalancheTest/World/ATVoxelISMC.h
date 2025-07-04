@@ -8,7 +8,7 @@
 
 #include "ATVoxelISMC.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBreakVoxelEventSignature, const FIntVector&, InPoint, const bool, bInForced);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBreakVoxelEventSignature, const FIntVector&, InPoint);
 
 /**
  *
@@ -27,89 +27,59 @@ protected:
 	virtual void OnRegister() override; // UActorComponent
 	virtual void BeginPlay() override; // UActorComponent
 	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // UActorComponent
-//~ End Initialize
-	
-//~ Begin Owner
 public:
 
-	UFUNCTION(Category = "Owner", BlueprintCallable, meta = (KeyWords = "GetOwnerVoxelChunk"))
-	class AATVoxelChunk* GetOwnerChunk() const { return OwnerChunk; }
-
-protected:
-
-	UPROPERTY(Category = "Owner", BlueprintReadOnly)
-	TObjectPtr<class AATVoxelChunk> OwnerChunk;
-//~ End Owner
-
+	UFUNCTION(Category = "Initialize", BlueprintNativeEvent, meta = (DisplayName = "InitComponent"))
+	void BP_InitComponent(class AATVoxelChunk* InOwnerChunk);
+//~ End Initialize
+	
 //~ Begin Getters
 public:
 
-	UFUNCTION(Category = "Getters", BlueprintCallable)
-	const TMap<FIntVector, FVoxelInstanceData>& GetLocalPoint_To_InstanceData_Map() const;
+	UFUNCTION(Category = "Getters | Voxel Instance Data", BlueprintCallable)
+	int32 GetVoxelInstancesNum() const { return Point_To_VoxelInstanceData_Map.Num(); }
+
+	UFUNCTION(Category = "Getters | Voxel Instance Data", BlueprintCallable)
+	bool HasVoxelInstanceDataAtPoint(const FIntVector& InPoint) const { return Point_To_VoxelInstanceData_Map.Contains(InPoint); }
+
+	UFUNCTION(Category = "Getters | Voxel Instance Data", BlueprintCallable)
+	FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint) const;
+
+	UFUNCTION(Category = "Getters | Mesh Index", BlueprintCallable)
+	bool HasMeshAtPoint(const FIntVector& InPoint) const { return Point_To_MeshIndex_MirroredMap.ContainsKey(InPoint); }
+
+	UFUNCTION(Category = "Getters | Mesh Index", BlueprintCallable)
+	int32 GetMeshIndexAtPoint(const FIntVector& InPoint) const { return Point_To_MeshIndex_MirroredMap.FindRefByKey(InPoint, INDEX_NONE); }
+
+	UFUNCTION(Category = "Getters | Mesh Index", BlueprintCallable)
+	const FIntVector& GetPointOfMeshIndex(int32 InMeshIndex) const { return Point_To_MeshIndex_MirroredMap.FindRefByValue(InMeshIndex, FIntVector::ZeroValue); }
 
 	UFUNCTION(Category = "Getters", BlueprintCallable)
-	void GetAllLocalPoints(TArray<FIntVector>& OutPoints) const;
+	bool IsVoxelAtPointFullyClosed(const FIntVector& InPoint) const;
 
 	UFUNCTION(Category = "Getters", BlueprintCallable)
-	const FIntVector& GetVoxelInstancePointAtIndex(int32 InInstanceIndex, const bool bInChecked = true) const;
-
-	UFUNCTION(Category = "Getters", BlueprintCallable)
-	FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked = true) const;
-
-	UFUNCTION(Category = "Getters", BlueprintCallable)
-	bool HasVoxelAtPoint(const FIntVector& InPoint) const;
-
-	UFUNCTION(Category = "Getters | Compounds", BlueprintCallable)
-	FVoxelCompoundData& GetCompoundDataAt(const FIntVector& InTargetPoint, const bool bInChecked = true) const;
-
-	UFUNCTION(Category = "Getters | Compounds", BlueprintCallable)
-	bool HasCompoundAtPoint(const FIntVector& InPoint) const;
-
-	UFUNCTION(Category = "Getters | Compounds", BlueprintCallable)
-	void GetAdjacentCompoundOriginsAt(const FIntVector& InTargetPoint, EATAttachmentDirection InSide, TArray<FIntVector>& OutCompoundOrigins) const;
+	float GetVoxelSize() const;
 //~ End Getters
 
 //~ Begin Setters
 public:
 
-	UFUNCTION(Category = "Setters", BlueprintCallable)
-	bool SetVoxelAtPoint(const FIntVector& InPoint, const class UATVoxelTypeData* InTypeData, const bool bInForced = false);
+	UFUNCTION(Category = "Setters | Voxel Instance Data", BlueprintCallable, meta = (KeyWords = "AddVoxelAt, PlaceVoxelAt"))
+	void HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const struct FVoxelInstanceData& InVoxelInstanceData);
 
-	UFUNCTION(Category = "Setters", BlueprintCallable)
-	bool SetVoxelsAtPoints(const TArray<FIntVector>& InPoints, const class UATVoxelTypeData* InTypeData, const bool bInForced = false);
+	UFUNCTION(Category = "Setters | Voxel Instance Data", BlueprintCallable)
+	bool HandleBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInNotify = false);
 
-	UFUNCTION(Category = "Setters", BlueprintCallable)
-	bool RemoveVoxelAtPoint(const FIntVector& InPoint, const bool bInChecked = true);
-
-	UFUNCTION(Category = "Setters", BlueprintCallable)
-	bool RemoveVoxelsAtPoints(const TArray<FIntVector>& InPoints, const bool bInForced = false);
-
-	UFUNCTION(Category = "Setters", BlueprintCallable)
-	void RemoveAllVoxels();
-
-	UFUNCTION(Category = "Setters", BlueprintCallable)
-	bool BreakVoxelAtPoint(const FIntVector& InPoint, const bool bInForced = false, const bool bInNotify = false);
-
-	UFUNCTION(Category = "Setters", BlueprintCallable)
-	bool BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const bool bInForced = false, const bool bInNotify = false);
-
-	bool RelocateInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked = true);
-
-	UFUNCTION(Category = "Setters | Compounds", BlueprintCallable)
-	void RegenerateCompoundData();
-
-	UFUNCTION(Category = "Setters | Compounds", BlueprintCallable)
-	bool SetCompoundData(const FIntVector& InOrigin, int32 InSize, const bool bInChecked = true);
-
+	bool RelocateMeshInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked = true);
 protected:
-	int32 CalcMaxFittingCompoundSizeAt(const FIntVector& InOrigin);
 
 	UPROPERTY(Category = "Setters", BlueprintAssignable)
-	FBreakVoxelEventSignature OnBreakVoxelAtLocalPoint;
+	FBreakVoxelEventSignature OnBreakVoxelAtPoint;
 //~ End Setters
 	
 //~ Begin Data
 public:
+	void HandleUpdates(int32& InOutUpdatesNum);
 
 	UFUNCTION(Category = "Data", BlueprintCallable)
 	void QueuePointForVisibilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
@@ -117,26 +87,60 @@ public:
 	UFUNCTION(Category = "Data", BlueprintCallable)
 	void UpdateVoxelsVisibilityState();
 
+protected:
+
+	UPROPERTY(Category = "Data", BlueprintReadOnly)
+	TObjectPtr<class AATVoxelChunk> OwnerChunk;
+
+	// Set from Tree->Chunk for gameplay purposes, not simulation
 	UPROPERTY(Transient)
-	TArray<FIntVector> FoundationLocalPoints;
+	TMap<FIntVector, FVoxelInstanceData> Point_To_VoxelInstanceData_Map;
+
+	//UPROPERTY(Transient)
+	TMirroredMapPair<FIntVector, int32> Point_To_MeshIndex_MirroredMap;
+
+	//UPROPERTY(Transient)
+	TArraySetPair<FIntVector> QueuedVisibilityUpdatePoints;
+//~ End Data
+
+//~ Begin Meshes
+protected:
+	static void Static_OnISMInstanceIndicesUpdated(UInstancedStaticMeshComponent* InUpdatedComponent, TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData> InIndexUpdates);
+	void HandleInstanceIndicesUpdates(const TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData>& InIndexUpdates);
+
+	static FDelegateHandle InstanceIndexUpdatedDelegateHandle;
+//~ End Meshes
+
+//~ Begin Debug
+public:
+
+	UFUNCTION(Category = "Debug", BlueprintCallable)
+	void UpdateVoxelsDebugState();
+
+	FORCEINLINE void TryQueuePointForDebugUpdate(const FIntVector& InPoint) { if (bDebugStabilityValues || bDebugHealthValues) QueuedDebugUpdatePoints.Add(InPoint); }
+	FORCEINLINE void TryQueueMeshIndexForDebugUpdate(int32 InMeshIndex) { TryQueuePointForDebugUpdate(GetPointOfMeshIndex(InMeshIndex)); }
+	
+	UPROPERTY(Category = "Debug", EditAnywhere, BlueprintReadWrite)
+	bool bDebugStabilityValues;
+
+	UPROPERTY(Category = "Debug", EditAnywhere, BlueprintReadWrite)
+	bool bDebugHealthValues;
+
+	UPROPERTY(Category = "Debug", EditAnywhere, BlueprintReadOnly)
+	int32 DebugVoxelCustomData_Stability;
+
+	UPROPERTY(Category = "Debug", EditAnywhere, BlueprintReadOnly)
+	int32 DebugVoxelCustomData_Health;
 
 protected:
 
+	void Debug_UpdateStabilityValueAtPoint(const FIntVector& InPoint);
+	void Debug_UpdateHealthValueAtPoint(const FIntVector& InPoint);
+
+	void Debug_UpdateStabilityValueAtMeshIndex(int32 InMeshIndex) { Debug_UpdateStabilityValueAtPoint(GetPointOfMeshIndex(InMeshIndex)); }
+	void Debug_UpdateHealthValueAtMeshIndex(int32 InMeshIndex) { Debug_UpdateHealthValueAtPoint(GetPointOfMeshIndex(InMeshIndex)); }
+
 	//UPROPERTY(Transient)
-	//TArray<FVoxelInstanceData> VoxelDataArray;
-
-	UPROPERTY(Transient)
-	TMap<FIntVector, FVoxelInstanceData> LocalPoint_To_InstanceData_Map;
-
-	UPROPERTY(Transient)
-	TMap<FIntVector, FVoxelCompoundData> LocalPoint_To_CompoundData_Map;
-
-	UPROPERTY(Transient)
-	TMap<int32, FIntVector> InstanceIndex_To_LocalPoint_Map;
-	
-	TArraySetPair<FIntVector> QueuedVisibilityUpdatePoints;
-
-	static FVoxelInstanceData InvalidInstanceData_NonConst;
-	static FVoxelCompoundData InvalidCompoundData_NonConst;
-//~ End Data
+	TArraySetPair<FIntVector> QueuedDebugUpdatePoints;
+//~ End Debug
 };

@@ -6,6 +6,10 @@
 
 #include "ATTypes_World.generated.h"
 
+#if DEBUG_VOXELS
+	#pragma optimize("", off)
+#endif // DEBUG_VOXELS
+
 UENUM(BlueprintType, meta = (DisplayName = "[AT] Attachment Direction"))
 enum class EATAttachmentDirection : uint8
 {
@@ -101,51 +105,12 @@ struct FVoxelInstanceData
 	float Health = 10.0f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	int32 SMI_Index = INDEX_NONE;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float Stability = 0.0f;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	TSet<EATAttachmentDirection> AttachmentDirections = TSet<EATAttachmentDirection>();
-
 	bool IsTypeDataValid() const { return TypeData != nullptr; }
-	bool IsAttachmentDataValid() const { return !AttachmentDirections.IsEmpty(); }
-	bool IsAttachedTo(EATAttachmentDirection ToDirection) const { return AttachmentDirections.Contains(ToDirection); }
-	bool HasMesh() const { return SMI_Index != INDEX_NONE; }
-
-	FVoxelInstanceData(TObjectPtr<const class UATVoxelTypeData> InTypeData = nullptr, float InHealth = 1.0f)
-		: TypeData(InTypeData), Health(InHealth) {}
 
 	static const FVoxelInstanceData Invalid;
-	static FVoxelInstanceData Invalid_NonConst;
 };
-
-USTRUCT(BlueprintType)
-struct FVoxelCompoundData
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FIntVector Origin;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Size;
-
-	bool IsValid() const { return Size > 0; }
-
-	void GetAllPoints(TArray<FIntVector>& OutPoints) const;
-	void GetPointsAtSide(EATAttachmentDirection InSide, TArray<FIntVector>& OutPoints, const bool bInOutside = false) const;
-
-	FVoxelCompoundData(const FIntVector& InOrigin = FIntVector::ZeroValue, int32 InSize = 0)
-		: Origin(InOrigin), Size(InSize) {}
-
-	static const FVoxelCompoundData Invalid;
-};
-
-#if DEBUG_VOXELS
-	#pragma optimize("", off)
-#endif // DEBUG_VOXELS
 
 template<typename ElementType>
 struct TArraySetPair
@@ -155,10 +120,10 @@ private:
 	TSet<ElementType> Set;
 public:
 
-	const TArray<ElementType>& GetConstArray() const { return Array; }
-	const TSet<ElementType>& GetConstSet() const { return Set; }
+	FORCEINLINE const TArray<ElementType>& GetConstArray() const { return Array; }
+	FORCEINLINE const TSet<ElementType>& GetConstSet() const { return Set; }
 
-	bool Add(const ElementType& InElement)
+	FORCEINLINE bool Add(const ElementType& InElement)
 	{
 		if (Contains(InElement))
 		{
@@ -173,7 +138,7 @@ public:
 		}
 	}
 
-	bool Remove(const ElementType& InElement)
+	FORCEINLINE bool Remove(const ElementType& InElement)
 	{
 		if (Contains(InElement))
 		{
@@ -188,7 +153,7 @@ public:
 		}
 	}
 
-	bool Replace(const ElementType& InPrevElement, const ElementType& InNewElement)
+	FORCEINLINE bool Replace(const ElementType& InPrevElement, const ElementType& InNewElement)
 	{
 		if (Contains(InPrevElement))
 		{
@@ -202,7 +167,7 @@ public:
 		}
 	}
 
-	void AddFromOther(const TArraySetPair<ElementType>& InOther)
+	FORCEINLINE void AddFromOther(const TArraySetPair<ElementType>& InOther)
 	{
 		for (const ElementType& SampleOtherItem : InOther.Array)
 		{
@@ -210,7 +175,7 @@ public:
 		}
 	}
 
-	void RemoveFromOther(const TArraySetPair<ElementType>& InOther)
+	FORCEINLINE void RemoveFromOther(const TArraySetPair<ElementType>& InOther)
 	{
 		for (const ElementType& SampleOtherItem : InOther.Array)
 		{
@@ -218,7 +183,7 @@ public:
 		}
 	}
 
-	void AddHeadTo(int32 InDesiredElementsNum, TArraySetPair<ElementType>& InOutOther, const bool bInPopElements = false)
+	FORCEINLINE void AddHeadTo(int32 InDesiredElementsNum, TArraySetPair<ElementType>& InOutOther, const bool bInPopElements = false)
 	{
 		int32 FirstIndex = 0;
 		int32 LastIndex = FMath::Min(InDesiredElementsNum, Array.Num()) - 1;
@@ -233,7 +198,7 @@ public:
 		}
 	}
 
-	void AddTailTo(int32 InDesiredElementsNum, TArraySetPair<ElementType>& InOutOther, const bool bInPopElements = false)
+	FORCEINLINE void AddTailTo(int32 InDesiredElementsNum, TArraySetPair<ElementType>& InOutOther, const bool bInPopElements = false)
 	{
 		int32 FirstIndex = Array.Num() - 1;
 		int32 LastIndex = Array.Num() - FMath::Min(InDesiredElementsNum, Array.Num());
@@ -248,21 +213,143 @@ public:
 		}
 	}
 
-	int32 Num() const { return Array.Num(); }
-	bool Contains(const ElementType& InElement) const { return Set.Contains(InElement); }
-	bool IsEmpty() const { return Array.IsEmpty(); }
+	FORCEINLINE int32 Num() const { return Array.Num(); }
+	FORCEINLINE bool IsEmpty() const { return Array.IsEmpty(); }
+	FORCEINLINE bool Contains(const ElementType& InElement) const { return Set.Contains(InElement); }
 
-	void Empty(int32 InSlack = 0)
+	FORCEINLINE void Empty(int32 InSlack = 0)
 	{
 		Array.Empty(InSlack);
 		Set.Empty(InSlack);
 	}
 
-	ElementType Pop(EAllowShrinking InAllowShrinking = EAllowShrinking::Default)
+	FORCEINLINE ElementType Pop(EAllowShrinking InAllowShrinking = EAllowShrinking::Default)
 	{
 		ElementType PoppedItem = Array.Pop(InAllowShrinking);
 		Set.Remove(PoppedItem);
 		return PoppedItem;
+	}
+};
+
+template<typename KeyType, typename ValueType>
+struct TMirroredMapPair
+{
+private:
+	TMap<KeyType, ValueType> KeyValueMap;
+	TMap<ValueType, KeyType> ValueKeyMap;
+public:
+
+	FORCEINLINE const TMap<KeyType, ValueType>& GetConstKeyValueMap() const { return KeyValueMap; }
+	FORCEINLINE const TMap<ValueType, KeyType>& GetConstValueKeyMap() const { return ValueKeyMap; }
+
+	/*FORCEINLINE*/ bool AddPair(const KeyType& InKey, const ValueType& InValue)
+	{
+		ensure(ContainsKey(InKey) == ContainsValue(InValue));
+
+		if (ContainsKey(InKey))
+		{
+			return false;
+		}
+		KeyValueMap.Add(InKey, InValue);
+		ValueKeyMap.Add(InValue, InKey);
+		ensure(KeyValueMap.Num() == ValueKeyMap.Num());
+		return true;
+	}
+
+	FORCEINLINE bool RemoveByKey(const KeyType& InKey)
+	{
+		if (ContainsKey(InKey))
+		{
+			ValueKeyMap.Remove(KeyValueMap[InKey]);
+			KeyValueMap.Remove(InKey);
+			ensure(KeyValueMap.Num() == ValueKeyMap.Num());
+			return true;
+		}
+		return false;
+	}
+
+	/*FORCEINLINE*/ bool RemoveByValue(const ValueType& InValue)
+	{
+		if (ContainsValue(InValue))
+		{
+			KeyValueMap.Remove(ValueKeyMap[InValue]);
+			ValueKeyMap.Remove(InValue);
+			ensure(KeyValueMap.Num() == ValueKeyMap.Num());
+			return true;
+		}
+		return false;
+	}
+
+	FORCEINLINE bool ReplaceKey(const KeyType& InPrevKey, const KeyType& InNewKey)
+	{
+		if (ContainsKey(InPrevKey))
+		{
+			RemoveByKey(InNewKey);
+
+			ValueType ValueAtKey = KeyValueMap[InPrevKey];
+			ValueKeyMap[ValueAtKey] = InNewKey;
+
+			KeyValueMap.Remove(InPrevKey);
+			KeyValueMap.Add(InNewKey, ValueAtKey);
+			ensure(KeyValueMap.Num() == ValueKeyMap.Num());
+			return true;
+		}
+		return false;
+	}
+
+	/*FORCEINLINE*/ bool ReplaceValue(const ValueType& InPrevValue, const ValueType& InNewValue)
+	{
+		if (ContainsValue(InPrevValue))
+		{
+			if (ContainsValue(InNewValue))
+			{
+				Swap(KeyValueMap[ValueKeyMap[InPrevValue]], KeyValueMap[ValueKeyMap[InNewValue]]);
+				Swap(ValueKeyMap[InPrevValue], ValueKeyMap[InNewValue]);
+			}
+			else
+			{
+				KeyType KeyAtPrevValue = ValueKeyMap[InPrevValue];
+				
+				RemoveByKey(KeyAtPrevValue);
+				AddPair(KeyAtPrevValue, InNewValue);
+				ensure(KeyValueMap.Num() == ValueKeyMap.Num());
+			}
+			return true;
+		}
+		return false;
+	}
+
+	FORCEINLINE ValueType* FindByKey(const KeyType& InKey) const { return const_cast<ValueType*>(KeyValueMap.Find(InKey)); }
+	FORCEINLINE KeyType* FindByValue(const ValueType& InValue) const { return const_cast<KeyType*>(ValueKeyMap.Find(InValue)); }
+
+	FORCEINLINE ValueType& FindRefByKey(const KeyType& InKey, const ValueType& InDefaultValue) const
+	{
+		if (const ValueType* FoundValuePtr = KeyValueMap.Find(InKey))
+		{
+			return const_cast<ValueType&>(*FoundValuePtr);
+		}
+		return const_cast<ValueType&>(InDefaultValue);
+	}
+
+	FORCEINLINE KeyType& FindRefByValue(const ValueType& InValue, const KeyType& InDefaultKey) const
+	{
+		if (const KeyType* FoundKeyPtr = ValueKeyMap.Find(InValue))
+		{
+			return const_cast<KeyType&>(*FoundKeyPtr);
+		}
+		return const_cast<KeyType&>(InDefaultKey);
+	}
+
+	FORCEINLINE int32 Num() const { return KeyValueMap.Num(); }
+	FORCEINLINE bool IsEmpty() const { return KeyValueMap.IsEmpty(); }
+
+	FORCEINLINE bool ContainsKey(const KeyType& InKey) const { return KeyValueMap.Contains(InKey); }
+	FORCEINLINE bool ContainsValue(const ValueType& InValue) const { return ValueKeyMap.Contains(InValue); }
+
+	FORCEINLINE void Empty(int32 InSlack = 0)
+	{
+		KeyValueMap.Empty(InSlack);
+		ValueKeyMap.Empty(InSlack);
 	}
 };
 
@@ -346,6 +433,29 @@ struct FVoxelChunkDebugData
 	}
 };
 
+/*USTRUCT(BlueprintType)
+struct FVoxelCompoundData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FIntVector Origin;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Size;
+
+	bool IsValid() const { return Size > 0; }
+
+	void GetAllPoints(TArray<FIntVector>& OutPoints) const;
+	void GetPointsAtSide(EATAttachmentDirection InSide, TArray<FIntVector>& OutPoints, const bool bInOutside = false) const;
+
+	FVoxelCompoundData(const FIntVector& InOrigin = FIntVector::ZeroValue, int32 InSize = 0)
+		: Origin(InOrigin), Size(InSize) {
+	}
+
+	static const FVoxelCompoundData Invalid;
+};
+
 USTRUCT(BlueprintType)
 struct FVoxelChunkPendingUpdates
 {
@@ -384,7 +494,7 @@ public:
 	bool IsInstanceWaitingToUpdateThisTick(const FIntVector& InPoint) const;
 	void ResolveThisTickSelectedPoints();
 	int32 ResolveThisTickAlreadyUpdatedPoints();
-};
+};*/
 
 #if DEBUG_VOXELS
 	#pragma optimize("", on)

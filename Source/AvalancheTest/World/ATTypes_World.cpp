@@ -10,11 +10,9 @@
 #endif // DEBUG_VOXELS
 
 const FVoxelInstanceData FVoxelInstanceData::Invalid = FVoxelInstanceData();
-FVoxelInstanceData FVoxelInstanceData::Invalid_NonConst = FVoxelInstanceData();
+//const FVoxelCompoundData FVoxelCompoundData::Invalid = FVoxelCompoundData();
 
-const FVoxelCompoundData FVoxelCompoundData::Invalid = FVoxelCompoundData();
-
-void FVoxelCompoundData::GetAllPoints(TArray<FIntVector>& OutPoints) const
+/*void FVoxelCompoundData::GetAllPoints(TArray<FIntVector>& OutPoints) const
 {
 	ensure(OutPoints.IsEmpty());
 
@@ -140,6 +138,7 @@ bool FVoxelChunkPendingUpdates::PrepareThisTickSelectedPoints(int32 InDesiredUpd
 
 	bIsInsideUpdateSequence = !ThisTickSelectedPoints.IsEmpty();
 	return bIsInsideUpdateSequence;
+	return false;
 }
 
 bool FVoxelChunkPendingUpdates::IsInstanceWaitingToUpdateThisTick(const FIntVector& InPoint) const
@@ -173,7 +172,7 @@ int32 FVoxelChunkPendingUpdates::ResolveThisTickAlreadyUpdatedPoints()
 	int32 OutPointsNum = ThisTickAlreadyUpdatedPoints.Num();
 	ThisTickAlreadyUpdatedPoints.Empty();
 	return OutPointsNum;
-}
+}*/
 
 #if DEBUG_VOXELS
 	#pragma optimize("", on)

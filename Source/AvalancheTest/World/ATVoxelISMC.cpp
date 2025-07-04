@@ -4,24 +4,34 @@
 
 #include "World/ATVoxelChunk.h"
 #include "World/ATVoxelTypeData.h"
+#include "World/ATWorldFunctionLibrary.h"
 
 #if DEBUG_VOXELS
 	#pragma optimize("", off)
 #endif // DEBUG_VOXELS
 
-FVoxelInstanceData UATVoxelISMC::InvalidInstanceData_NonConst = FVoxelInstanceData::Invalid;
-FVoxelCompoundData UATVoxelISMC::InvalidCompoundData_NonConst = FVoxelCompoundData::Invalid;
+FDelegateHandle UATVoxelISMC::InstanceIndexUpdatedDelegateHandle = FDelegateHandle();
 
 UATVoxelISMC::UATVoxelISMC()
 {
+	PrimaryComponentTick.bCanEverTick = false;
+
 	bSupportRemoveAtSwap = true;
+
+	bDebugStabilityValues = true;
+	bDebugHealthValues = true;
+
+	DebugVoxelCustomData_Stability = 0;
+	DebugVoxelCustomData_Health = 3;
 }
 
 //~ Begin Initialize
 void UATVoxelISMC::OnRegister() // UActorComponent
 {
-	OwnerChunk = GetOwner<AATVoxelChunk>();
-
+	if (!InstanceIndexUpdatedDelegateHandle.IsValid())
+	{
+		InstanceIndexUpdatedDelegateHandle = FInstancedStaticMeshDelegates::OnInstanceIndexUpdated.AddStatic(&UATVoxelISMC::Static_OnISMInstanceIndicesUpdated);
+	}
 	Super::OnRegister();
 }
 
@@ -38,318 +48,92 @@ void UATVoxelISMC::EndPlay(const EEndPlayReason::Type InReason) // UActorCompone
 
 
 }
+
+void UATVoxelISMC::BP_InitComponent_Implementation(AATVoxelChunk* InOwnerChunk)
+{
+	OwnerChunk = InOwnerChunk;
+}
 //~ End Initialize
 
 //~ Begin Getters
-const TMap<FIntVector, FVoxelInstanceData>& UATVoxelISMC::GetLocalPoint_To_InstanceData_Map() const
+FVoxelInstanceData& UATVoxelISMC::GetVoxelInstanceDataAtPoint(const FIntVector& InPoint) const
 {
-	return LocalPoint_To_InstanceData_Map;
+	if (const FVoxelInstanceData* SampleData = Point_To_VoxelInstanceData_Map.Find(InPoint))
+	{
+		return const_cast<FVoxelInstanceData&>(*SampleData);
+	}
+	return const_cast<FVoxelInstanceData&>(FVoxelInstanceData::Invalid);
 }
 
-void UATVoxelISMC::GetAllLocalPoints(TArray<FIntVector>& OutPoints) const
+bool UATVoxelISMC::IsVoxelAtPointFullyClosed(const FIntVector& InPoint) const
 {
-	LocalPoint_To_InstanceData_Map.GenerateKeyArray(OutPoints);
-}
-
-const FIntVector& UATVoxelISMC::GetVoxelInstancePointAtIndex(int32 InInstanceIndex, const bool bInChecked) const
-{
-	if (const FIntVector* SamplePoint = InstanceIndex_To_LocalPoint_Map.Find(InInstanceIndex))
+	if (HasVoxelInstanceDataAtPoint(InPoint + FIntVector(1, 0, 0)) &&
+		HasVoxelInstanceDataAtPoint(InPoint + FIntVector(-1, 0, 0)) &&
+		HasVoxelInstanceDataAtPoint(InPoint + FIntVector(0, 1, 0)) &&
+		HasVoxelInstanceDataAtPoint(InPoint + FIntVector(0, -1, 0)) &&
+		HasVoxelInstanceDataAtPoint(InPoint + FIntVector(0, 0, 1)) &&
+		HasVoxelInstanceDataAtPoint(InPoint + FIntVector(0, 0, -1)))
 	{
-		return *SamplePoint;
-	}
-	else
-	{
-		ensure(!bInChecked);
-		return FIntVector::ZeroValue;
-	}
-}
-
-FVoxelInstanceData& UATVoxelISMC::GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked) const
-{
-	if (const FVoxelInstanceData* SampleInstanceDataPtr = LocalPoint_To_InstanceData_Map.Find(InPoint))
-	{
-		return *const_cast<FVoxelInstanceData*>(SampleInstanceDataPtr);
-	}
-	else
-	{
-		ensure(!bInChecked);
-		return InvalidInstanceData_NonConst;
-	}
-}
-
-bool UATVoxelISMC::HasVoxelAtPoint(const FIntVector& InPoint) const
-{
-	return LocalPoint_To_InstanceData_Map.Contains(InPoint);
-}
-
-FVoxelCompoundData& UATVoxelISMC::GetCompoundDataAt(const FIntVector& InTargetPoint, const bool bInChecked) const
-{
-	if (const FVoxelCompoundData* SampleCompoundDataPtr = LocalPoint_To_CompoundData_Map.Find(InTargetPoint))
-	{
-		return *const_cast<FVoxelCompoundData*>(SampleCompoundDataPtr);
-	}
-	else
-	{
-		ensure(!bInChecked);
-		return InvalidCompoundData_NonConst;
-	}
-}
-
-bool UATVoxelISMC::HasCompoundAtPoint(const FIntVector& InPoint) const
-{
-	return LocalPoint_To_CompoundData_Map.Contains(InPoint);
-}
-
-void UATVoxelISMC::GetAdjacentCompoundOriginsAt(const FIntVector& InTargetPoint, EATAttachmentDirection InSide, TArray<FIntVector>& OutCompoundOrigins) const
-{
-	const FVoxelCompoundData& TargetCompoundData = GetCompoundDataAt(InTargetPoint);
-
-	TArray<FIntVector> SidePoints;
-	TargetCompoundData.GetPointsAtSide(InSide, SidePoints);
-
-	for (const FIntVector& SampleSidePoint : SidePoints)
-	{
-		const FVoxelCompoundData& SampleSideCompoundData = GetCompoundDataAt(SampleSidePoint);
-		if (SampleSideCompoundData.IsValid())
-		{
-			OutCompoundOrigins.AddUnique(SampleSideCompoundData.Origin);
-		}
-	}
-}
-//~ End Getters
-
-//~ Begin Setters
-bool UATVoxelISMC::SetVoxelAtPoint(const FIntVector& InPoint, const UATVoxelTypeData* InTypeData, const bool bInForced)
-{
-	if (!OwnerChunk || !InTypeData)
-	{
-		ensure(false);
-		return false;
-	}
-	if (bInForced)
-	{
-		RemoveVoxelAtPoint(InPoint, false);
-	}
-	else if (HasVoxelAtPoint(InPoint))
-	{
-		return false;
-	}
-	ensure(!LocalPoint_To_InstanceData_Map.Contains(InPoint));
-	FVoxelInstanceData& NewInstanceData = LocalPoint_To_InstanceData_Map.Add(InPoint, InTypeData->BP_InitializeInstanceData(OwnerChunk, InPoint));
-
-	QueuePointForVisibilityUpdate(InPoint);
-	//OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
-	//OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
-	OwnerChunk->QueueRecursiveStabilityUpdate(InPoint);
-	return true;
-}
-
-bool UATVoxelISMC::SetVoxelsAtPoints(const TArray<FIntVector>& InPoints, const UATVoxelTypeData* InTypeData, const bool bInForced)
-{
-	bool bAnySet = false;
-
-	for (const FIntVector& SamplePoint : InPoints)
-	{
-		bAnySet |= SetVoxelAtPoint(SamplePoint, InTypeData, bInForced);
-	}
-	return bAnySet;
-}
-
-bool UATVoxelISMC::RemoveVoxelAtPoint(const FIntVector& InPoint, const bool bInChecked)
-{
-	if (bInChecked && !LocalPoint_To_InstanceData_Map.Contains(InPoint))
-	{
-		ensure(false);
-		return false;
-	}
-	if (FVoxelInstanceData* SampleData = LocalPoint_To_InstanceData_Map.Find(InPoint))
-	{
-		if (SampleData->HasMesh())
-		{
-			InstanceIndex_To_LocalPoint_Map.Remove(SampleData->SMI_Index);
-			RemoveInstance(SampleData->SMI_Index);
-		}
-		LocalPoint_To_InstanceData_Map.Remove(InPoint);
-		QueuePointForVisibilityUpdate(InPoint);
-		//OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
-		//OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
-		OwnerChunk->QueueRecursiveStabilityUpdate(InPoint);
 		return true;
 	}
 	return false;
 }
 
-bool UATVoxelISMC::RemoveVoxelsAtPoints(const TArray<FIntVector>& InPoints, const bool bInChecked)
+float UATVoxelISMC::GetVoxelSize() const
 {
-	bool bAnyRemoved = false;
-
-	for (const FIntVector& SamplePoint : InPoints)
-	{
-		bAnyRemoved |= RemoveVoxelAtPoint(SamplePoint, bInChecked);
-	}
-	return bAnyRemoved;
+	ensureReturn(OwnerChunk, 16.0f);
+	return OwnerChunk->GetVoxelSize();
 }
+//~ End Getters
 
-void UATVoxelISMC::RemoveAllVoxels()
+//~ Begin Setters
+void UATVoxelISMC::HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const FVoxelInstanceData& InVoxelInstanceData)
 {
-	TArray<FIntVector> AllPoints;
-	GetAllLocalPoints(AllPoints);
-	RemoveVoxelsAtPoints(AllPoints);
-
-	ensure(LocalPoint_To_InstanceData_Map.IsEmpty());
-	ensure(InstanceIndex_To_LocalPoint_Map.IsEmpty());
-
-	ClearInstances();
-}
-
-bool UATVoxelISMC::BreakVoxelAtPoint(const FIntVector& InPoint, const bool bInForced, const bool bInNotify)
-{
-	if (bInForced)
+	if (InVoxelInstanceData.IsTypeDataValid())
 	{
-		if (RemoveVoxelAtPoint(InPoint, false))
-		{
-			if (bInNotify)
-			{
-				OnBreakVoxelAtLocalPoint.Broadcast(InPoint, bInForced);
-			}
-			return true;
-		}
+		Point_To_VoxelInstanceData_Map.Add(InPoint, InVoxelInstanceData);
 	}
 	else
 	{
-		const FVoxelInstanceData& TargetData = GetVoxelInstanceDataAtPoint(InPoint, false);
-		if (TargetData.IsTypeDataValid() && !TargetData.TypeData->IsFoundation)
-		{
-			if (RemoveVoxelAtPoint(InPoint))
-			{
-				if (bInNotify)
-				{
-					OnBreakVoxelAtLocalPoint.Broadcast(InPoint, bInForced);
-				}
-				return true;
-			}
-		}
+		Point_To_VoxelInstanceData_Map.Remove(InPoint);
 	}
-	return false;
+	QueuePointForVisibilityUpdate(InPoint);
+	TryQueuePointForDebugUpdate(InPoint);
 }
 
-bool UATVoxelISMC::BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const bool bInForced, const bool bInNotify)
+bool UATVoxelISMC::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInNotify)
 {
-	bool bAnyBroken = false;
+	HandleSetVoxelInstanceDataAtPoint(InPoint, FVoxelInstanceData::Invalid);
 
-	for (const FIntVector& SamplePoint : InPoints)
+	if (bInNotify)
 	{
-		bAnyBroken |= BreakVoxelAtPoint(SamplePoint, bInForced, bInNotify);
+		OnBreakVoxelAtPoint.Broadcast(InPoint);
 	}
-	return bAnyBroken;
+	return true;
 }
 
-bool UATVoxelISMC::RelocateInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked)
+bool UATVoxelISMC::RelocateMeshInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked)
 {
-	if (!InstanceIndex_To_LocalPoint_Map.Contains(InPrevIndex))
+	if (!Point_To_MeshIndex_MirroredMap.ContainsValue(InPrevIndex))
 	{
 		ensure(!bInChecked);
 		return false;
 	}
-	FIntVector TargetInstancePoint;
-	InstanceIndex_To_LocalPoint_Map.RemoveAndCopyValue(InPrevIndex, TargetInstancePoint);
-	InstanceIndex_To_LocalPoint_Map.Add(InNewIndex, TargetInstancePoint);
+	FIntVector PrevMeshIndexPoint = *Point_To_MeshIndex_MirroredMap.FindByValue(InPrevIndex);
+	Point_To_MeshIndex_MirroredMap.ReplaceValue(InPrevIndex, InNewIndex);
 
-	if (!LocalPoint_To_InstanceData_Map.Contains(TargetInstancePoint))
-	{
-		ensure(!bInChecked);
-		return false;
-	}
-	FVoxelInstanceData& TargetInstanceData = *LocalPoint_To_InstanceData_Map.Find(TargetInstancePoint);
-
-	ensure(TargetInstanceData.SMI_Index == InPrevIndex);
-	TargetInstanceData.SMI_Index = InNewIndex;
+	ensure(Point_To_VoxelInstanceData_Map.Contains(PrevMeshIndexPoint));
 	return true;
-}
-
-void UATVoxelISMC::RegenerateCompoundData()
-{
-	TArray<FIntVector> AllPoints;
-	GetAllLocalPoints(AllPoints);
-
-	LocalPoint_To_CompoundData_Map.Empty();
-
-	for (const FIntVector& SampleCompoundOrigin : AllPoints)
-	{
-		if (HasCompoundAtPoint(SampleCompoundOrigin))
-		{
-			continue;
-		}
-		int32 NewCompoundSize = CalcMaxFittingCompoundSizeAt(SampleCompoundOrigin);
-		SetCompoundData(SampleCompoundOrigin, NewCompoundSize);
-	}
-}
-
-bool UATVoxelISMC::SetCompoundData(const FIntVector& InOrigin, int32 InSize, const bool bInChecked)
-{
-	if (InSize <= 0)
-	{
-		ensure(false);
-		return false;
-	}
-	FVoxelCompoundData NewCompoundData = FVoxelCompoundData(InOrigin, InSize);
-
-	for (int32 SampleCompoundX = 0; SampleCompoundX < NewCompoundData.Size; ++SampleCompoundX)
-	{
-		for (int32 SampleCompoundY = 0; SampleCompoundY < NewCompoundData.Size; ++SampleCompoundY)
-		{
-			for (int32 SampleCompoundZ = 0; SampleCompoundZ < NewCompoundData.Size; ++SampleCompoundZ)
-			{
-				ensure(!bInChecked || !LocalPoint_To_CompoundData_Map.Contains(InOrigin));
-				LocalPoint_To_CompoundData_Map.Add(InOrigin, NewCompoundData);
-			}
-		}
-	}
-	//QueuePointForVisibilityUpdate(InPoint);
-	//OwnerChunk->AttachmentUpdates.QueuePointIfRelevant(InPoint);
-	//OwnerChunk->StabilityUpdates.QueuePointIfRelevant(InPoint);
-	//OwnerChunk->QueueRecursiveStabilityUpdate(InPoint);
-	return true;
-}
-
-int32 UATVoxelISMC::CalcMaxFittingCompoundSizeAt(const FIntVector& InOrigin)
-{
-	const int32 CompoundMaxSize = OwnerChunk->ChunkSize;
-	int32 OutSize = 0;
-	for (int32 CompoundSizeMinusOne = 0; CompoundSizeMinusOne < CompoundMaxSize; ++CompoundSizeMinusOne)
-	{
-		bool bSuccess = true;
-
-		for (int32 OffsetX = 0; (OffsetX < CompoundSizeMinusOne + 1) && bSuccess; ++OffsetX)
-		{
-			for (int32 OffsetY = 0; (OffsetY < CompoundSizeMinusOne + 1) && bSuccess; ++OffsetY)
-			{
-				for (int32 OffsetZ = 0; (OffsetZ < CompoundSizeMinusOne + 1) && bSuccess; ++OffsetZ)
-				{
-					FIntVector SampleCompoundPoint = InOrigin + FIntVector(OffsetX, OffsetY, OffsetZ);
-
-					if (!HasVoxelAtPoint(SampleCompoundPoint) || HasCompoundAtPoint(SampleCompoundPoint))
-					{
-						bSuccess = false;
-						break;
-					}
-				}
-			}
-		}
-		if (bSuccess)
-		{
-			OutSize = CompoundSizeMinusOne + 1;
-		}
-	}
-	return OutSize + 1;
 }
 //~ End Setters
 
-#if DEBUG_VOXELS
-	#pragma optimize("", off)
-#endif // DEBUG_VOXELS
-
 //~ Begin Data
+void UATVoxelISMC::HandleUpdates(int32& InOutUpdatesNum)
+{
+	UpdateVoxelsVisibilityState();
+	UpdateVoxelsDebugState();
+}
+
 void UATVoxelISMC::QueuePointForVisibilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo)
 {
 	QueuedVisibilityUpdatePoints.Add(InPoint);
@@ -377,54 +161,132 @@ void UATVoxelISMC::UpdateVoxelsVisibilityState()
 	
 	for (const FIntVector& SamplePoint : QueuedVisibilityUpdatePoints.GetConstArray())
 	{
-		if (HasVoxelAtPoint(SamplePoint))
+		if (HasVoxelInstanceDataAtPoint(SamplePoint))
 		{
-			FVoxelInstanceData& SampleData = GetVoxelInstanceDataAtPoint(SamplePoint);
-
-			if (SampleData.HasMesh()) // Has mesh...
+			if (int32* SampleIndexPtr = Point_To_MeshIndex_MirroredMap.FindByKey(SamplePoint)) // Has mesh...
 			{
-				if (OwnerChunk->IsVoxelAtPointFullyClosed(SamplePoint)) // ...but doesn't need anymore
+				if (IsVoxelAtPointFullyClosed(SamplePoint)) // ...but doesn't need anymore
 				{
-					MeshInstancesToRemove.Add(SampleData.SMI_Index);
-					SampleData.SMI_Index = INDEX_NONE;
+					MeshInstancesToRemove.Add(*SampleIndexPtr);
 				}
 			}
 			else // Does not have mesh...
 			{
-				if (!OwnerChunk->IsVoxelAtPointFullyClosed(SamplePoint)) // ...but needs now
+				if (!IsVoxelAtPointFullyClosed(SamplePoint)) // ...but needs now
 				{
-					FTransform NewInstanceTransform = FTransform(OwnerChunk->LocalPoint_To_RelativeLocation(SamplePoint));
+					FTransform NewInstanceTransform = FTransform(UATWorldFunctionLibrary::Point_To_RelativeLocation(this, SamplePoint));
 					MeshTransformsToAdd.Add(NewInstanceTransform);
 					MeshTransformsToAdd_Points.Add(SamplePoint);
 				}
 			}
 		}
-		else // Point is empty - no instance data
+		else // Point is empty - no voxel instance data
 		{
-			
+			if (int32* SampleIndexPtr = Point_To_MeshIndex_MirroredMap.FindByKey(SamplePoint)) // But has mesh to remove
+			{
+				MeshInstancesToRemove.Add(*SampleIndexPtr);
+			}
 		}
 	}
 	// Remove
 	RemoveInstances(MeshInstancesToRemove);
 
-	for (int32 SampleInstanceIndex : MeshInstancesToRemove)
-	{
-		InstanceIndex_To_LocalPoint_Map.Remove(SampleInstanceIndex);
-	}
 	// Add
-	TArray<int32> AddedMeshInstancesIndices = AddInstances(MeshTransformsToAdd, true);
-	ensure(AddedMeshInstancesIndices.Num() == MeshTransformsToAdd_Points.Num());
+	TArray<int32> AddedIndices = AddInstances(MeshTransformsToAdd, true);
+	ensure(AddedIndices.Num() == MeshTransformsToAdd_Points.Num());
 
 	for (int32 SampleArrayIndex = 0; SampleArrayIndex < MeshTransformsToAdd.Num(); ++SampleArrayIndex)
 	{
-		FVoxelInstanceData& SampleData = GetVoxelInstanceDataAtPoint(MeshTransformsToAdd_Points[SampleArrayIndex]);
-		SampleData.SMI_Index = AddedMeshInstancesIndices[SampleArrayIndex];
-		InstanceIndex_To_LocalPoint_Map.Add(SampleData.SMI_Index, MeshTransformsToAdd_Points[SampleArrayIndex]);
+		const FIntVector& SamplePoint = MeshTransformsToAdd_Points[SampleArrayIndex];
+
+		Point_To_MeshIndex_MirroredMap.AddPair(SamplePoint, AddedIndices[SampleArrayIndex]);
+		TryQueuePointForDebugUpdate(SamplePoint);
 	}
 	// Reset queue
 	QueuedVisibilityUpdatePoints.Empty();
 }
 //~ End Data
+
+//~ Begin Meshes
+void UATVoxelISMC::Static_OnISMInstanceIndicesUpdated(UInstancedStaticMeshComponent* InUpdatedComponent, TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData> InIndexUpdates)
+{
+	ensureReturn(InUpdatedComponent);
+
+	if (UATVoxelISMC* TargetVoxelComponent = Cast<UATVoxelISMC>(InUpdatedComponent))
+	{
+		TargetVoxelComponent->HandleInstanceIndicesUpdates(InIndexUpdates);
+	}
+}
+
+void UATVoxelISMC::HandleInstanceIndicesUpdates(const TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData>& InIndexUpdates)
+{
+	for (const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData& SampleUpdate : InIndexUpdates)
+	{
+		bool bQueueDebug = false;
+
+		switch (SampleUpdate.Type)
+		{
+			case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Added:
+			{
+				bQueueDebug = true;
+				break;
+			}
+			case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Removed:
+			case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Cleared:
+			case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Destroyed:
+			{
+				Point_To_MeshIndex_MirroredMap.RemoveByValue(SampleUpdate.Index);
+				break;
+			}
+			case FInstancedStaticMeshDelegates::EInstanceIndexUpdateType::Relocated:
+			{
+				RelocateMeshInstanceIndex(SampleUpdate.OldIndex, SampleUpdate.Index);
+				bQueueDebug = true;
+				break;
+			}
+		}
+		if (bQueueDebug)
+		{
+			TryQueueMeshIndexForDebugUpdate(SampleUpdate.Index);
+		}
+	}
+}
+//~ End Meshes
+
+//~ Begin Debug
+void UATVoxelISMC::UpdateVoxelsDebugState()
+{
+	if (QueuedDebugUpdatePoints.IsEmpty())
+	{
+		return;
+	}
+	for (const FIntVector& SamplePoint : QueuedDebugUpdatePoints.GetConstArray())
+	{
+		Debug_UpdateStabilityValueAtPoint(SamplePoint);
+		Debug_UpdateHealthValueAtPoint(SamplePoint);
+	}
+	// Reset queue
+	QueuedDebugUpdatePoints.Empty();
+}
+
+void UATVoxelISMC::Debug_UpdateStabilityValueAtPoint(const FIntVector& InPoint)
+{
+	if (bDebugStabilityValues && HasMeshAtPoint(InPoint))
+	{
+		const FVoxelInstanceData& VoxeInstanceData = GetVoxelInstanceDataAtPoint(InPoint);
+		SetCustomDataValue(GetMeshIndexAtPoint(InPoint), DebugVoxelCustomData_Stability, VoxeInstanceData.Stability, true);
+	}
+}
+
+void UATVoxelISMC::Debug_UpdateHealthValueAtPoint(const FIntVector& InPoint)
+{
+	if (bDebugHealthValues && HasMeshAtPoint(InPoint))
+	{
+		const FVoxelInstanceData& VoxeInstanceData = GetVoxelInstanceDataAtPoint(InPoint);
+		SetCustomDataValue(GetMeshIndexAtPoint(InPoint), DebugVoxelCustomData_Health, VoxeInstanceData.Health, true);
+	}
+}
+//~ End Debug
 
 #if DEBUG_VOXELS
 	#pragma optimize("", on)
