@@ -15,6 +15,8 @@ class AVALANCHETEST_API AATVoxelTree : public AActor
 {
 	GENERATED_BODY()
 	
+	friend class FATVoxelTree_SimulationAsyncTask;
+
 public:
 
 	AATVoxelTree(const FObjectInitializer& InObjectInitializer = FObjectInitializer::Get());
@@ -125,7 +127,13 @@ public:
 //~ Begin Voxel Data
 public:
 
+	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
+	void ForceTickUpdateNextFrame();
+
 protected:
+	void HandleTickUpdate_FromForceTickUpdate();
+	void HandleTickUpdate(float InDeltaSeconds);
+
 	void ApplyQueued_Point_To_VoxelInstanceData_Map();
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
@@ -142,6 +150,9 @@ protected:
 
 	UPROPERTY(Transient)
 	TMap<FIntVector, FVoxelInstanceData> Point_To_VoxelInstanceData_Map;
+
+	UPROPERTY(Transient)
+	FTimerHandle ForceTickUpdateNextFrameTimerHandle;
 //~ End Voxel Data
 
 //~ Begin Simulation
@@ -186,15 +197,42 @@ protected:
 
 	void HandleVoxelDataUpdatesTick(int32& InOutMaxUpdates);
 
+	bool QueueRecursiveStabilityUpdate_bDontQueueNeighborsToo;
+
 	void QueueRecursiveStabilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
 	TArraySetPair<FIntVector> QueuedRecursiveStabilityUpdatePoints;
 
-	void UpdateStabilityRecursive(int32& InOutUpdatesLeft);
+	void UpdateStabilityRecursive_StartBackgroundTask(int32& InOutUpdatesLeft);
+	TArray<FIntVector> UpdateStabilityRecursive_SelectedUpdatePoints;
+
+	void UpdateStabilityRecursive_DoWork();
+	float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None, uint8 InCurrentRecursionLevel = 0u);
 	TMap<FIntVector, FRecursivePointCache> UpdateStabilityRecursive_PointsCache;
 
-	float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None, uint8 InCurrentRecursionLevel = 0u);
+	void UpdateInDangerGroupHealthPoints(int32& InOutUpdatesLeft);
 
 	void UpdateHealth(int32& InOutUpdatesLeft);
+	TArray<FIntVector> QueuedInDangerGroupHealthUpdatePoints;
 	TArraySetPair<FIntVector> InDangerGroupHealthUpdatePoints;
+
+	FAsyncTask<class FATVoxelTree_SimulationAsyncTask>* SimulationAsyncTaskPtr;
 //~ End Simulation
+};
+
+class FATVoxelTree_SimulationAsyncTask : public FNonAbandonableTask
+{
+public:
+
+	void DoWork()
+	{
+		ensureReturn(TargetTree);
+		TargetTree->UpdateStabilityRecursive_DoWork();
+	}
+
+	FORCEINLINE TStatId GetStatId() const
+	{
+		RETURN_QUICK_DECLARE_CYCLE_STAT(FATVoxelTree_SimulationAsyncTask, STATGROUP_ThreadPoolAsyncTasks);
+	}
+
+	TObjectPtr<AATVoxelTree> TargetTree;
 };

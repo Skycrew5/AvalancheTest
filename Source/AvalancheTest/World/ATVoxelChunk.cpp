@@ -36,7 +36,7 @@ void AATVoxelChunk::OnConstruction(const FTransform& InTransform) // AActor
 	{
 		if (VoxelComponent && World->IsEditorWorld())
 		{
-			VoxelComponent->UpdateVoxelsVisibilityState();
+			VoxelComponent->UpdateAllVoxelsVisibilityState();
 		}
 	}
 }

@@ -15,3 +15,4 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogATGameplay, Log, All);
 
 #define DEBUG_VOXELS 1
+//#define DEBUG_VOXELS 0

@@ -130,8 +130,8 @@ bool UATVoxelISMC::RelocateMeshInstanceIndex(int32 InPrevIndex, int32 InNewIndex
 //~ Begin Data
 void UATVoxelISMC::HandleUpdates(int32& InOutUpdatesNum)
 {
-	UpdateVoxelsVisibilityState();
-	UpdateVoxelsDebugState();
+	UpdateVoxelsVisibilityState(InOutUpdatesNum);
+	UpdateVoxelsDebugState(InOutUpdatesNum);
 }
 
 void UATVoxelISMC::QueuePointForVisibilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo)
@@ -149,7 +149,7 @@ void UATVoxelISMC::QueuePointForVisibilityUpdate(const FIntVector& InPoint, cons
 	}
 }
 
-void UATVoxelISMC::UpdateVoxelsVisibilityState()
+void UATVoxelISMC::UpdateVoxelsVisibilityState(int32& InOutUpdatesLeft)
 {
 	if (QueuedVisibilityUpdatePoints.IsEmpty())
 	{
@@ -158,9 +158,12 @@ void UATVoxelISMC::UpdateVoxelsVisibilityState()
 	TArray<FTransform> MeshTransformsToAdd;
 	TArray<FIntVector> MeshTransformsToAdd_Points;
 	TArray<int32> MeshInstancesToRemove;
-	
-	for (const FIntVector& SamplePoint : QueuedVisibilityUpdatePoints.GetConstArray())
+
+	while (InOutUpdatesLeft > 0 && !QueuedVisibilityUpdatePoints.IsEmpty())
 	{
+		InOutUpdatesLeft -= 1;
+		FIntVector SamplePoint = QueuedVisibilityUpdatePoints.Pop();
+		
 		if (HasVoxelInstanceDataAtPoint(SamplePoint))
 		{
 			if (int32* SampleIndexPtr = Point_To_MeshIndex_MirroredMap.FindByKey(SamplePoint)) // Has mesh...
@@ -202,8 +205,6 @@ void UATVoxelISMC::UpdateVoxelsVisibilityState()
 		Point_To_MeshIndex_MirroredMap.AddPair(SamplePoint, AddedIndices[SampleArrayIndex]);
 		TryQueuePointForDebugUpdate(SamplePoint);
 	}
-	// Reset queue
-	QueuedVisibilityUpdatePoints.Empty();
 }
 //~ End Data
 
@@ -254,19 +255,20 @@ void UATVoxelISMC::HandleInstanceIndicesUpdates(const TArrayView<const FInstance
 //~ End Meshes
 
 //~ Begin Debug
-void UATVoxelISMC::UpdateVoxelsDebugState()
+void UATVoxelISMC::UpdateVoxelsDebugState(int32& InOutUpdatesLeft)
 {
 	if (QueuedDebugUpdatePoints.IsEmpty())
 	{
 		return;
 	}
-	for (const FIntVector& SamplePoint : QueuedDebugUpdatePoints.GetConstArray())
+	while (InOutUpdatesLeft > 0 && !QueuedDebugUpdatePoints.IsEmpty())
 	{
+		InOutUpdatesLeft -= 1;
+		FIntVector SamplePoint = QueuedDebugUpdatePoints.Pop();
+
 		Debug_UpdateStabilityValueAtPoint(SamplePoint);
 		Debug_UpdateHealthValueAtPoint(SamplePoint);
 	}
-	// Reset queue
-	QueuedDebugUpdatePoints.Empty();
 }
 
 void UATVoxelISMC::Debug_UpdateStabilityValueAtPoint(const FIntVector& InPoint)

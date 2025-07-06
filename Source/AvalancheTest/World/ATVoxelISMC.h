@@ -84,11 +84,15 @@ public:
 	void HandleUpdates(int32& InOutUpdatesNum);
 
 	UFUNCTION(Category = "Data", BlueprintCallable)
-	void QueuePointForVisibilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
+	int32 GetQueuedVisibilityUpdatePointsNum() const { return QueuedVisibilityUpdatePoints.Num(); }
 
 	UFUNCTION(Category = "Data", BlueprintCallable)
-	void UpdateVoxelsVisibilityState();
+	void QueuePointForVisibilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
 
+	UFUNCTION(Category = "Data", BlueprintCallable, meta = (KeyWords = "UpdateVoxelsVisibilityState"))
+	void UpdateAllVoxelsVisibilityState() { int32 UpdatesNum = GetQueuedVisibilityUpdatePointsNum(); UpdateVoxelsVisibilityState(UpdatesNum); }
+
+	void UpdateVoxelsVisibilityState(int32& InOutUpdatesLeft);
 protected:
 
 	UPROPERTY(Category = "Data", BlueprintReadOnly)
@@ -117,7 +121,7 @@ protected:
 public:
 
 	UFUNCTION(Category = "Debug", BlueprintCallable)
-	void UpdateVoxelsDebugState();
+	void UpdateVoxelsDebugState(int32& InOutUpdatesLeft);
 
 	FORCEINLINE void TryQueuePointForDebugUpdate(const FIntVector& InPoint) { if (bDebugStabilityValues || bDebugHealthValues) QueuedDebugUpdatePoints.Add(InPoint); }
 	FORCEINLINE void TryQueueMeshIndexForDebugUpdate(int32 InMeshIndex) { TryQueuePointForDebugUpdate(GetPointOfMeshIndex(InMeshIndex)); }
