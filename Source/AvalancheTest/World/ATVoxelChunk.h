@@ -47,6 +47,9 @@ public:
 	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
 	float GetVoxelSize() const;
 
+	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
+	FIntVector GetChunkBackLeftCornerPoint() const { return GetChunkCoords() * GetChunkSize(); }
+
 protected:
 
 	UPROPERTY(Category = "Voxel Tree", EditAnywhere, BlueprintReadOnly)
@@ -63,7 +66,7 @@ public:
 	class UATVoxelISMC* GetVoxelComponentAtPoint(const FIntVector& InChunkPoint) const;
 	
 protected:
-	void HandleISMCUpdatesTick(int32& InOutMaxUpdates);
+	void HandleISMCUpdatesTick(int32& InOutUpdatesLeft);
 	
 	UPROPERTY(Category = "Voxel Components", VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<class UATVoxelISMC> VoxelComponent;
@@ -94,7 +97,7 @@ public:
 
 //~ Begin Voxel Data
 public:
-	void HandleUpdates(int32& InOutUpdatesNum);
+	void HandleUpdates(int32& InOutUpdatesLeft);
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	bool bEnableVoxelComponentsUpdatesTick;
@@ -103,6 +106,14 @@ protected:
 
 	
 //~ End Voxel Data
+	
+//~ Begin Voxel Generation
+public:
+	void HandleProceduralGeneration();
+protected:
+
+	
+//~ End Voxel Generation
 
 //~ Begin Debug
 public:

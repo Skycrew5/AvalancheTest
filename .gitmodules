@@ -1,3 +1,6 @@
 [submodule "Plugins/UnrealCommons"]
 	path = Plugins/UnrealCommons
 	url = https://github.com/ScientificWays/UnrealCommons
+[submodule "Plugins/UnrealFastNoise2"]
+	path = Plugins/UnrealFastNoise2
+	url = https://github.com/DoubleDeez/UnrealFastNoise2.git

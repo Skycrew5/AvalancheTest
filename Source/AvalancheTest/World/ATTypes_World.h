@@ -24,6 +24,16 @@ enum class EATAttachmentDirection : uint8
 
 namespace EATAttachmentDirection_Utils
 {
+	const TArray<EATAttachmentDirection> AttachmentDirectionsArray = {
+		EATAttachmentDirection::None,
+		EATAttachmentDirection::Front,
+		EATAttachmentDirection::Back,
+		EATAttachmentDirection::Right,
+		EATAttachmentDirection::Left,
+		EATAttachmentDirection::Top,
+		EATAttachmentDirection::Bottom
+	};
+
 	const TMap<EATAttachmentDirection, EATAttachmentDirection> Opposites = {
 		{ EATAttachmentDirection::Front, EATAttachmentDirection::Back },
 		{ EATAttachmentDirection::Back, EATAttachmentDirection::Front },
@@ -43,13 +53,13 @@ namespace EATAttachmentDirection_Utils
 		{ EATAttachmentDirection::Bottom, FIntVector(0, 0, -1) }
 	};
 
-	const TMap<EATAttachmentDirection, float> AttachmentMuls = {
+	const TMap<EATAttachmentDirection, float> BaseAttachmentStrengthMuls = {
 		{ EATAttachmentDirection::None, 1.0f }, // Used on recursion start, should be 1.0f
-		{ EATAttachmentDirection::Front, 0.8f },
-		{ EATAttachmentDirection::Back, 0.8f },
-		{ EATAttachmentDirection::Right, 0.8f },
-		{ EATAttachmentDirection::Left, 0.8f },
-		{ EATAttachmentDirection::Top, 0.4 },
+		{ EATAttachmentDirection::Front, 0.9f },
+		{ EATAttachmentDirection::Back, 0.9f },
+		{ EATAttachmentDirection::Right, 0.9f },
+		{ EATAttachmentDirection::Left, 0.9f },
+		{ EATAttachmentDirection::Top, 0.75 },
 		{ EATAttachmentDirection::Bottom, 1.0f }
 	};
 

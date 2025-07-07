@@ -33,7 +33,8 @@ public class AvalancheTest : ModuleRules
 			"Networking",
 
 			"UnrealCommons",
-		});
+			"UnrealFastNoise2",
+        });
 
 		PrivateDependencyModuleNames.AddRange(new string[]
         {

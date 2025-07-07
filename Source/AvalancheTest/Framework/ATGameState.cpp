@@ -2,7 +2,9 @@
 
 #include "Framework/ATGameState.h"
 
-#include "World/ATVoxelChunk.h"
+#include "Gameplay/Characters/ATCharacter.h"
+
+#include "World/ATVoxelTree.h"
 
 AATGameState::AATGameState()
 {
@@ -53,4 +55,18 @@ void AATGameState::EndPlay(const EEndPlayReason::Type InReason) // AActor
 //~ End Initialize
 
 //~ Begin Voxels
+void AATGameState::SetMainVoxelTree(AATVoxelTree* InVoxelTree)
+{
+	ensureReturn(!MainVoxelTree);
+	MainVoxelTree = InVoxelTree;
+
+	for (const APlayerState* SamplePlayer : PlayerArray)
+	{
+		if (AATCharacter* SampleCharacter = SamplePlayer->GetPawn<AATCharacter>()) // Consider only AATCharacter pawns
+		{
+			MainVoxelTree->RegisterChunksUpdateReferenceActor(SampleCharacter);
+		}
+	}
+}
 //~ End Voxels
+

@@ -48,10 +48,21 @@ public:
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	float GetVoxelSize() const { return VoxelSize; }
 
-protected:
+	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
+	int32 GetBaseSeed() const { return BaseSeed; }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
-	void InitVoxelChunks();
+	void RegisterChunksUpdateReferenceActor(const AActor* InActor);
+
+	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
+	void UnRegisterChunksUpdateReferenceActor(const AActor* InActor);
+
+protected:
+	void HandleChunkUpdates(int32& InOutUpdatesLeft);
+	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenter, const int32 InSquareExtent);
+
+	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
+	int32 BaseSeed;
 
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class AATVoxelChunk> ChunkClass;
@@ -65,9 +76,25 @@ protected:
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
 	float VoxelSize;
 
-	UPROPERTY()
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<const AActor>> ChunksUpdateReferenceActors;
+
+	UPROPERTY(Transient)
 	TMap<FIntVector, TObjectPtr<AATVoxelChunk>> ChunksMap;
 //~ End Voxel Chunks
+	
+//~ Begin Voxel Generation
+public:
+
+	UFUNCTION(Category = "Voxel Generation", BlueprintCallable, meta = (KeyWords = "GetVoxelGenerator_Perlin"))
+	class UFastNoise2PerlinGenerator* GetVoxelPerlinGenerator() const { return VoxelGenerator_Perlin; }
+
+protected:
+	void InitVoxelGenerators();
+
+	UPROPERTY(Transient)
+	TObjectPtr<class UFastNoise2PerlinGenerator> VoxelGenerator_Perlin;
+//~ End Voxel Generation
 
 //~ Begin Voxel Getters
 public:
@@ -130,6 +157,15 @@ public:
 	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
 	void ForceTickUpdateNextFrame();
 
+	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<const class UATVoxelTypeData> DefaultVoxelTypeData;
+
+	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<const class UATVoxelTypeData> WeakVoxelTypeData;
+
+	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<const class UATVoxelTypeData> FoundationVoxelTypeData;
+
 protected:
 	void HandleTickUpdate_FromForceTickUpdate();
 	void HandleTickUpdate(float InDeltaSeconds);
@@ -137,13 +173,7 @@ protected:
 	void ApplyQueued_Point_To_VoxelInstanceData_Map();
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	bool bEnableVoxelDataUpdatesTick;
-
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	int32 MaxUpdatesPerSecond;
-
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<const class UATVoxelTypeData> FoundationVoxelTypeData;
 
 	UPROPERTY(Transient)
 	TMap<FIntVector, FVoxelInstanceData> Queued_Point_To_VoxelInstanceData_Map;
@@ -160,6 +190,9 @@ public:
 
 	UFUNCTION(Category = "Simulation", BlueprintCallable)
 	void QueueFullUpdateAtChunk(const FIntVector& InChunkCoords);
+
+	UPROPERTY(Category = "Simulation", EditAnywhere, BlueprintReadOnly)
+	bool bEnableSimulationUpdates;
 
 protected:
 
@@ -195,7 +228,7 @@ protected:
 		}
 	};
 
-	void HandleVoxelDataUpdatesTick(int32& InOutMaxUpdates);
+	void HandleSimulationUpdates(int32& InOutUpdatesLeft);
 
 	bool QueueRecursiveStabilityUpdate_bDontQueueNeighborsToo;
 

@@ -37,5 +37,17 @@ protected:
 //~ End Initialize
 	
 //~ Begin Voxels
+public:
+
+	UFUNCTION(Category = "Voxels", BlueprintCallable)
+	class AATVoxelTree* GetMainVoxelTree() const { return MainVoxelTree; }
+
+	UFUNCTION(Category = "Voxels", BlueprintCallable)
+	void SetMainVoxelTree(class AATVoxelTree* InVoxelTree);
+
+protected:
+
+	UPROPERTY(Transient)
+	TObjectPtr<class AATVoxelTree> MainVoxelTree;
 //~ End Voxels
 };

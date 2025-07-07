@@ -128,10 +128,10 @@ bool UATVoxelISMC::RelocateMeshInstanceIndex(int32 InPrevIndex, int32 InNewIndex
 //~ End Setters
 
 //~ Begin Data
-void UATVoxelISMC::HandleUpdates(int32& InOutUpdatesNum)
+void UATVoxelISMC::HandleUpdates(int32& InOutUpdatesLeft)
 {
-	UpdateVoxelsVisibilityState(InOutUpdatesNum);
-	UpdateVoxelsDebugState(InOutUpdatesNum);
+	UpdateVoxelsVisibilityState(InOutUpdatesLeft);
+	UpdateVoxelsDebugState(InOutUpdatesLeft);
 }
 
 void UATVoxelISMC::QueuePointForVisibilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo)

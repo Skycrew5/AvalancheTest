@@ -18,10 +18,10 @@ class AVALANCHETEST_API UATWorldFunctionLibrary : public UBlueprintFunctionLibra
 public:
 
 	UFUNCTION(Category = "Locations", BlueprintCallable)
-	static FIntVector WorldLocation_To_Point(const FVector& InWorldLocation, float InVoxelSize);
+	static FIntVector WorldLocation_To_Point(const FVector& InWorldLocation, const float InVoxelSize);
 
 	UFUNCTION(Category = "Locations", BlueprintCallable)
-	static FVector Point_To_WorldLocation(const FIntVector& InPoint, float InVoxelSize);
+	static FVector Point_To_WorldLocation(const FIntVector& InPoint, const float InVoxelSize);
 
 	UFUNCTION(Category = "Locations", BlueprintCallable)
 	static FIntVector RelativeLocation_To_Point(const class UATVoxelISMC* InVoxelComponent, const FVector& InRelativeLocation);
@@ -30,7 +30,16 @@ public:
 	static FVector Point_To_RelativeLocation(const class UATVoxelISMC* InVoxelComponent, const FIntVector& InPoint);
 
 	UFUNCTION(Category = "Locations", BlueprintCallable)
-	static FVector GetVoxelCenterWorldLocation(const FIntVector& InPoint, float InVoxelSize);
+	static FVector GetVoxelCenterWorldLocation(const FIntVector& InPoint, const float InVoxelSize);
 //~ End Locations
 
+//~ Begin Indices
+public:
+
+	UFUNCTION(Category = "Indices", BlueprintCallable)
+	static FIntVector ArrayIndex_To_Point(const int32 InArrayIndex, const FIntVector& InBoxSize);
+
+	UFUNCTION(Category = "Indices", BlueprintCallable)
+	static int32 Point_To_ArrayIndex(const FIntVector& InPoint, const FIntVector& InBoxSize);
+//~ End Indices
 };

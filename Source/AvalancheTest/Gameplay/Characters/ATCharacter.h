@@ -19,5 +19,11 @@ class AATCharacter : public AScWCharacter
 public:
 
 	AATCharacter(const FObjectInitializer& InObjectInitializer = FObjectInitializer::Get());
-
+	
+//~ Begin Controller
+protected:
+	virtual void PossessedBy(AController* InController) override; // APawn
+	virtual void UnPossessed() override; // APawn
+//~ End Controller
+	
 };

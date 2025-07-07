@@ -5,13 +5,13 @@
 #include "World/ATVoxelISMC.h"
 
 //~ Begin Locations
-FIntVector UATWorldFunctionLibrary::WorldLocation_To_Point(const FVector& InWorldLocation, float InVoxelSize)
+FIntVector UATWorldFunctionLibrary::WorldLocation_To_Point(const FVector& InWorldLocation, const float InVoxelSize)
 {
 	FVector VoxelScaledWorldLocation = (InWorldLocation / InVoxelSize);
 	return FIntVector(FMath::CeilToInt(VoxelScaledWorldLocation.X), FMath::CeilToInt(VoxelScaledWorldLocation.Y), FMath::CeilToInt(VoxelScaledWorldLocation.Z));
 }
 
-FVector UATWorldFunctionLibrary::Point_To_WorldLocation(const FIntVector& InPoint, float InVoxelSize)
+FVector UATWorldFunctionLibrary::Point_To_WorldLocation(const FIntVector& InPoint, const float InVoxelSize)
 {
 	return FVector(InPoint * InVoxelSize);
 }
@@ -33,3 +33,16 @@ FVector UATWorldFunctionLibrary::GetVoxelCenterWorldLocation(const FIntVector& I
 	return FVector(InPoint * InVoxelSize) + FVector(InVoxelSize * 0.5f, InVoxelSize * 0.5f, InVoxelSize * 0.5f);
 }
 //~ End Locations
+
+
+//~ Begin Indices
+FIntVector UATWorldFunctionLibrary::ArrayIndex_To_Point(const int32 InArrayIndex, const FIntVector& InBoxSize)
+{
+	return FIntVector(InArrayIndex % InBoxSize.X, (InArrayIndex / InBoxSize.X) % InBoxSize.Y, InArrayIndex / (InBoxSize.X * InBoxSize.Y));
+}
+
+int32 UATWorldFunctionLibrary::Point_To_ArrayIndex(const FIntVector& InPoint, const FIntVector& InBoxSize)
+{
+	return InPoint.X + InPoint.Y * (InBoxSize.X) + InPoint.Z * (InBoxSize.X * InBoxSize.Y);
+}
+//~ End Indices

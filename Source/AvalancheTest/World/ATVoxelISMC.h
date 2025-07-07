@@ -81,7 +81,7 @@ protected:
 	
 //~ Begin Data
 public:
-	void HandleUpdates(int32& InOutUpdatesNum);
+	void HandleUpdates(int32& InOutUpdatesLeft);
 
 	UFUNCTION(Category = "Data", BlueprintCallable)
 	int32 GetQueuedVisibilityUpdatePointsNum() const { return QueuedVisibilityUpdatePoints.Num(); }

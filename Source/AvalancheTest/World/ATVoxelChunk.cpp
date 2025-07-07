@@ -9,6 +9,8 @@
 #include "World/ATVoxelTypeData.h"
 #include "World/ATWorldFunctionLibrary.h"
 
+#include "FastNoise2/FastNoise2Generators.h"
+
 #if DEBUG_VOXELS
 	#pragma optimize("", off)
 #endif // DEBUG_VOXELS
@@ -45,7 +47,7 @@ void AATVoxelChunk::BeginPlay() // AActor
 {
 	Super::BeginPlay();
 
-
+	HandleProceduralGeneration();
 }
 
 void AATVoxelChunk::EndPlay(const EEndPlayReason::Type InReason) // AActor
@@ -156,12 +158,51 @@ void AATVoxelChunk::HandleSetVoxelHealthAtPoint(const FIntVector& InPoint, float
 }*/
 //~ End Voxel Setters
 
-//~ Begin Data
-void AATVoxelChunk::HandleUpdates(int32& InOutUpdatesNum)
+//~ Begin Voxel Data
+void AATVoxelChunk::HandleUpdates(int32& InOutUpdatesLeft)
 {
-	VoxelComponent->HandleUpdates(InOutUpdatesNum);
+	VoxelComponent->HandleUpdates(InOutUpdatesLeft);
 }
-//~ End Data
+//~ End Voxel Data
+
+//~ Begin Voxel Generation
+void AATVoxelChunk::HandleProceduralGeneration()
+{
+	ensureReturn(OwnerTree);
+	ensureReturn(OwnerTree->DefaultVoxelTypeData);
+	ensureReturn(OwnerTree->WeakVoxelTypeData);
+
+	int32 BaseSeed = OwnerTree->GetBaseSeed();
+	int32 ChunkSeed = BaseSeed + ChunkCoords.X * ChunkCoords.X * ChunkCoords.X + ChunkCoords.Y * ChunkCoords.Y + ChunkCoords.Z;
+
+	UFastNoise2PerlinGenerator* PerlinGenerator = OwnerTree->GetVoxelPerlinGenerator();
+
+	TArray<float> PerlinValues;
+	FIntVector PerlinStart = GetChunkBackLeftCornerPoint();
+	FIntVector PerlinSize = FIntVector(GetChunkSize());
+	PerlinGenerator->GenUniformGrid3D(PerlinValues, PerlinStart, PerlinSize, 0.01f, BaseSeed);
+
+	for (int32 SampleArrayIndex = 0; SampleArrayIndex < PerlinValues.Num(); ++SampleArrayIndex)
+	{
+		float SamplePerlinValue = PerlinValues[SampleArrayIndex];
+
+		if (SamplePerlinValue > 0.0f)
+		//if (FMath::RandBool())
+		{
+			FIntVector SamplePoint = PerlinStart + UATWorldFunctionLibrary::ArrayIndex_To_Point(SampleArrayIndex, PerlinSize);
+
+			if (SamplePerlinValue > 0.1f)
+			{
+				OwnerTree->SetVoxelAtPoint(SamplePoint, OwnerTree->WeakVoxelTypeData);
+			}
+			else
+			{
+				OwnerTree->SetVoxelAtPoint(SamplePoint, OwnerTree->DefaultVoxelTypeData);
+			}
+		}
+	}
+}
+//~ End Voxel Generation
 
 //~ Begin Debug
 void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerController* ForPlayerController, FVoxelChunkDebugData& InOutData) const
