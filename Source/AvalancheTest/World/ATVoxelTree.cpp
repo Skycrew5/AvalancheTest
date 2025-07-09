@@ -193,6 +193,7 @@ void AATVoxelTree::InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, co
 				SampleChunk->FinishSpawning(SampleTransform);
 
 				InOutUpdatesLeft -= FMath::Cube(GetChunkSize());
+				//InOutUpdatesLeft -= FMath::Square(GetChunkSize());
 
 				if (InOutUpdatesLeft <= 0)
 				{
