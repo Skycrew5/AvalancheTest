@@ -46,9 +46,6 @@ public:
 	class AATVoxelChunk* GetVoxelChunkAtPoint(const FIntVector& InPoint) const { return GetVoxelChunkAtCoords(GetVoxelChunkCoordsAtPoint(InPoint)); }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
-	int32 GetBaseSeed() const { return BaseSeed; }
-
-	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	int32 GetChunkSize() const { return ChunkSize; }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
@@ -72,9 +69,6 @@ protected:
 
 	UPROPERTY(Category = "Simulation", BlueprintReadOnly)
 	bool bIsInitializingVoxelChunks;
-
-	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
-	int32 BaseSeed;
 
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class AATVoxelChunk> ChunkClass;
@@ -107,8 +101,14 @@ public:
 	UFUNCTION(Category = "Voxel Generation", BlueprintCallable, meta = (KeyWords = "GetVoxelGenerator_Perlin"))
 	class UFastNoise2PerlinGenerator* GetVoxelPerlinGenerator() const { return VoxelGenerator_Perlin; }
 
+	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
+	int32 GetTreeSeed() const { return TreeSeed; }
+
 protected:
 	void InitVoxelGenerators();
+
+	UPROPERTY(Category = "Voxel Generation", EditAnywhere, BlueprintReadOnly)
+	int32 TreeSeed;
 
 	UPROPERTY(Transient)
 	TObjectPtr<class UFastNoise2PerlinGenerator> VoxelGenerator_Perlin;
@@ -265,6 +265,13 @@ protected:
 
 	FAsyncTask<class FATVoxelTree_SimulationAsyncTask>* SimulationAsyncTaskPtr;
 //~ End Simulation
+
+//~ Begin Debug
+public:
+
+	UFUNCTION(Category = "Debug", BlueprintImplementableEvent, meta = (DisplayName = "HandleGameplayDebuggerToggled"))
+	void BP_HandleGameplayDebuggerToggled(const bool bInWasActivated) const;
+//~ End Debug
 };
 
 class FATVoxelTree_SimulationAsyncTask : public FNonAbandonableTask

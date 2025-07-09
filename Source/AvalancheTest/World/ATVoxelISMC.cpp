@@ -18,6 +18,9 @@ UATVoxelISMC::UATVoxelISMC()
 
 	bSupportRemoveAtSwap = true;
 
+	SetCollisionProfileName(TEXT("Voxel"));
+	SetNumCustomDataFloats(4);
+
 	bDebugStabilityValues = true;
 	bDebugHealthValues = true;
 
@@ -49,9 +52,21 @@ void UATVoxelISMC::EndPlay(const EEndPlayReason::Type InReason) // UActorCompone
 
 }
 
-void UATVoxelISMC::BP_InitComponent_Implementation(AATVoxelChunk* InOwnerChunk)
+void UATVoxelISMC::BP_InitComponent_Implementation(AATVoxelChunk* InOwnerChunk, const UATVoxelTypeData* InTypeData)
 {
+	ensureReturn(InOwnerChunk);
 	OwnerChunk = InOwnerChunk;
+
+	ensureReturn(InTypeData);
+	VoxelTypeData = InTypeData;
+
+	ensureReturn(InTypeData->StaticMesh);
+	SetStaticMesh(InTypeData->StaticMesh);
+
+	for (const auto& SampleIndexAndMaterial : InTypeData->StaticMeshOverrideMaterials)
+	{
+		SetMaterial(SampleIndexAndMaterial.Key, SampleIndexAndMaterial.Value);
+	}
 }
 //~ End Initialize
 
@@ -107,7 +122,8 @@ bool UATVoxelISMC::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const bool
 
 	if (bInNotify)
 	{
-		OnBreakVoxelAtPoint.Broadcast(InPoint);
+		ensureReturn(OwnerChunk, true);
+		OwnerChunk->OnBreakVoxelAtPoint.Broadcast(this, InPoint);
 	}
 	return true;
 }

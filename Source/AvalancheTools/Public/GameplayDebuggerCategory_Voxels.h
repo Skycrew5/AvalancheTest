@@ -12,7 +12,14 @@ public:
 
 	FGameplayDebuggerCategory_Voxels();
 
+//~ Begin Initialize
+public:
 	static TSharedRef<FGameplayDebuggerCategory> MakeInstance();
+protected:
+	virtual void OnGameplayDebuggerActivated() override; // FGameplayDebuggerAddonBase
+	virtual void OnGameplayDebuggerDeactivated() override; // FGameplayDebuggerAddonBase
+	void HandleToggled(const bool bInWasActivated);
+//~ End Initialize
 
 //~ Begin Debug
 protected:
@@ -22,8 +29,11 @@ protected:
 
 //~ Begin Data
 protected:
+
 	bool bUnderCursorTarget;
 	FVoxelChunkDebugData DebugData;
+
+	TObjectPtr<UWorld> CachedWorld;
 //~ End Data
 };
 

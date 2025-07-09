@@ -19,12 +19,13 @@ AATVoxelTree::AATVoxelTree(const FObjectInitializer& InObjectInitializer)
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.TickInterval = 0.5f;
 
-	BaseSeed = 1337;
 	ChunkClass = AATVoxelChunk::StaticClass();
 	TreeSizeInChunks = FIntVector(4, 4, 2);
 	ChunkSize = 16;
 	VoxelSize = 16.0f;
 	ChunksUpdateMaxSquareExtent = 4;
+
+	TreeSeed = 1337;
 
 	MaxUpdatesPerSecond = 10000;
 	bEnableSimulationUpdates = true;
@@ -73,6 +74,8 @@ void AATVoxelTree::Tick(float InDeltaSeconds) // AActor
 void AATVoxelTree::EndPlay(const EEndPlayReason::Type InReason) // AActor
 {
 	Super::EndPlay(InReason);
+
+
 
 	if (SimulationAsyncTaskPtr)
 	{

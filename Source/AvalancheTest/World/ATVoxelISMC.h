@@ -10,8 +10,6 @@
 
 #include "ATVoxelISMC.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FBreakVoxelEventSignature, const FIntVector&, InPoint);
-
 /**
  *
  */
@@ -32,7 +30,7 @@ protected:
 public:
 
 	UFUNCTION(Category = "Initialize", BlueprintNativeEvent, meta = (DisplayName = "InitComponent"))
-	void BP_InitComponent(class AATVoxelChunk* InOwnerChunk);
+	void BP_InitComponent(class AATVoxelChunk* InOwnerChunk, const class UATVoxelTypeData* InTypeData);
 //~ End Initialize
 	
 //~ Begin Getters
@@ -75,8 +73,6 @@ public:
 	bool RelocateMeshInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked = true);
 protected:
 
-	UPROPERTY(Category = "Setters", BlueprintAssignable)
-	FBreakVoxelEventSignature OnBreakVoxelAtPoint;
 //~ End Setters
 	
 //~ Begin Data
@@ -97,6 +93,9 @@ protected:
 
 	UPROPERTY(Category = "Data", BlueprintReadOnly)
 	TObjectPtr<class AATVoxelChunk> OwnerChunk;
+
+	UPROPERTY(Category = "Data", BlueprintReadOnly)
+	TObjectPtr<const class UATVoxelTypeData> VoxelTypeData;
 
 	// Set from Tree->Chunk for gameplay purposes, not simulation
 	UPROPERTY(Transient)

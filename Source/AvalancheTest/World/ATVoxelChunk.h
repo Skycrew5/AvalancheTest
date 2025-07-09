@@ -8,6 +8,8 @@
 
 #include "ATVoxelChunk.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBreakVoxelEventSignature, class UATVoxelISMC*, InVoxelComponent, const FIntVector&, InPoint);
+
 /**
  * 
  */
@@ -50,6 +52,9 @@ public:
 	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
 	FIntVector GetChunkBackLeftCornerPoint() const { return GetChunkCoords() * GetChunkSize(); }
 
+	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
+	int32 GetChunkSeed() const;
+
 protected:
 
 	UPROPERTY(Category = "Voxel Tree", EditAnywhere, BlueprintReadOnly)
@@ -64,12 +69,20 @@ public:
 
 	UFUNCTION(Category = "Voxel Components", BlueprintCallable, meta = (KeyWords = "GetInstancedStaticMesh, GetVoxelInstancedStaticMesh"))
 	class UATVoxelISMC* GetVoxelComponentAtPoint(const FIntVector& InChunkPoint) const;
-	
+
+	UFUNCTION(Category = "Voxel Components", BlueprintCallable, meta = (KeyWords = "GetInstancedStaticMesh, GetVoxelInstancedStaticMesh, GetVoxelComponentForType"))
+	class UATVoxelISMC* GetOrInitVoxelComponentForType(const class UATVoxelTypeData* InTypeData);
+
+	UPROPERTY(Category = "Setters", BlueprintAssignable)
+	FBreakVoxelEventSignature OnBreakVoxelAtPoint;
+
 protected:
-	void HandleISMCUpdatesTick(int32& InOutUpdatesLeft);
-	
-	UPROPERTY(Category = "Voxel Components", VisibleAnywhere, BlueprintReadOnly)
-	TObjectPtr<class UATVoxelISMC> VoxelComponent;
+
+	UPROPERTY(Category = "Voxel Components", EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<class UATVoxelISMC> VoxelComponentClass;
+
+	UPROPERTY(Transient)
+	TMap<TObjectPtr<const class UATVoxelTypeData>, TObjectPtr<class UATVoxelISMC>> PerTypeVoxelComponentMap;
 //~ End Voxel Components
 
 //~ Begin Voxel Getters

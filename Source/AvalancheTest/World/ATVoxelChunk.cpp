@@ -19,26 +19,30 @@ AATVoxelChunk::AATVoxelChunk(const FObjectInitializer& InObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	VoxelComponent = CreateDefaultSubobject<UATVoxelISMC>(TEXT("VoxelComponent"));
-	VoxelComponent->SetNumCustomDataFloats(4);
-	VoxelComponent->SetupAttachment(RootComponent);
+	VoxelComponentClass = UATVoxelISMC::StaticClass();
 }
 
 //~ Begin Initialize
 void AATVoxelChunk::PostInitializeComponents() // AActor
 {
 	Super::PostInitializeComponents();
+
+
 }
 
 void AATVoxelChunk::OnConstruction(const FTransform& InTransform) // AActor
 {
 	Super::OnConstruction(InTransform);
 
-	if (UWorld* World = GetWorld())
+	UWorld* World = GetWorld();
+	ensureReturn(World);
+	
+	if (World->IsEditorWorld())
 	{
-		if (VoxelComponent && World->IsEditorWorld())
+		for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
 		{
-			VoxelComponent->UpdateAllVoxelsVisibilityState();
+			ensureContinue(SampleTypeDataAndVoxelComponent.Value);
+			SampleTypeDataAndVoxelComponent.Value->UpdateAllVoxelsVisibilityState();
 		}
 	}
 }
@@ -73,15 +77,51 @@ void AATVoxelChunk::BP_InitChunk_Implementation(AATVoxelTree* InOwnerTree, const
 	{
 
 	}*/
-	ensureReturn(VoxelComponent);
-	VoxelComponent->BP_InitComponent(this);
 }
 //~ End Initialize
 
 //~ Begin Voxel Components
 UATVoxelISMC* AATVoxelChunk::GetVoxelComponentAtPoint(const FIntVector& InPoint) const
 {
-	return VoxelComponent;
+	ensureReturn(OwnerTree, nullptr);
+
+	const FVoxelInstanceData& SampleVoxelInstanceData = OwnerTree->GetVoxelInstanceDataAtPoint(InPoint, false);
+	if (SampleVoxelInstanceData.IsTypeDataValid())
+	{
+		ensureReturn(PerTypeVoxelComponentMap.Contains(SampleVoxelInstanceData.TypeData), nullptr);
+		return PerTypeVoxelComponentMap[SampleVoxelInstanceData.TypeData];
+	}
+	else
+	{
+		for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
+		{
+			ensureContinue(SampleTypeDataAndVoxelComponent.Value);
+			if (SampleTypeDataAndVoxelComponent.Value->HasVoxelInstanceDataAtPoint(InPoint))
+			{
+				return SampleTypeDataAndVoxelComponent.Value;
+			}
+		}
+	}
+	return nullptr;
+}
+
+UATVoxelISMC* AATVoxelChunk::GetOrInitVoxelComponentForType(const UATVoxelTypeData* InTypeData)
+{
+	ensureReturn(InTypeData, nullptr);
+
+	if (PerTypeVoxelComponentMap.Contains(InTypeData))
+	{
+		return PerTypeVoxelComponentMap[InTypeData];
+	}
+	UATVoxelISMC* NewVoxelComponent = NewObject<UATVoxelISMC>(this, VoxelComponentClass, FName(TEXT("VoxelComponent_") + InTypeData->GetName()));
+	ensureReturn(NewVoxelComponent, nullptr);
+
+	NewVoxelComponent->BP_InitComponent(this, InTypeData);
+	NewVoxelComponent->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::SnapToTargetIncludingScale);
+	NewVoxelComponent->RegisterComponent();
+
+	PerTypeVoxelComponentMap.Add(InTypeData, NewVoxelComponent);
+	return PerTypeVoxelComponentMap[InTypeData];
 }
 //~ End Voxel Components
 
@@ -116,14 +156,30 @@ float AATVoxelChunk::GetVoxelSize() const
 	ensureReturn(OwnerTree, 16.0f);
 	return OwnerTree->GetVoxelSize();
 }
+
+int32 AATVoxelChunk::GetChunkSeed() const
+{
+	ensureReturn(OwnerTree, 0);
+	return OwnerTree->GetTreeSeed() + ChunkCoords.X * ChunkCoords.X * ChunkCoords.X + ChunkCoords.Y * ChunkCoords.Y + ChunkCoords.Z;
+}
 //~ End Voxel Getters
 
 //~ Begin Voxel Setters
 void AATVoxelChunk::HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const FVoxelInstanceData& InVoxelInstanceData)
 {
-	if (UATVoxelISMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
+	if (InVoxelInstanceData.IsTypeDataValid())
 	{
-		TargetComponent->HandleSetVoxelInstanceDataAtPoint(InPoint, InVoxelInstanceData);
+		if (UATVoxelISMC* TargetComponent = GetOrInitVoxelComponentForType(InVoxelInstanceData.TypeData))
+		{
+			TargetComponent->HandleSetVoxelInstanceDataAtPoint(InPoint, InVoxelInstanceData);
+		}
+	}
+	else
+	{
+		if (UATVoxelISMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
+		{
+			TargetComponent->HandleSetVoxelInstanceDataAtPoint(InPoint, InVoxelInstanceData);
+		}
 	}
 }
 
@@ -161,7 +217,11 @@ void AATVoxelChunk::HandleSetVoxelHealthAtPoint(const FIntVector& InPoint, float
 //~ Begin Voxel Data
 void AATVoxelChunk::HandleUpdates(int32& InOutUpdatesLeft)
 {
-	VoxelComponent->HandleUpdates(InOutUpdatesLeft);
+	for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
+	{
+		ensureContinue(SampleTypeDataAndVoxelComponent.Value);
+		SampleTypeDataAndVoxelComponent.Value->HandleUpdates(InOutUpdatesLeft);
+	}
 }
 //~ End Voxel Data
 
@@ -172,15 +232,15 @@ void AATVoxelChunk::HandleProceduralGeneration()
 	ensureReturn(OwnerTree->DefaultVoxelTypeData);
 	ensureReturn(OwnerTree->WeakVoxelTypeData);
 
-	int32 BaseSeed = OwnerTree->GetBaseSeed();
-	int32 ChunkSeed = BaseSeed + ChunkCoords.X * ChunkCoords.X * ChunkCoords.X + ChunkCoords.Y * ChunkCoords.Y + ChunkCoords.Z;
+	int32 TreeSeed = OwnerTree->GetTreeSeed();
+	int32 ChunkSeed = GetChunkSeed();
 
 	UFastNoise2PerlinGenerator* PerlinGenerator = OwnerTree->GetVoxelPerlinGenerator();
 
 	TArray<float> PerlinValues3D;
 	FIntVector PerlinStart3D = GetChunkBackLeftCornerPoint();
 	FIntVector PerlinSize3D = FIntVector(GetChunkSize());
-	/*PerlinGenerator->GenUniformGrid3D(PerlinValues3D, PerlinStart3D, PerlinSize3D, 0.01f, BaseSeed);
+	/*PerlinGenerator->GenUniformGrid3D(PerlinValues3D, PerlinStart3D, PerlinSize3D, 0.01f, TreeSeed);
 
 	for (int32 SampleArrayIndex = 0; SampleArrayIndex < PerlinValues3D.Num(); ++SampleArrayIndex)
 	{
@@ -204,7 +264,7 @@ void AATVoxelChunk::HandleProceduralGeneration()
 	TArray<float> PerlinValues2D;
 	FIntPoint PerlinStart2D = FIntPoint(PerlinStart3D.X, PerlinStart3D.Y);
 	FIntPoint PerlinSize2D = FIntPoint(PerlinSize3D.X, PerlinSize3D.Y);
-	PerlinGenerator->GenUniformGrid2D(PerlinValues2D, PerlinStart2D, PerlinSize2D, 0.01f, BaseSeed);
+	PerlinGenerator->GenUniformGrid2D(PerlinValues2D, PerlinStart2D, PerlinSize2D, 0.01f, TreeSeed);
 
 	int32 ChunkTreeMaxZ = OwnerTree->GetBoundsSize().Z;
 
@@ -244,15 +304,14 @@ void AATVoxelChunk::HandleProceduralGeneration()
 //~ Begin Debug
 void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerController* ForPlayerController, FVoxelChunkDebugData& InOutData) const
 {
-	ensureReturn(VoxelComponent);
+	ensureReturn(OwnerTree);
 
 	// Common
 	InOutData.ChunkHighlightTransform = FTransform(FRotator::ZeroRotator, GetChunkCenterWorldLocation(), FVector((float)GetChunkSize() * GetVoxelSize() * 0.5f));
 
 	InOutData.Label = GetActorLabel();
-	InOutData.LabelColor = FColor::MakeRandomSeededColor(GetActorGuid()[0]);
+	InOutData.LabelColor = FColor::MakeRandomSeededColor(GetChunkSeed());
 
-	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Instances Num"), VoxelComponent->GetVoxelInstancesNum()));
 	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Chunk Size"), GetChunkSize()));
 	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Voxel Base Size"), GetVoxelSize()));
 	//InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Max Updates per Second"), MaxUpdatesPerSecond));
@@ -267,17 +326,19 @@ void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerCont
 	FHitResult ScreenCenterHitResult;
 	ScWPlayerController->GetHitResultUnderScreenCenter(TraceTypeQuery_Visibility, false, ScreenCenterHitResult);
 
-	UInstancedStaticMeshComponent* TargetISMC = Cast<UInstancedStaticMeshComponent>(ScreenCenterHitResult.GetComponent());
-	if (TargetISMC == VoxelComponent)
+	UATVoxelISMC* TargetComponent = Cast<UATVoxelISMC>(ScreenCenterHitResult.GetComponent());
+	if (auto TargetTypeDataPtr = PerTypeVoxelComponentMap.FindKey(TargetComponent))
 	{
+		InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Voxel Component's Instances Num"), TargetComponent->GetVoxelInstancesNum()));
+
 		int32 TargetInstanceIndex = ScreenCenterHitResult.Item;
-		const FIntVector& TargetPoint = VoxelComponent->GetPointOfMeshIndex(TargetInstanceIndex);
+		const FIntVector& TargetPoint = TargetComponent->GetPointOfMeshIndex(TargetInstanceIndex);
 		InOutData.InstanceLabel = FString::Printf(TEXT("Looking at Voxel at %s, instance index %d"), *TargetPoint.ToString(), TargetInstanceIndex);
 		
-		const FVoxelInstanceData& TargetData = VoxelComponent->GetVoxelInstanceDataAtPoint(TargetPoint);
+		const FVoxelInstanceData& TargetData = OwnerTree->GetVoxelInstanceDataAtPoint(TargetPoint, false);
 		if (TargetData.IsTypeDataValid())
 		{
-			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Type Data"), TargetData.TypeData.GetName()));
+			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Type Data"), TargetTypeDataPtr->GetName()));
 			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Health"), TargetData.Health));
 			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Stability"), TargetData.Stability));
 			//InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Attachment Directions"), EATAttachmentDirection_Utils::CreateStringFromAttachmentDirections(TargetData.AttachmentDirections)));

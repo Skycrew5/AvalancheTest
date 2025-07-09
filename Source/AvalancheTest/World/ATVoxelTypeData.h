@@ -68,4 +68,14 @@ protected:
 		{ EATAttachmentDirection::Bottom, 1.0f }
 	};
 //~ End Stability
+	
+//~ Begin Mesh
+public:
+
+	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<UStaticMesh> StaticMesh;
+
+	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
+	TMap<int32, TObjectPtr<UMaterialInterface>> StaticMeshOverrideMaterials;
+//~ End Mesh
 };

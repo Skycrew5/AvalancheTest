@@ -6,6 +6,7 @@
 
 #include "Framework/ScWPlayerController.h"
 
+#include "World/ATVoxelTree.h"
 #include "World/ATVoxelChunk.h"
 
 #include "DrawDebugHelpers.h"
@@ -20,15 +21,45 @@ FGameplayDebuggerCategory_Voxels::FGameplayDebuggerCategory_Voxels()
 	DebugData = FVoxelChunkDebugData();
 }
 
+//~ Begin Initialize
 TSharedRef<FGameplayDebuggerCategory> FGameplayDebuggerCategory_Voxels::MakeInstance()
 {
 	return MakeShareable(new FGameplayDebuggerCategory_Voxels());
 }
 
+void FGameplayDebuggerCategory_Voxels::OnGameplayDebuggerActivated() // FGameplayDebuggerAddonBase
+{
+	FGameplayDebuggerCategory::OnGameplayDebuggerActivated();
+
+	HandleToggled(true);
+}
+
+void FGameplayDebuggerCategory_Voxels::OnGameplayDebuggerDeactivated() // FGameplayDebuggerAddonBase
+{
+	FGameplayDebuggerCategory::OnGameplayDebuggerDeactivated();
+
+	HandleToggled(false);
+}
+
+void FGameplayDebuggerCategory_Voxels::HandleToggled(const bool bInWasActivated)
+{
+	TArray<AActor*> TreeActors;
+	UGameplayStatics::GetAllActorsOfClass(CachedWorld ? CachedWorld : GWorld, AATVoxelTree::StaticClass(), TreeActors);
+
+	for (AActor* SampleTreeActor : TreeActors)
+	{
+		if (AATVoxelTree* SampleTree = Cast<AATVoxelTree>(SampleTreeActor))
+		{
+			SampleTree->BP_HandleGameplayDebuggerToggled(bInWasActivated);
+		}
+	}
+}
+//~ End Initialize
+
 void FGameplayDebuggerCategory_Voxels::CollectData(APlayerController* InPlayerController, AActor* InDebugActor) // FGameplayDebuggerCategory
 {
-	UWorld* World = InPlayerController->GetWorld();
-	if (World == nullptr)
+	CachedWorld = InPlayerController->GetWorld();
+	if (CachedWorld == nullptr)
 	{
 		return;
 	}
@@ -55,12 +86,12 @@ void FGameplayDebuggerCategory_Voxels::CollectData(APlayerController* InPlayerCo
 
 void FGameplayDebuggerCategory_Voxels::DrawData(APlayerController* InPlayerController, FGameplayDebuggerCanvasContext& InOutCanvasContext) // FGameplayDebuggerCategory
 {
-	UWorld* World = InPlayerController->GetWorld();
-	if (World == nullptr)
+	CachedWorld = InPlayerController->GetWorld();
+	if (CachedWorld == nullptr)
 	{
 		return;
 	}
-	DrawDebugBox(World, DebugData.ChunkHighlightTransform.GetLocation(), DebugData.ChunkHighlightTransform.GetScale3D(), FColor::White, false, -1.0f, 100U, 4.0f);
+	DrawDebugBox(CachedWorld, DebugData.ChunkHighlightTransform.GetLocation(), DebugData.ChunkHighlightTransform.GetScale3D(), FColor::White, false, -1.0f, 100U, 4.0f);
 
 	static FString SeparatorString = "=====================================";
 
@@ -103,7 +134,7 @@ void FGameplayDebuggerCategory_Voxels::DrawData(APlayerController* InPlayerContr
 	{
 		InOutCanvasContext.Print(FColor::Purple, SampleEntry.ToString());
 	}
-	DrawDebugBox(World, DebugData.InstanceHighlightTransform.GetLocation(), DebugData.InstanceHighlightTransform.GetScale3D(), FColor::Purple, false, -1.0f, 120U, 2.0f);
+	DrawDebugBox(CachedWorld, DebugData.InstanceHighlightTransform.GetLocation(), DebugData.InstanceHighlightTransform.GetScale3D(), FColor::Purple, false, -1.0f, 120U, 2.0f);
 }
 
 #endif // WITH_GAMEPLAY_DEBUGGER
