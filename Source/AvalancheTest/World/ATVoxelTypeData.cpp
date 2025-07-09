@@ -10,7 +10,7 @@ UATVoxelTypeData::UATVoxelTypeData()
 
 	bIsFoundation = false;
 	AttachmentStrengthMul = 1.0f;
-	MaxHealth = 10.0f;
+	MaxHealth = 1.0f;
 }
 
 //~ Begin Initialize
@@ -37,7 +37,7 @@ FVoxelInstanceData UATVoxelTypeData::BP_InitializeInstanceData_Implementation(AA
 		return FVoxelInstanceData::Invalid;
 	}
 	FVoxelInstanceData OutData = FVoxelInstanceData(this, MaxHealth);
-	OutData.Stability = 0.0f;
+	OutData.Stability = InVoxelTree->IsInitializingVoxelChunks() ? 1.0f : 0.0f;
 	return OutData;
 }
 //~ End Initialize

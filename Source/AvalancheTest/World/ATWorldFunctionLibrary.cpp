@@ -11,6 +11,12 @@ FIntVector UATWorldFunctionLibrary::WorldLocation_To_Point(const FVector& InWorl
 	return FIntVector(FMath::CeilToInt(VoxelScaledWorldLocation.X), FMath::CeilToInt(VoxelScaledWorldLocation.Y), FMath::CeilToInt(VoxelScaledWorldLocation.Z));
 }
 
+FIntPoint UATWorldFunctionLibrary::WorldLocation_To_PointXY(const FVector& InWorldLocation, const float InVoxelSize)
+{
+	FVector VoxelScaledWorldLocation = (InWorldLocation / InVoxelSize);
+	return FIntPoint(FMath::CeilToInt(VoxelScaledWorldLocation.X), FMath::CeilToInt(VoxelScaledWorldLocation.Y));
+}
+
 FVector UATWorldFunctionLibrary::Point_To_WorldLocation(const FIntVector& InPoint, const float InVoxelSize)
 {
 	return FVector(InPoint * InVoxelSize);

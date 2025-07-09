@@ -34,6 +34,9 @@ protected:
 public:
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
+	bool IsInitializingVoxelChunks() const { return bIsInitializingVoxelChunks; }
+
+	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	FIntVector GetVoxelChunkCoordsAtPoint(const FIntVector& InPoint) const;
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
@@ -43,13 +46,16 @@ public:
 	class AATVoxelChunk* GetVoxelChunkAtPoint(const FIntVector& InPoint) const { return GetVoxelChunkAtCoords(GetVoxelChunkCoordsAtPoint(InPoint)); }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
+	int32 GetBaseSeed() const { return BaseSeed; }
+
+	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	int32 GetChunkSize() const { return ChunkSize; }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	float GetVoxelSize() const { return VoxelSize; }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
-	int32 GetBaseSeed() const { return BaseSeed; }
+	const FIntVector& GetBoundsSize() const { return BoundsSize; }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	void RegisterChunksUpdateReferenceActor(const AActor* InActor);
@@ -57,9 +63,15 @@ public:
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	void UnRegisterChunksUpdateReferenceActor(const AActor* InActor);
 
+	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
+	float PerlinPow = 3.0f;
+
 protected:
 	void HandleChunkUpdates(int32& InOutUpdatesLeft);
-	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenter, const int32 InSquareExtent);
+	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY, int32& InOutUpdatesLeft);
+
+	UPROPERTY(Category = "Simulation", BlueprintReadOnly)
+	bool bIsInitializingVoxelChunks;
 
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
 	int32 BaseSeed;
@@ -75,6 +87,12 @@ protected:
 
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
 	float VoxelSize;
+
+	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
+	int32 ChunksUpdateMaxSquareExtent;
+
+	UPROPERTY(Transient)
+	FIntVector BoundsSize;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<const AActor>> ChunksUpdateReferenceActors;
@@ -115,15 +133,10 @@ public:
 	bool CanBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
 	UFUNCTION(Category = "Voxel Chunks | Bounds", BlueprintCallable)
-	const FIntVector& GetBoundsSize() const { return BoundsSize; }
-
-	UFUNCTION(Category = "Voxel Chunks | Bounds", BlueprintCallable)
 	bool IsPointInsideTree(const FIntVector& InPoint) const;
 
-protected:
-
-	UPROPERTY()
-	FIntVector BoundsSize;
+	UFUNCTION(Category = "Voxel Chunks | Bounds", BlueprintCallable)
+	bool IsPointInsideLoadedChunk(const FIntVector& InPoint) const;
 //~ End Voxel Getters
 	
 //~ Begin Voxel Setters
@@ -171,6 +184,7 @@ protected:
 	void HandleTickUpdate(float InDeltaSeconds);
 
 	void ApplyQueued_Point_To_VoxelInstanceData_Map();
+	void HandleQueuedVoxelInstanceData(const FIntVector& InPoint);
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	int32 MaxUpdatesPerSecond;
@@ -191,10 +205,13 @@ public:
 	UFUNCTION(Category = "Simulation", BlueprintCallable)
 	void QueueFullUpdateAtChunk(const FIntVector& InChunkCoords);
 
+protected:
+
 	UPROPERTY(Category = "Simulation", EditAnywhere, BlueprintReadOnly)
 	bool bEnableSimulationUpdates;
 
-protected:
+	UPROPERTY(Category = "Simulation", EditAnywhere, BlueprintReadOnly)
+	float VoxelHealthDrainSpeedMul;
 
 	struct FRecursiveThreadData
 	{
@@ -230,12 +247,10 @@ protected:
 
 	void HandleSimulationUpdates(int32& InOutUpdatesLeft);
 
-	bool QueueRecursiveStabilityUpdate_bDontQueueNeighborsToo;
-
 	void QueueRecursiveStabilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
 	TArraySetPair<FIntVector> QueuedRecursiveStabilityUpdatePoints;
 
-	void UpdateStabilityRecursive_StartBackgroundTask(int32& InOutUpdatesLeft);
+	void UpdateStabilityRecursive_TryStartBackgroundTask(int32& InOutUpdatesLeft);
 	TArray<FIntVector> UpdateStabilityRecursive_SelectedUpdatePoints;
 
 	void UpdateStabilityRecursive_DoWork();

@@ -21,6 +21,9 @@ public:
 	static FIntVector WorldLocation_To_Point(const FVector& InWorldLocation, const float InVoxelSize);
 
 	UFUNCTION(Category = "Locations", BlueprintCallable)
+	static FIntPoint WorldLocation_To_PointXY(const FVector& InWorldLocation, const float InVoxelSize);
+
+	UFUNCTION(Category = "Locations", BlueprintCallable)
 	static FVector Point_To_WorldLocation(const FIntVector& InPoint, const float InVoxelSize);
 
 	UFUNCTION(Category = "Locations", BlueprintCallable)

@@ -177,19 +177,19 @@ void AATVoxelChunk::HandleProceduralGeneration()
 
 	UFastNoise2PerlinGenerator* PerlinGenerator = OwnerTree->GetVoxelPerlinGenerator();
 
-	TArray<float> PerlinValues;
-	FIntVector PerlinStart = GetChunkBackLeftCornerPoint();
-	FIntVector PerlinSize = FIntVector(GetChunkSize());
-	PerlinGenerator->GenUniformGrid3D(PerlinValues, PerlinStart, PerlinSize, 0.01f, BaseSeed);
+	TArray<float> PerlinValues3D;
+	FIntVector PerlinStart3D = GetChunkBackLeftCornerPoint();
+	FIntVector PerlinSize3D = FIntVector(GetChunkSize());
+	/*PerlinGenerator->GenUniformGrid3D(PerlinValues3D, PerlinStart3D, PerlinSize3D, 0.01f, BaseSeed);
 
-	for (int32 SampleArrayIndex = 0; SampleArrayIndex < PerlinValues.Num(); ++SampleArrayIndex)
+	for (int32 SampleArrayIndex = 0; SampleArrayIndex < PerlinValues3D.Num(); ++SampleArrayIndex)
 	{
-		float SamplePerlinValue = PerlinValues[SampleArrayIndex];
+		float SamplePerlinValue = PerlinValues3D[SampleArrayIndex];
 
 		if (SamplePerlinValue > 0.0f)
 		//if (FMath::RandBool())
 		{
-			FIntVector SamplePoint = PerlinStart + UATWorldFunctionLibrary::ArrayIndex_To_Point(SampleArrayIndex, PerlinSize);
+			FIntVector SamplePoint = PerlinStart3D + UATWorldFunctionLibrary::ArrayIndex_To_Point(SampleArrayIndex, PerlinSize3D);
 
 			if (SamplePerlinValue > 0.1f)
 			{
@@ -200,7 +200,44 @@ void AATVoxelChunk::HandleProceduralGeneration()
 				OwnerTree->SetVoxelAtPoint(SamplePoint, OwnerTree->DefaultVoxelTypeData);
 			}
 		}
+	}*/
+	TArray<float> PerlinValues2D;
+	FIntPoint PerlinStart2D = FIntPoint(PerlinStart3D.X, PerlinStart3D.Y);
+	FIntPoint PerlinSize2D = FIntPoint(PerlinSize3D.X, PerlinSize3D.Y);
+	PerlinGenerator->GenUniformGrid2D(PerlinValues2D, PerlinStart2D, PerlinSize2D, 0.01f, BaseSeed);
+
+	int32 ChunkTreeMaxZ = OwnerTree->GetBoundsSize().Z;
+
+	for (int32 SampleArrayIndex = 0; SampleArrayIndex < PerlinValues2D.Num(); ++SampleArrayIndex)
+	{
+		float SamplePerlinValue = PerlinValues2D[SampleArrayIndex];
+		float SampleNormalizedPerlinValue = (SamplePerlinValue + 1.0f) * 0.5f;
+
+		SampleNormalizedPerlinValue = FMath::Pow(SampleNormalizedPerlinValue, OwnerTree->PerlinPow);
+
+		for (int32 SampleZ = PerlinStart3D.Z; SampleZ < PerlinStart3D.Z + GetChunkSize(); ++SampleZ)
+		{
+			float AlphaZ = float(SampleZ) / float(ChunkTreeMaxZ);
+
+			if (SampleNormalizedPerlinValue > AlphaZ)
+			{
+				FIntVector SamplePoint = FIntVector(
+					PerlinStart2D.X + SampleArrayIndex % PerlinSize2D.X,
+					PerlinStart2D.Y + SampleArrayIndex / PerlinSize2D.Y,
+					SampleZ);
+
+				if (SampleNormalizedPerlinValue - AlphaZ > 0.1f)
+				{
+					OwnerTree->SetVoxelAtPoint(SamplePoint, OwnerTree->WeakVoxelTypeData);
+				}
+				else
+				{
+					OwnerTree->SetVoxelAtPoint(SamplePoint, OwnerTree->DefaultVoxelTypeData);
+				}
+			}
+		}
 	}
+
 }
 //~ End Voxel Generation
 
