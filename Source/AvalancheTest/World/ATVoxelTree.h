@@ -10,25 +10,26 @@
 
 #include "ATVoxelTree.generated.h"
 
+/**
+ *
+ */
 UCLASS(meta = (DisplayName = "[AT] Voxel Tree"))
 class AVALANCHETEST_API AATVoxelTree : public AActor
 {
 	GENERATED_BODY()
 	
-	friend class FATVoxelTree_SimulationAsyncTask;
-
 public:
 
 	AATVoxelTree(const FObjectInitializer& InObjectInitializer = FObjectInitializer::Get());
 	
-//~ Begin Initialize
+//~ Begin Actor
 protected:
 	virtual void PostInitializeComponents() override; // AActor
 	virtual void OnConstruction(const FTransform& InTransform) override; // AActor
 	virtual void BeginPlay() override; // AActor
 	virtual void Tick(float InDeltaSeconds) override; // AActor
 	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // AActor
-//~ End Initialize
+//~ End Actor
 
 //~ Begin Voxel Chunks
 public:
@@ -179,12 +180,12 @@ public:
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<const class UATVoxelTypeData> FoundationVoxelTypeData;
 
+	void ApplyQueued_Point_To_VoxelInstanceData_Map();
 protected:
+	void HandleQueuedVoxelInstanceData(const FIntVector& InPoint);
+
 	void HandleTickUpdate_FromForceTickUpdate();
 	void HandleTickUpdate(float InDeltaSeconds);
-
-	void ApplyQueued_Point_To_VoxelInstanceData_Map();
-	void HandleQueuedVoxelInstanceData(const FIntVector& InPoint);
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	int32 MaxUpdatesPerSecond;
@@ -205,65 +206,13 @@ public:
 	UFUNCTION(Category = "Simulation", BlueprintCallable)
 	void QueueFullUpdateAtChunk(const FIntVector& InChunkCoords);
 
+	UFUNCTION(Category = "Simulation", BlueprintCallable)
+	class UATSimulationComponent* GetSimulationComponent() const { return SimulationComponent; }
+
 protected:
 
 	UPROPERTY(Category = "Simulation", EditAnywhere, BlueprintReadOnly)
-	bool bEnableSimulationUpdates;
-
-	UPROPERTY(Category = "Simulation", EditAnywhere, BlueprintReadOnly)
-	float VoxelHealthDrainSpeedMul;
-
-	struct FRecursiveThreadData
-	{
-		const TArray<EATAttachmentDirection>* DirectionsOrderPtr;
-		TSet<FIntVector> ThisOrderUpdatedPoints;
-
-		FRecursiveThreadData(const TArray<EATAttachmentDirection>& InOrder)
-			: DirectionsOrderPtr(&InOrder), ThisOrderUpdatedPoints({}) {
-		}
-	};
-
-	struct FRecursivePointCache
-	{
-		bool bIsThreadSafe;
-		float Stability;
-		TSet<FIntVector> FinalUpdatedPoints;
-
-		bool Intersects(const TSet<FIntVector>& InOther) const
-		{
-			const TSet<FIntVector>& SmallerSet = (FinalUpdatedPoints.Num() < InOther.Num()) ? FinalUpdatedPoints : InOther;
-			const TSet<FIntVector>& LargerSet = (FinalUpdatedPoints.Num() < InOther.Num()) ? InOther : FinalUpdatedPoints;
-
-			for (const FIntVector& SampleItem : SmallerSet)
-			{
-				if (LargerSet.Contains(SampleItem))
-				{
-					return true;
-				}
-			}
-			return false;
-		}
-	};
-
-	void HandleSimulationUpdates(int32& InOutUpdatesLeft);
-
-	void QueueRecursiveStabilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
-	TArraySetPair<FIntVector> QueuedRecursiveStabilityUpdatePoints;
-
-	void UpdateStabilityRecursive_TryStartBackgroundTask(int32& InOutUpdatesLeft);
-	TArray<FIntVector> UpdateStabilityRecursive_SelectedUpdatePoints;
-
-	void UpdateStabilityRecursive_DoWork();
-	float UpdateStabilityRecursive_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None, uint8 InCurrentRecursionLevel = 0u);
-	TMap<FIntVector, FRecursivePointCache> UpdateStabilityRecursive_PointsCache;
-
-	void UpdateInDangerGroupHealthPoints(int32& InOutUpdatesLeft);
-
-	void UpdateHealth(int32& InOutUpdatesLeft);
-	TArray<FIntVector> QueuedInDangerGroupHealthUpdatePoints;
-	TArraySetPair<FIntVector> InDangerGroupHealthUpdatePoints;
-
-	FAsyncTask<class FATVoxelTree_SimulationAsyncTask>* SimulationAsyncTaskPtr;
+	TObjectPtr<class UATSimulationComponent> SimulationComponent;
 //~ End Simulation
 
 //~ Begin Debug
@@ -272,22 +221,4 @@ public:
 	UFUNCTION(Category = "Debug", BlueprintImplementableEvent, meta = (DisplayName = "HandleGameplayDebuggerToggled"))
 	void BP_HandleGameplayDebuggerToggled(const bool bInWasActivated) const;
 //~ End Debug
-};
-
-class FATVoxelTree_SimulationAsyncTask : public FNonAbandonableTask
-{
-public:
-
-	void DoWork()
-	{
-		ensureReturn(TargetTree);
-		TargetTree->UpdateStabilityRecursive_DoWork();
-	}
-
-	FORCEINLINE TStatId GetStatId() const
-	{
-		RETURN_QUICK_DECLARE_CYCLE_STAT(FATVoxelTree_SimulationAsyncTask, STATGROUP_ThreadPoolAsyncTasks);
-	}
-
-	TObjectPtr<AATVoxelTree> TargetTree;
 };

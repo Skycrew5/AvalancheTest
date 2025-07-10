@@ -55,11 +55,11 @@ namespace EATAttachmentDirection_Utils
 
 	const TMap<EATAttachmentDirection, float> BaseAttachmentStrengthMuls = {
 		{ EATAttachmentDirection::None, 1.0f }, // Used on recursion start, should be 1.0f
-		{ EATAttachmentDirection::Front, 0.9f },
-		{ EATAttachmentDirection::Back, 0.9f },
-		{ EATAttachmentDirection::Right, 0.9f },
-		{ EATAttachmentDirection::Left, 0.9f },
-		{ EATAttachmentDirection::Top, 0.75 },
+		{ EATAttachmentDirection::Front, 0.85f },
+		{ EATAttachmentDirection::Back, 0.85f },
+		{ EATAttachmentDirection::Right, 0.85f },
+		{ EATAttachmentDirection::Left, 0.85f },
+		{ EATAttachmentDirection::Top, 0.6 },
 		{ EATAttachmentDirection::Bottom, 1.0f }
 	};
 
