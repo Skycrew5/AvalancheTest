@@ -37,7 +37,7 @@ FVoxelInstanceData UATVoxelTypeData::BP_InitializeInstanceData_Implementation(AA
 		return FVoxelInstanceData::Invalid;
 	}
 	FVoxelInstanceData OutData = FVoxelInstanceData(this, MaxHealth);
-	OutData.Stability = InVoxelTree->IsInitializingVoxelChunks() ? 1.0f : 0.0f;
+	OutData.Stability = 1.0f;
 	return OutData;
 }
 //~ End Initialize

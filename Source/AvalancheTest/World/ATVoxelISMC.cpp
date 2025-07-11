@@ -138,16 +138,16 @@ bool UATVoxelISMC::RelocateMeshInstanceIndex(int32 InPrevIndex, int32 InNewIndex
 	FIntVector PrevMeshIndexPoint = *Point_To_MeshIndex_MirroredMap.FindByValue(InPrevIndex);
 	Point_To_MeshIndex_MirroredMap.ReplaceValue(InPrevIndex, InNewIndex);
 
-	ensure(Point_To_VoxelInstanceData_Map.Contains(PrevMeshIndexPoint));
+	//ensure(Point_To_VoxelInstanceData_Map.Contains(PrevMeshIndexPoint));
 	return true;
 }
 //~ End Setters
 
 //~ Begin Data
-void UATVoxelISMC::HandleUpdates(int32& InOutUpdatesLeft)
+void UATVoxelISMC::HandleUpdates()
 {
-	UpdateVoxelsVisibilityState(InOutUpdatesLeft);
-	UpdateVoxelsDebugState(InOutUpdatesLeft);
+	UpdateVoxelsVisibilityState();
+	UpdateVoxelsDebugState();
 }
 
 void UATVoxelISMC::QueuePointForVisibilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo)
@@ -165,7 +165,7 @@ void UATVoxelISMC::QueuePointForVisibilityUpdate(const FIntVector& InPoint, cons
 	}
 }
 
-void UATVoxelISMC::UpdateVoxelsVisibilityState(int32& InOutUpdatesLeft)
+void UATVoxelISMC::UpdateVoxelsVisibilityState(const bool bInIgnoreTimeBugdet)
 {
 	if (QueuedVisibilityUpdatePoints.IsEmpty())
 	{
@@ -175,9 +175,9 @@ void UATVoxelISMC::UpdateVoxelsVisibilityState(int32& InOutUpdatesLeft)
 	TArray<FIntVector> MeshTransformsToAdd_Points;
 	TArray<int32> MeshInstancesToRemove;
 
-	while (InOutUpdatesLeft > 0 && !QueuedVisibilityUpdatePoints.IsEmpty())
+	ensureReturn(OwnerChunk);
+	while ((bInIgnoreTimeBugdet || !OwnerChunk->IsThisTickUpdatesTimeBudgetExceeded()) && !QueuedVisibilityUpdatePoints.IsEmpty())
 	{
-		InOutUpdatesLeft -= 1;
 		FIntVector SamplePoint = QueuedVisibilityUpdatePoints.Pop();
 		
 		if (HasVoxelInstanceDataAtPoint(SamplePoint))
@@ -271,15 +271,15 @@ void UATVoxelISMC::HandleInstanceIndicesUpdates(const TArrayView<const FInstance
 //~ End Meshes
 
 //~ Begin Debug
-void UATVoxelISMC::UpdateVoxelsDebugState(int32& InOutUpdatesLeft)
+void UATVoxelISMC::UpdateVoxelsDebugState()
 {
 	if (QueuedDebugUpdatePoints.IsEmpty())
 	{
 		return;
 	}
-	while (InOutUpdatesLeft > 0 && !QueuedDebugUpdatePoints.IsEmpty())
+	ensureReturn(OwnerChunk);
+	while (!OwnerChunk->IsThisTickUpdatesTimeBudgetExceeded() && !QueuedDebugUpdatePoints.IsEmpty())
 	{
-		InOutUpdatesLeft -= 1;
 		FIntVector SamplePoint = QueuedDebugUpdatePoints.Pop();
 
 		Debug_UpdateStabilityValueAtPoint(SamplePoint);

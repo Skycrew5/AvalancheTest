@@ -1,6 +1,6 @@
 // Scientific Ways
 
-#include "Simulations/ATSimulationTask_HealthDrain.h"
+#include "Simulation/ATSimulationTask_HealthDrain.h"
 
 #include "World/ATVoxelTree.h"
 #include "World/ATVoxelChunk.h"
@@ -37,17 +37,24 @@ void UATSimulationTask_HealthDrain::DoWork_SubThread() // UATSimulationTask
 
 		//ensure(SampleData.Stability < 0.25f);
 
-		float HealthDrainSpeed = FMath::Max(FMath::Square(0.25f - SampleData.Stability), 0.1f);
-		SampleData.Health -= HealthDrainSpeed * HealthDrainSpeedMul * DeltaTime;
+		if (SampleData.Stability > 0.01f)
+		{
+			float HealthDrainSpeed = FMath::Max(FMath::Square(0.25f - SampleData.Stability), 0.1f);
+			SampleData.Health -= HealthDrainSpeed * HealthDrainSpeedMul * DeltaTime;
+		}
+		else
+		{
+			SampleData.Health = 0.0f;
+		}
 	});
 	bPendingPostWork = true;
 }
 
-void UATSimulationTask_HealthDrain::PostWork_GameThread(int32& InOutUpdatesLeft)
+void UATSimulationTask_HealthDrain::PostWork_GameThread()
 {
-	while (InOutUpdatesLeft > 0 && !SelectedUpdatePoints.IsEmpty())
+	ensureReturn(TargetTree);
+	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !SelectedUpdatePoints.IsEmpty())
 	{
-		InOutUpdatesLeft -= 1;
 		FIntVector SamplePoint = SelectedUpdatePoints.Pop();
 
 		FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false);

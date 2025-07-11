@@ -4,13 +4,13 @@
 
 #include "Framework/ATGameState.h"
 
-#include "Simulations/ATSimulationComponent.h"
+#include "Procedural/ATProceduralGeneratorComponent.h"
+
+#include "Simulation/ATSimulationComponent.h"
 
 #include "World/ATVoxelChunk.h"
 #include "World/ATVoxelTypeData.h"
 #include "World/ATWorldFunctionLibrary.h"
-
-#include "FastNoise2/FastNoise2BlueprintLibrary.h"
 
 #if DEBUG_VOXELS
 	#pragma optimize("", off)
@@ -23,6 +23,7 @@ AATVoxelTree::AATVoxelTree(const FObjectInitializer& InObjectInitializer)
 
 	SetRootComponent(CreateDefaultSubobject<USceneComponent>(TEXT("RootComponent")));
 	SimulationComponent = CreateDefaultSubobject<UATSimulationComponent>(TEXT("SimulationComponent"));
+	ProceduralGeneratorComponent = CreateDefaultSubobject<UATProceduralGeneratorComponent>(TEXT("ProceduralGeneratorComponent"));
 
 	ChunkClass = AATVoxelChunk::StaticClass();
 	TreeSizeInChunks = FIntVector(4, 4, 2);
@@ -32,7 +33,7 @@ AATVoxelTree::AATVoxelTree(const FObjectInitializer& InObjectInitializer)
 
 	TreeSeed = 1337;
 
-	MaxUpdatesPerSecond = 10000;
+	TickUpdatesTimeBudgetSeconds = 0.010;
 }
 
 //~ Begin Actor
@@ -54,13 +55,10 @@ void AATVoxelTree::BeginPlay() // AActor
 {
 	Super::BeginPlay();
 
-	InitVoxelGenerators();
-
 	if (AATGameState* GameState = AATGameState::TryGetATGameState(this))
 	{
 		GameState->SetMainVoxelTree(this);
 	}
-
 	//InitVoxelChunksInSquare(FIntPoint(TreeSizeInChunks.X, TreeSizeInChunks.Y) / 2, TreeSizeInChunks.GetAbsMax());
 }
 
@@ -103,7 +101,7 @@ void AATVoxelTree::UnRegisterChunksUpdateReferenceActor(const AActor* InActor)
 	ChunksUpdateReferenceActors.Remove(InActor);
 }
 
-void AATVoxelTree::HandleChunkUpdates(int32& InOutUpdatesLeft)
+void AATVoxelTree::HandleChunkUpdates()
 {
 	ensureReturn(SimulationComponent);
 	if (!SimulationComponent->IsCurrentTaskActive())
@@ -111,9 +109,9 @@ void AATVoxelTree::HandleChunkUpdates(int32& InOutUpdatesLeft)
 		for (const AActor* UpdateReferenceActor : ChunksUpdateReferenceActors)
 		{
 			FIntPoint UpdatePointXY = UATWorldFunctionLibrary::WorldLocation_To_PointXY(UpdateReferenceActor->GetActorLocation(), GetVoxelSize());
-			InitVoxelChunksInSquare(UpdatePointXY / GetChunkSize(), ChunksUpdateMaxSquareExtent, InOutUpdatesLeft);
+			InitVoxelChunksInSquare(UpdatePointXY / GetChunkSize(), ChunksUpdateMaxSquareExtent);
 
-			if (InOutUpdatesLeft <= 0)
+			if (IsThisTickUpdatesTimeBudgetExceeded())
 			{
 				//break;
 				return;
@@ -128,11 +126,17 @@ void AATVoxelTree::HandleChunkUpdates(int32& InOutUpdatesLeft)
 	{
 		AATVoxelChunk* SampleChunk = GetVoxelChunkAtCoords(SampleChunkCoords);
 		ensureContinue(SampleChunk);
-		SampleChunk->HandleUpdates(InOutUpdatesLeft);
+		SampleChunk->HandleUpdates();
+
+		if (IsThisTickUpdatesTimeBudgetExceeded())
+		{
+			//break;
+			return;
+		}
 	}
 }
 
-void AATVoxelTree::InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY, int32& InOutUpdatesLeft)
+void AATVoxelTree::InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY)
 {
 	if (InSquareExtentXY < 1)
 	{
@@ -144,8 +148,6 @@ void AATVoxelTree::InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, co
 	ensureReturn(!TreeSizeInChunks.IsZero());
 	ensureReturn(ChunkSize > 0);
 	ensureReturn(VoxelSize > 0.0f);
-
-	bIsInitializingVoxelChunks = true;
 
 	FIntPoint BackLeftCorner = FIntPoint(FMath::Max(InSquareCenterXY.X - InSquareExtentXY, 0), FMath::Max(InSquareCenterXY.Y - InSquareExtentXY, 0));
 	FIntPoint FrontRightCorner = FIntPoint(FMath::Min(InSquareCenterXY.X + InSquareExtentXY, TreeSizeInChunks.X), FMath::Min(InSquareCenterXY.Y + InSquareExtentXY, TreeSizeInChunks.Y));
@@ -178,35 +180,22 @@ void AATVoxelTree::InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, co
 
 				SampleChunk->BP_InitChunk(this, SamplePoint);
 
-				if (SamplePoint.Z == 0)
-				{
-					CreateFoundationAtChunk(SamplePoint);
-					InOutUpdatesLeft -= FMath::Square(GetChunkSize());
-				}
 				SampleChunk->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 				SampleChunk->FinishSpawning(SampleTransform);
 
-				//InOutUpdatesLeft -= FMath::Cube(GetChunkSize());
+				ProceduralGeneratorComponent->QueueChunkForTaskAtIndex(SampleChunk, 0);
 
-				if (InOutUpdatesLeft <= 0)
+				if (IsThisTickUpdatesTimeBudgetExceeded())
 				{
 					goto LeaveLoop;
 				}
 			}
 		}
 	}
-	LeaveLoop:
-	bIsInitializingVoxelChunks = false;
+LeaveLoop:
+	return;
 }
 //~ End Voxel Chunks
-
-//~ Begin Voxel Generation
-void AATVoxelTree::InitVoxelGenerators()
-{
-	ensureReturn(VoxelGenerator_Perlin == nullptr);
-	VoxelGenerator_Perlin = UFastNoise2BlueprintLibrary::MakePerlinGenerator();
-}
-//~ End Voxel Generation
 
 //~ Begin Voxel Getters
 bool AATVoxelTree::HasVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued) const
@@ -298,9 +287,13 @@ bool AATVoxelTree::IsPointInsideTree(const FIntVector& InPoint) const
 		&& (InPoint.Z >= 0 && InPoint.Z < BoundsSize.Z);
 }
 
-bool AATVoxelTree::IsPointInsideLoadedChunk(const FIntVector& InPoint) const
+bool AATVoxelTree::IsPointInsideSimulationReadyChunk(const FIntVector& InPoint) const
 {
-	return ChunksMap.Contains(GetVoxelChunkCoordsAtPoint(InPoint));
+	if (const AATVoxelChunk* SampleChunk = ChunksMap.FindRef(GetVoxelChunkCoordsAtPoint(InPoint), nullptr))
+	{
+		return SampleChunk->IsChunkSimulationReady();
+	}
+	return false;
 }
 //~ End Voxel Getters
 
@@ -324,13 +317,13 @@ bool AATVoxelTree::SetVoxelAtPoint(const FIntVector& InPoint, const UATVoxelType
 		FVoxelInstanceData NewInstanceData = Queued_Point_To_VoxelInstanceData_Map.Add(InPoint, InTypeData->BP_InitializeInstanceData(this, InPoint));
 		SampleChunk->HandleSetVoxelInstanceDataAtPoint(InPoint, NewInstanceData);
 
-		if (bIsInitializingVoxelChunks)
+		if (!SampleChunk->IsChunkSimulationReady())
 		{
-			HandleQueuedVoxelInstanceData(InPoint);
+			QueuedPointsSkipSimulationQueue.Add(InPoint);
 		}
 		return true;
 	}
-	//ensureReturn(false, false);
+	//ensure(false);
 	return false;
 }
 
@@ -409,27 +402,19 @@ void AATVoxelTree::BreakAllVoxelsAtChunk(const FIntVector& InChunkCoords, const 
 	}
 	BreakVoxelsAtPoints(VoxelPoints, bInForced);
 }
-
-void AATVoxelTree::CreateFoundationAtChunk(const FIntVector& InChunkCoords)
-{
-	ensureReturn(FoundationVoxelTypeData);
-	ensureReturn(FoundationVoxelTypeData->bIsFoundation);
-
-	FIntVector ChunkOffset = InChunkCoords * ChunkSize;
-	TArray<FIntVector> VoxelPoints;
-
-	for (int32 SampleX = 0; SampleX < ChunkSize; ++SampleX)
-	{
-		for (int32 SampleY = 0; SampleY < ChunkSize; ++SampleY)
-		{
-			VoxelPoints.Add(ChunkOffset + FIntVector(SampleX, SampleY, 0));
-		}
-	}
-	SetVoxelsAtPoints(VoxelPoints, FoundationVoxelTypeData, true);
-}
 //~ End Voxel Setters
 
 //~ Begin Voxel Data
+bool AATVoxelTree::IsThisTickUpdatesTimeBudgetExceeded() const
+{
+	return FPlatformTime::Cycles64() > ThisTickUpdatesTimeBudget_CyclesThreshold;
+}
+
+void AATVoxelTree::SetThisTickUpdatesTimeBudget(double InTimeSeconds)
+{
+	ThisTickUpdatesTimeBudget_CyclesThreshold = FPlatformTime::Cycles64() + FPlatformTime::SecondsToCycles64(InTimeSeconds);
+}
+
 void AATVoxelTree::ForceTickUpdateNextFrame()
 {
 	FTimerManager& TimerManager = GetWorldTimerManager();
@@ -454,8 +439,9 @@ void AATVoxelTree::HandleTickUpdate_FromForceTickUpdate()
 
 void AATVoxelTree::HandleTickUpdate(float InDeltaSeconds)
 {
-	int32 UpdatesLeft = FMath::CeilToInt((float)MaxUpdatesPerSecond * InDeltaSeconds);
-	HandleChunkUpdates(UpdatesLeft);
+	SetThisTickUpdatesTimeBudget(TickUpdatesTimeBudgetSeconds);
+
+	HandleChunkUpdates();
 }
 
 void AATVoxelTree::ApplyQueued_Point_To_VoxelInstanceData_Map()
@@ -472,6 +458,11 @@ void AATVoxelTree::ApplyQueued_Point_To_VoxelInstanceData_Map()
 		for (const FIntVector& SamplePoint : QueuedPointArray)
 		{
 			HandleQueuedVoxelInstanceData(SamplePoint);
+
+			if (IsThisTickUpdatesTimeBudgetExceeded())
+			{
+				break;
+			}
 		}
 	}
 }
@@ -479,6 +470,7 @@ void AATVoxelTree::ApplyQueued_Point_To_VoxelInstanceData_Map()
 void AATVoxelTree::HandleQueuedVoxelInstanceData(const FIntVector& InPoint)
 {
 	ensureReturn(SimulationComponent);
+	ensureReturn(!SimulationComponent->IsCurrentTaskActive());
 
 	ensureReturn(Queued_Point_To_VoxelInstanceData_Map.Contains(InPoint));
 	const FVoxelInstanceData& QueuedVoxelInstanceData = Queued_Point_To_VoxelInstanceData_Map[InPoint];
@@ -486,19 +478,17 @@ void AATVoxelTree::HandleQueuedVoxelInstanceData(const FIntVector& InPoint)
 	if (QueuedVoxelInstanceData.IsTypeDataValid())
 	{
 		FVoxelInstanceData& AddedVoxelInstanceData = Point_To_VoxelInstanceData_Map.Add(InPoint, QueuedVoxelInstanceData);
-
-		if (bIsInitializingVoxelChunks)
-		{
-			
-		}
-		else
-		{
-			SimulationComponent->QueuePointForTaskAtIndex(0, InPoint);
-		}
 	}
 	else
 	{
 		Point_To_VoxelInstanceData_Map.Remove(InPoint);
+	}
+	if (QueuedPointsSkipSimulationQueue.Contains(InPoint))
+	{
+		QueuedPointsSkipSimulationQueue.Remove(InPoint);
+	}
+	else
+	{
 		SimulationComponent->QueuePointForTaskAtIndex(0, InPoint);
 	}
 	Queued_Point_To_VoxelInstanceData_Map.Remove(InPoint);

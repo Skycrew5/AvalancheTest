@@ -1,10 +1,10 @@
 // Scientific Ways
 
-#include "Simulations/ATSimulationComponent.h"
+#include "Simulation/ATSimulationComponent.h"
 
-#include "Simulations/ATSimulationTask.h"
-#include "Simulations/ATSimulationTask_HealthDrain.h"
-#include "Simulations/ATSimulationTask_StabilityRecursive.h"
+#include "Simulation/ATSimulationTask.h"
+#include "Simulation/ATSimulationTask_HealthDrain.h"
+#include "Simulation/ATSimulationTask_StabilityRecursive.h"
 
 #include "World/ATVoxelTree.h"
 
@@ -15,7 +15,7 @@ UATSimulationComponent::UATSimulationComponent()
 
 	TaskArray = {
 		CreateDefaultSubobject<UATSimulationTask_StabilityRecursive>(TEXT("SimulationTask_StabilityRecursive")),
-		CreateDefaultSubobject<UATSimulationTask_HealthDrain>(TEXT("SimulationTask_HealthDrain"))
+		//CreateDefaultSubobject<UATSimulationTask_HealthDrain>(TEXT("SimulationTask_HealthDrain"))
 	};
 	bEnableSimulationTasks = true;
 	MaxUpdatesPerSecond = 10000;
@@ -86,8 +86,7 @@ void UATSimulationComponent::HandleTickUpdate_FromForceTickUpdate()
 
 void UATSimulationComponent::HandleTickUpdate(float InDeltaSeconds)
 {
-	int32 UpdatesLeft = FMath::CeilToInt((float)MaxUpdatesPerSecond * InDeltaSeconds);
-	HandleSimulationTasks(UpdatesLeft);
+	HandleSimulationTasks();
 }
 //~ End Update
 
@@ -125,7 +124,7 @@ UATSimulationTask* UATSimulationComponent::FindTaskInstanceByClass(TSubclassOf<U
 	return nullptr;
 }
 
-void UATSimulationComponent::HandleSimulationTasks(int32& InOutUpdatesLeft)
+void UATSimulationComponent::HandleSimulationTasks()
 {
 	if (!bEnableSimulationTasks)
 	{
@@ -142,7 +141,7 @@ void UATSimulationComponent::HandleSimulationTasks(int32& InOutUpdatesLeft)
 	{
 		case EATSimulationTaskPhase::Idle:
 		{
-			CurrentTask->PreWork_GameThread(InOutUpdatesLeft);
+			CurrentTask->PreWork_GameThread();
 			bMoveToNextTask = CurrentTask->GetCurrentTaskPhase() != EATSimulationTaskPhase::DoWork;
 			break;
 		}
@@ -152,7 +151,7 @@ void UATSimulationComponent::HandleSimulationTasks(int32& InOutUpdatesLeft)
 		}
 		case EATSimulationTaskPhase::PendingPostWork:
 		{
-			CurrentTask->PostWork_GameThread(InOutUpdatesLeft);
+			CurrentTask->PostWork_GameThread();
 			bMoveToNextTask = CurrentTask->GetCurrentTaskPhase() != EATSimulationTaskPhase::PendingPostWork;
 			break;
 		}

@@ -44,5 +44,8 @@ public:
 
 	UFUNCTION(Category = "Indices", BlueprintCallable)
 	static int32 Point_To_ArrayIndex(const FIntVector& InPoint, const FIntVector& InBoxSize);
+
+	UFUNCTION(Category = "Indices", BlueprintCallable)
+	static int32 ArrayIndex2D_To_Point3D(const int32 InArrayIndex2D, const int32 InZ, const FIntVector& InBoxSize);
 //~ End Indices
 };

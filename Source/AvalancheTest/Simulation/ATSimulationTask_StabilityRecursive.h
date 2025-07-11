@@ -4,7 +4,7 @@
 
 #include "AvalancheTest.h"
 
-#include "Simulations/ATSimulationTask.h"
+#include "Simulation/ATSimulationTask.h"
 
 #include "World/ATTypes_World.h"
 
@@ -31,7 +31,7 @@ public:
 //~ Begin Task
 public:
 	virtual void DoWork_SubThread() override; // UATSimulationTask
-	virtual void PostWork_GameThread(int32& InOutUpdatesLeft) override; // UATSimulationTask
+	virtual void PostWork_GameThread() override; // UATSimulationTask
 protected:
 	virtual void AllocateCacheAtPoint(const FIntVector& InPoint) override { PointsCache.Add(InPoint); } // UATSimulationTask
 	virtual void ResetCacheAtPoint(const FIntVector& InPoint) override { PointsCache.Remove(InPoint); } // UATSimulationTask
@@ -107,7 +107,7 @@ protected:
 //~ Begin Next
 protected:
 
-	UPROPERTY(Category = "Next", EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<class UATSimulationTask_HealthDrain> HealthDrainSimulationTask;
+	//UPROPERTY(Category = "Next", EditAnywhere, BlueprintReadOnly)
+	//TObjectPtr<class UATSimulationTask_HealthDrain> HealthDrainSimulationTask;
 //~ End Next
 };

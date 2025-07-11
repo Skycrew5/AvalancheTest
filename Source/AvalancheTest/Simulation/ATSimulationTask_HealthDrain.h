@@ -4,7 +4,7 @@
 
 #include "AvalancheTest.h"
 
-#include "Simulations/ATSimulationTask.h"
+#include "Simulation/ATSimulationTask.h"
 
 #include "ATSimulationTask_HealthDrain.generated.h"
 
@@ -27,7 +27,7 @@ protected:
 //~ Begin Task
 public:
 	virtual void DoWork_SubThread() override; // UATSimulationTask
-	virtual void PostWork_GameThread(int32& InOutUpdatesLeft) override; // UATSimulationTask
+	virtual void PostWork_GameThread() override; // UATSimulationTask
 //~ End Task
 
 //~ Begin Health

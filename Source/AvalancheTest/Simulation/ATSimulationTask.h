@@ -8,7 +8,7 @@
 
 #include "ATSimulationTask.generated.h"
 
-UENUM(BlueprintType, meta = (DisplayName = "[AT] Attachment Direction"))
+UENUM(BlueprintType, meta = (DisplayName = "[AT] Simulation Task Phase"))
 enum class EATSimulationTaskPhase : uint8
 {
 	Idle,
@@ -58,9 +58,9 @@ public:
 	UFUNCTION(Category = "Task", BlueprintCallable)
 	EATSimulationTaskPhase GetCurrentTaskPhase() const;
 
-	virtual void PreWork_GameThread(int32& InOutUpdatesLeft);
+	virtual void PreWork_GameThread();
 	virtual void DoWork_SubThread() { ensure(false); }
-	virtual void PostWork_GameThread(int32& InOutUpdatesLeft) { ensure(false); }
+	virtual void PostWork_GameThread() { ensure(false); }
 protected:
 	virtual void AllocateCacheAtPoint(const FIntVector& InPoint) {}
 	virtual void ResetCacheAtPoint(const FIntVector& InPoint) {}
@@ -73,7 +73,7 @@ protected:
 	UPROPERTY(Transient)
 	TArray<FIntVector> SelectedUpdatePoints;
 
-	FAsyncTask<class FATSimulationTask_AsyncTask>* SimulationAsyncTaskPtr;
+	FAsyncTask<class FATSimulationTask_AsyncTask>* AsyncTaskPtr;
 //~ End Task
 };
 

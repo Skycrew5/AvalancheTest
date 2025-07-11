@@ -110,24 +110,24 @@ public:
 
 //~ Begin Voxel Data
 public:
-	void HandleUpdates(int32& InOutUpdatesLeft);
+
+	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
+	bool IsThisTickUpdatesTimeBudgetExceeded() const;
+
+	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
+	bool IsChunkSimulationReady() const { return bChunkSimulationReady; }
+
+	void MarkChunkAsSimulationReady() { ensure(!bChunkSimulationReady); bChunkSimulationReady = true; }
+	void HandleUpdates();
+protected:
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	bool bEnableVoxelComponentsUpdatesTick;
 
-protected:
-
-	
+	UPROPERTY(Transient)
+	bool bChunkSimulationReady;
 //~ End Voxel Data
 	
-//~ Begin Voxel Generation
-public:
-	void HandleProceduralGeneration();
-protected:
-
-	
-//~ End Voxel Generation
-
 //~ Begin Debug
 public:
 

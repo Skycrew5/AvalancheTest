@@ -51,7 +51,7 @@ void AATVoxelChunk::BeginPlay() // AActor
 {
 	Super::BeginPlay();
 
-	HandleProceduralGeneration();
+	
 }
 
 void AATVoxelChunk::EndPlay(const EEndPlayReason::Type InReason) // AActor
@@ -215,91 +215,26 @@ void AATVoxelChunk::HandleSetVoxelHealthAtPoint(const FIntVector& InPoint, float
 //~ End Voxel Setters
 
 //~ Begin Voxel Data
-void AATVoxelChunk::HandleUpdates(int32& InOutUpdatesLeft)
+bool AATVoxelChunk::IsThisTickUpdatesTimeBudgetExceeded() const
+{
+	ensureReturn(OwnerTree, false);
+	return OwnerTree->IsThisTickUpdatesTimeBudgetExceeded();
+}
+
+void AATVoxelChunk::HandleUpdates()
 {
 	for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
 	{
 		ensureContinue(SampleTypeDataAndVoxelComponent.Value);
-		SampleTypeDataAndVoxelComponent.Value->HandleUpdates(InOutUpdatesLeft);
+		SampleTypeDataAndVoxelComponent.Value->HandleUpdates();
+
+		if (IsThisTickUpdatesTimeBudgetExceeded())
+		{
+			break;
+		}
 	}
 }
 //~ End Voxel Data
-
-//~ Begin Voxel Generation
-void AATVoxelChunk::HandleProceduralGeneration()
-{
-	ensureReturn(OwnerTree);
-	ensureReturn(OwnerTree->DefaultVoxelTypeData);
-	ensureReturn(OwnerTree->WeakVoxelTypeData);
-
-	int32 TreeSeed = OwnerTree->GetTreeSeed();
-	int32 ChunkSeed = GetChunkSeed();
-
-	UFastNoise2PerlinGenerator* PerlinGenerator = OwnerTree->GetVoxelPerlinGenerator();
-
-	TArray<float> PerlinValues3D;
-	FIntVector PerlinStart3D = GetChunkBackLeftCornerPoint();
-	FIntVector PerlinSize3D = FIntVector(GetChunkSize());
-	/*PerlinGenerator->GenUniformGrid3D(PerlinValues3D, PerlinStart3D, PerlinSize3D, 0.01f, TreeSeed);
-
-	for (int32 SampleArrayIndex = 0; SampleArrayIndex < PerlinValues3D.Num(); ++SampleArrayIndex)
-	{
-		float SamplePerlinValue = PerlinValues3D[SampleArrayIndex];
-
-		if (SamplePerlinValue > 0.0f)
-		//if (FMath::RandBool())
-		{
-			FIntVector SamplePoint = PerlinStart3D + UATWorldFunctionLibrary::ArrayIndex_To_Point(SampleArrayIndex, PerlinSize3D);
-
-			if (SamplePerlinValue > 0.1f)
-			{
-				OwnerTree->SetVoxelAtPoint(SamplePoint, OwnerTree->WeakVoxelTypeData);
-			}
-			else
-			{
-				OwnerTree->SetVoxelAtPoint(SamplePoint, OwnerTree->DefaultVoxelTypeData);
-			}
-		}
-	}*/
-	TArray<float> PerlinValues2D;
-	FIntPoint PerlinStart2D = FIntPoint(PerlinStart3D.X, PerlinStart3D.Y);
-	FIntPoint PerlinSize2D = FIntPoint(PerlinSize3D.X, PerlinSize3D.Y);
-	PerlinGenerator->GenUniformGrid2D(PerlinValues2D, PerlinStart2D, PerlinSize2D, 0.01f, TreeSeed);
-
-	int32 ChunkTreeMaxZ = OwnerTree->GetBoundsSize().Z;
-
-	for (int32 SampleArrayIndex = 0; SampleArrayIndex < PerlinValues2D.Num(); ++SampleArrayIndex)
-	{
-		float SamplePerlinValue = PerlinValues2D[SampleArrayIndex];
-		float SampleNormalizedPerlinValue = (SamplePerlinValue + 1.0f) * 0.5f;
-
-		SampleNormalizedPerlinValue = FMath::Pow(SampleNormalizedPerlinValue, OwnerTree->PerlinPow);
-
-		for (int32 SampleZ = PerlinStart3D.Z; SampleZ < PerlinStart3D.Z + GetChunkSize(); ++SampleZ)
-		{
-			float AlphaZ = float(SampleZ) / float(ChunkTreeMaxZ);
-
-			if (SampleNormalizedPerlinValue > AlphaZ)
-			{
-				FIntVector SamplePoint = FIntVector(
-					PerlinStart2D.X + SampleArrayIndex % PerlinSize2D.X,
-					PerlinStart2D.Y + SampleArrayIndex / PerlinSize2D.Y,
-					SampleZ);
-
-				if (SampleNormalizedPerlinValue - AlphaZ > 0.1f)
-				{
-					OwnerTree->SetVoxelAtPoint(SamplePoint, OwnerTree->WeakVoxelTypeData);
-				}
-				else
-				{
-					OwnerTree->SetVoxelAtPoint(SamplePoint, OwnerTree->DefaultVoxelTypeData);
-				}
-			}
-		}
-	}
-
-}
-//~ End Voxel Generation
 
 //~ Begin Debug
 void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerController* ForPlayerController, FVoxelChunkDebugData& InOutData) const

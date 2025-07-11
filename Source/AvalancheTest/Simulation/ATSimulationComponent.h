@@ -66,7 +66,7 @@ public:
 	template<class TaskClass>
 	TaskClass* FindTaskInstance() const { return Cast<TaskClass>(FindTaskInstanceByClass(TaskClass::StaticClass())); }
 
-	void HandleSimulationTasks(int32& InOutUpdatesLeft);
+	void HandleSimulationTasks();
 protected:
 	void IncrementCurrentTaskIndex();
 

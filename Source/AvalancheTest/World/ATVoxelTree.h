@@ -35,9 +35,6 @@ protected:
 public:
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
-	bool IsInitializingVoxelChunks() const { return bIsInitializingVoxelChunks; }
-
-	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	FIntVector GetVoxelChunkCoordsAtPoint(const FIntVector& InPoint) const;
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
@@ -65,11 +62,8 @@ public:
 	float PerlinPow = 3.0f;
 
 protected:
-	void HandleChunkUpdates(int32& InOutUpdatesLeft);
-	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY, int32& InOutUpdatesLeft);
-
-	UPROPERTY(Category = "Simulation", BlueprintReadOnly)
-	bool bIsInitializingVoxelChunks;
+	void HandleChunkUpdates();
+	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY);
 
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class AATVoxelChunk> ChunkClass;
@@ -99,20 +93,13 @@ protected:
 //~ Begin Voxel Generation
 public:
 
-	UFUNCTION(Category = "Voxel Generation", BlueprintCallable, meta = (KeyWords = "GetVoxelGenerator_Perlin"))
-	class UFastNoise2PerlinGenerator* GetVoxelPerlinGenerator() const { return VoxelGenerator_Perlin; }
-
 	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
 	int32 GetTreeSeed() const { return TreeSeed; }
 
 protected:
-	void InitVoxelGenerators();
 
 	UPROPERTY(Category = "Voxel Generation", EditAnywhere, BlueprintReadOnly)
 	int32 TreeSeed;
-
-	UPROPERTY(Transient)
-	TObjectPtr<class UFastNoise2PerlinGenerator> VoxelGenerator_Perlin;
 //~ End Voxel Generation
 
 //~ Begin Voxel Getters
@@ -137,7 +124,7 @@ public:
 	bool IsPointInsideTree(const FIntVector& InPoint) const;
 
 	UFUNCTION(Category = "Voxel Chunks | Bounds", BlueprintCallable)
-	bool IsPointInsideLoadedChunk(const FIntVector& InPoint) const;
+	bool IsPointInsideSimulationReadyChunk(const FIntVector& InPoint) const;
 //~ End Voxel Getters
 	
 //~ Begin Voxel Setters
@@ -160,25 +147,19 @@ public:
 
 	UFUNCTION(Category = "Voxel Setters | Per Chunk", BlueprintCallable, meta = (KeyWords = "ClearAll, BreakAllVoxels"))
 	void BreakAllVoxelsAtChunk(const FIntVector& InChunkCoords, const bool bInForced = false);
-
-	UFUNCTION(Category = "Voxel Setters | Per Chunk", BlueprintCallable)
-	void CreateFoundationAtChunk(const FIntVector& InChunkCoords);
 //~ End Voxel Setters
 	
 //~ Begin Voxel Data
 public:
 
 	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
+	bool IsThisTickUpdatesTimeBudgetExceeded() const;
+
+	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
+	void SetThisTickUpdatesTimeBudget(double InTimeSeconds);
+
+	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
 	void ForceTickUpdateNextFrame();
-
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<const class UATVoxelTypeData> DefaultVoxelTypeData;
-
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<const class UATVoxelTypeData> WeakVoxelTypeData;
-
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<const class UATVoxelTypeData> FoundationVoxelTypeData;
 
 	void ApplyQueued_Point_To_VoxelInstanceData_Map();
 protected:
@@ -188,10 +169,16 @@ protected:
 	void HandleTickUpdate(float InDeltaSeconds);
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	int32 MaxUpdatesPerSecond;
+	double TickUpdatesTimeBudgetSeconds;
+
+	UPROPERTY(Transient)
+	uint64 ThisTickUpdatesTimeBudget_CyclesThreshold;
 
 	UPROPERTY(Transient)
 	TMap<FIntVector, FVoxelInstanceData> Queued_Point_To_VoxelInstanceData_Map;
+
+	UPROPERTY(Transient)
+	TSet<FIntVector> QueuedPointsSkipSimulationQueue;
 
 	UPROPERTY(Transient)
 	TMap<FIntVector, FVoxelInstanceData> Point_To_VoxelInstanceData_Map;
@@ -214,6 +201,18 @@ protected:
 	UPROPERTY(Category = "Simulation", EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<class UATSimulationComponent> SimulationComponent;
 //~ End Simulation
+	
+//~ Begin Procedural Generation
+public:
+
+	UFUNCTION(Category = "Procedural Generation", BlueprintCallable)
+	class UATProceduralGeneratorComponent* GetProceduralGeneratorComponent() const { return ProceduralGeneratorComponent; }
+
+protected:
+
+	UPROPERTY(Category = "Procedural Generation", EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<class UATProceduralGeneratorComponent> ProceduralGeneratorComponent;
+//~ End Procedural Generation
 
 //~ Begin Debug
 public:

@@ -51,4 +51,9 @@ int32 UATWorldFunctionLibrary::Point_To_ArrayIndex(const FIntVector& InPoint, co
 {
 	return InPoint.X + InPoint.Y * (InBoxSize.X) + InPoint.Z * (InBoxSize.X * InBoxSize.Y);
 }
+
+int32 UATWorldFunctionLibrary::ArrayIndex2D_To_Point3D(const int32 InArrayIndex2D, const int32 InZ, const FIntVector& InBoxSize)
+{
+	return Point_To_ArrayIndex(FIntVector(InArrayIndex2D % InBoxSize.X, InArrayIndex2D / InBoxSize.Y, InZ), InBoxSize);
+}
 //~ End Indices

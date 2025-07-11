@@ -1,9 +1,9 @@
 // Scientific Ways
 
-#include "Simulations/ATSimulationTask_StabilityRecursive.h"
+#include "Simulation/ATSimulationTask_StabilityRecursive.h"
 
-#include "Simulations/ATSimulationComponent.h"
-#include "Simulations/ATSimulationTask_HealthDrain.h"
+#include "Simulation/ATSimulationComponent.h"
+#include "Simulation/ATSimulationTask_HealthDrain.h"
 
 #include "World/ATVoxelTree.h"
 #include "World/ATVoxelChunk.h"
@@ -82,8 +82,8 @@ void UATSimulationTask_StabilityRecursive::Initialize(AATVoxelTree* InTargetTree
 	UATSimulationComponent* SimulationComponent = InTargetTree->GetSimulationComponent();
 	ensureReturn(SimulationComponent);
 
-	HealthDrainSimulationTask = SimulationComponent->FindTaskInstance<UATSimulationTask_HealthDrain>();
-	ensureReturn(HealthDrainSimulationTask);
+	//HealthDrainSimulationTask = SimulationComponent->FindTaskInstance<UATSimulationTask_HealthDrain>();
+	//ensureReturn(HealthDrainSimulationTask);
 }
 
 void UATSimulationTask_StabilityRecursive::DeInitialize() // UATSimulationTask
@@ -103,21 +103,18 @@ void UATSimulationTask_StabilityRecursive::DoWork_SubThread() // UATSimulationTa
 
 		if (TargetTree->HasVoxelInstanceDataAtPoint(SamplePoint, true))
 		{
-			FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
-			SampleData.Stability = 0.0f;
-
-			FRecursivePointCache NewCache = FRecursivePointCache(false, SampleData.Stability);
+			const FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
+			FRecursivePointCache NewCache = FRecursivePointCache(false, 0.0f);
 
 			for (uint8 SampleOrderIndex = 0; SampleOrderIndex < UsedDirectionsOrders.Num(); ++SampleOrderIndex)
 			{
-				if (SampleData.Stability < 1.0f)
+				if (NewCache.Stability < 1.0f)
 				{
 					FRecursiveThreadData ThreadData = FRecursiveThreadData(*UsedDirectionsOrders[SampleOrderIndex]);
 					float OrderStability = DoWork_SubThread_GetStabilityFromAllNeighbors(SamplePoint, ThreadData);
-					if (OrderStability > SampleData.Stability)
+					if (OrderStability > NewCache.Stability)
 					{
-						SampleData.Stability = OrderStability;
-						NewCache = FRecursivePointCache(false, SampleData.Stability, ThreadData.ThisOrderUpdatedPoints);
+						NewCache = FRecursivePointCache(false, OrderStability, ThreadData.ThisOrderUpdatedPoints);
 					}
 				}
 				else
@@ -146,7 +143,7 @@ float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAll
 	{
 		if (PointCachePtr->bIsThreadSafe && !PointCachePtr->Intersects(InThreadData.ThisOrderUpdatedPoints))
 		{
-			FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
+			const FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
 			ensureReturn(SampleData.IsTypeDataValid(), 0.0f);
 
 			return PointCachePtr->Stability * SampleData.TypeData->GetStabilityAttachmentMulForDirection(InNeighborDirection);
@@ -156,7 +153,7 @@ float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAll
 	{
 		return 0.0f;
 	}
-	FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
+	const FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
 	if (SampleData.IsTypeDataValid())
 	{
 		if (SampleData.TypeData->bIsFoundation)
@@ -189,25 +186,34 @@ float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAll
 		}
 	}
 	InThreadData.ThisOrderUpdatedPoints.Add(SamplePoint);
-	return TargetTree->IsPointInsideLoadedChunk(SamplePoint) ? 0.0f : 1.0f;
+	return TargetTree->IsPointInsideSimulationReadyChunk(SamplePoint) ? 0.0f : 1.0f;
 }
 
-void UATSimulationTask_StabilityRecursive::PostWork_GameThread(int32& InOutUpdatesLeft)
+void UATSimulationTask_StabilityRecursive::PostWork_GameThread()
 {
-	while (InOutUpdatesLeft > 0 && !SelectedUpdatePoints.IsEmpty())
+	ensureReturn(TargetTree);
+	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !SelectedUpdatePoints.IsEmpty())
 	{
-		InOutUpdatesLeft -= 1;
 		FIntVector SamplePoint = SelectedUpdatePoints.Pop();
 		FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false);
 
-		AATVoxelChunk* SampleChunk = TargetTree->GetVoxelChunkAtPoint(SamplePoint);
-		ensureContinue(SampleChunk);
+		ensureContinue(PointsCache.Contains(SamplePoint));
+		SampleData.Stability = PointsCache[SamplePoint].Stability;
 
-		//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.Stability);
-		SampleChunk->HandleSetVoxelInstanceDataAtPoint(SamplePoint, SampleData);
+		if (SampleData.Stability > 0.25f)
+		{
+			AATVoxelChunk* SampleChunk = TargetTree->GetVoxelChunkAtPoint(SamplePoint);
+			ensureContinue(SampleChunk);
 
-		ensureContinue(HealthDrainSimulationTask);
-		HealthDrainSimulationTask->QueuePoint(SamplePoint);
+			//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.Stability);
+			SampleChunk->HandleSetVoxelInstanceDataAtPoint(SamplePoint, SampleData);
+		}
+		else
+		{
+			TargetTree->BreakVoxelAtPoint(SamplePoint, true, true); // Will update Chunk too
+		}
+		//ensureContinue(HealthDrainSimulationTask);
+		//HealthDrainSimulationTask->QueuePoint(SamplePoint);
 
 		PointsCache[SamplePoint].bIsThreadSafe = true;
 	}

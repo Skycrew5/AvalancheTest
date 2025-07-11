@@ -1,6 +1,6 @@
 // Scientific Ways
 
-#include "Simulations/ATSimulationTask.h"
+#include "Simulation/ATSimulationTask.h"
 
 #include "World/ATVoxelTree.h"
 
@@ -15,21 +15,21 @@ void UATSimulationTask::Initialize(AATVoxelTree* InTargetTree)
 {
 	TargetTree = InTargetTree;
 
-	check(SimulationAsyncTaskPtr == nullptr);
-	SimulationAsyncTaskPtr = new FAsyncTask<FATSimulationTask_AsyncTask>();
-	SimulationAsyncTaskPtr->GetTask().TargetTask = this;
+	check(AsyncTaskPtr == nullptr);
+	AsyncTaskPtr = new FAsyncTask<FATSimulationTask_AsyncTask>();
+	AsyncTaskPtr->GetTask().TargetTask = this;
 }
 
 void UATSimulationTask::DeInitialize()
 {
-	ensureReturn(SimulationAsyncTaskPtr);
+	ensureReturn(AsyncTaskPtr);
 
-	if (!SimulationAsyncTaskPtr->TryAbandonTask())
+	if (!AsyncTaskPtr->TryAbandonTask())
 	{
-		SimulationAsyncTaskPtr->EnsureCompletion();
+		AsyncTaskPtr->EnsureCompletion();
 	}
-	delete SimulationAsyncTaskPtr;
-	SimulationAsyncTaskPtr = nullptr;
+	delete AsyncTaskPtr;
+	AsyncTaskPtr = nullptr;
 }
 //~ End Initialize
 
@@ -62,9 +62,9 @@ bool UATSimulationTask::ShouldSelectQueuedPointForUpdate(const FIntVector& InPoi
 //~ Begin Task
 EATSimulationTaskPhase UATSimulationTask::GetCurrentTaskPhase() const
 {
-	ensureReturn(SimulationAsyncTaskPtr, EATSimulationTaskPhase::Idle);
+	ensureReturn(AsyncTaskPtr, EATSimulationTaskPhase::Idle);
 
-	if (SimulationAsyncTaskPtr->IsDone())
+	if (AsyncTaskPtr->IsDone())
 	{
 		if (bPendingPostWork)
 		{
@@ -81,17 +81,18 @@ EATSimulationTaskPhase UATSimulationTask::GetCurrentTaskPhase() const
 	}
 }
 
-void UATSimulationTask::PreWork_GameThread(int32& InOutUpdatesLeft)
+void UATSimulationTask::PreWork_GameThread()
 {
-	ensure(!bPendingPostWork);
+	ensureReturn(!bPendingPostWork);
 
-	ensureReturn(SimulationAsyncTaskPtr);
-	ensureReturn(SimulationAsyncTaskPtr->IsDone());
+	ensureReturn(AsyncTaskPtr);
+	ensureReturn(AsyncTaskPtr->IsDone());
 
-	ensure(SelectedUpdatePoints.IsEmpty());
-	while (InOutUpdatesLeft > 0 && !QueuedPoints.IsEmpty())
+	ensureReturn(SelectedUpdatePoints.IsEmpty());
+	ensureReturn(TargetTree);
+
+	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !QueuedPoints.IsEmpty())
 	{
-		InOutUpdatesLeft -= 1;
 		FIntVector SamplePoint = QueuedPoints.Pop();
 
 		if (ShouldSelectQueuedPointForUpdate(SamplePoint))
@@ -104,12 +105,12 @@ void UATSimulationTask::PreWork_GameThread(int32& InOutUpdatesLeft)
 	{
 		return;
 	}
-	SimulationAsyncTaskPtr->StartBackgroundTask();
+	AsyncTaskPtr->StartBackgroundTask();
 }
 
 void UATSimulationTask::FinishPostWork_GameThread()
 {
-	ensure(bPendingPostWork);
+	ensureReturn(bPendingPostWork);
 	bPendingPostWork = false;
 }
 //~ End Task
