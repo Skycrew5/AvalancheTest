@@ -11,6 +11,7 @@
 
 UATSimulationTask_StabilityRecursive::UATSimulationTask_StabilityRecursive()
 {
+	bEnablePointsCache = false;
 	MaxRecursionLevel = 48u;
 
 	DirectionsOrder1 = {
@@ -97,24 +98,37 @@ void UATSimulationTask_StabilityRecursive::DeInitialize() // UATSimulationTask
 //~ Begin Task
 void UATSimulationTask_StabilityRecursive::DoWork_SubThread() // UATSimulationTask
 {
+	UpdatedSelectedPointsStabilities.SetNum(SelectedUpdatePoints.Num());
+
 	ParallelFor(SelectedUpdatePoints.Num(), [&](int32 InIndex)
 	{
+		DEV_HANDLE_ASYNC_PENDING_STOP();
+
 		const FIntVector& SamplePoint = SelectedUpdatePoints[InIndex];
 
 		if (TargetTree->HasVoxelInstanceDataAtPoint(SamplePoint, true))
 		{
-			const FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
+			FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
+
 			FRecursivePointCache NewCache = FRecursivePointCache(false, 0.0f);
+			float NewStability = 0.0f;
 
 			for (uint8 SampleOrderIndex = 0; SampleOrderIndex < UsedDirectionsOrders.Num(); ++SampleOrderIndex)
 			{
-				if (NewCache.Stability < 1.0f)
+				DEV_HANDLE_ASYNC_PENDING_STOP();
+
+				if (NewStability < 1.0f)
 				{
 					FRecursiveThreadData ThreadData = FRecursiveThreadData(*UsedDirectionsOrders[SampleOrderIndex]);
 					float OrderStability = DoWork_SubThread_GetStabilityFromAllNeighbors(SamplePoint, ThreadData);
-					if (OrderStability > NewCache.Stability)
+
+					if (OrderStability > NewStability)
 					{
-						NewCache = FRecursivePointCache(false, OrderStability, ThreadData.ThisOrderUpdatedPoints);
+						if (bEnablePointsCache)
+						{
+							NewCache = FRecursivePointCache(false, OrderStability, ThreadData.ThisOrderUpdatedPoints);
+						}
+						NewStability = OrderStability;
 					}
 				}
 				else
@@ -122,15 +136,22 @@ void UATSimulationTask_StabilityRecursive::DoWork_SubThread() // UATSimulationTa
 					break;
 				}
 			}
-			PointsCache[SamplePoint] = NewCache;
+			if (bEnablePointsCache)
+			{
+				PointsCache[SamplePoint] = NewCache;
+			}
+			UpdatedSelectedPointsStabilities[InIndex] = NewStability;
 		}
 		//}, EParallelForFlags::ForceSingleThread);
 	});
+	
 	bPendingPostWork = true;
 }
 
 float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection, uint8 InCurrentRecursionLevel)
 {
+	DEV_HANDLE_ASYNC_PENDING_STOP(0.0f);
+
 	++InCurrentRecursionLevel;
 
 	if (InCurrentRecursionLevel > MaxRecursionLevel)
@@ -156,7 +177,7 @@ float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAll
 	const FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
 	if (SampleData.IsTypeDataValid())
 	{
-		if (SampleData.TypeData->bIsFoundation)
+		if (SampleData.TypeData->bHasInfiniteStability)
 		{
 			return 1.0f * SampleData.TypeData->GetStabilityAttachmentMulForDirection(InNeighborDirection);
 		}
@@ -194,11 +215,12 @@ void UATSimulationTask_StabilityRecursive::PostWork_GameThread()
 	ensureReturn(TargetTree);
 	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !SelectedUpdatePoints.IsEmpty())
 	{
+		ensureContinue(SelectedUpdatePoints.Num() == UpdatedSelectedPointsStabilities.Num());
+
 		FIntVector SamplePoint = SelectedUpdatePoints.Pop();
 		FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false);
 
-		ensureContinue(PointsCache.Contains(SamplePoint));
-		SampleData.Stability = PointsCache[SamplePoint].Stability;
+		SampleData.Stability = UpdatedSelectedPointsStabilities.Pop();
 
 		if (SampleData.Stability > 0.25f)
 		{
@@ -215,7 +237,18 @@ void UATSimulationTask_StabilityRecursive::PostWork_GameThread()
 		//ensureContinue(HealthDrainSimulationTask);
 		//HealthDrainSimulationTask->QueuePoint(SamplePoint);
 
-		PointsCache[SamplePoint].bIsThreadSafe = true;
+		if (bEnablePointsCache)
+		{
+			PointsCache[SamplePoint].bIsThreadSafe = true;
+		}
+	}
+	if (bEnablePointsCache)
+	{
+		SET_MEMORY_STAT(STAT_SimulationTasks_StabilityRecursiveCache, PointsCache.GetAllocatedSize());
+		for (const auto& SampleKeyValue : PointsCache)
+		{
+			INC_MEMORY_STAT_BY(STAT_SimulationTasks_StabilityRecursiveCache, SampleKeyValue.Value.FinalUpdatedPoints.GetAllocatedSize());
+		}
 	}
 	if (SelectedUpdatePoints.IsEmpty())
 	{

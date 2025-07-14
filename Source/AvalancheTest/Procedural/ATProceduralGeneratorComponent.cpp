@@ -16,7 +16,6 @@ UATProceduralGeneratorComponent::UATProceduralGeneratorComponent()
 		CreateDefaultSubobject<UATProceduralGeneratorTask_Landscape>(TEXT("ProceduralGeneratorTask_Landscape")),
 	};
 	bEnableProceduralTasks = true;
-	MaxUpdatesPerSecond = 10000;
 }
 
 //~ Begin ActorComponent
@@ -89,6 +88,18 @@ void UATProceduralGeneratorComponent::HandleTickUpdate(float InDeltaSeconds)
 //~ End Update
 
 //~ Begin Queue
+int32 UATProceduralGeneratorComponent::GetTotalQueuedChunksNum() const
+{
+	int32 OutNum = 0;
+
+	for (UATProceduralGeneratorTask* SampleTask : TaskArray)
+	{
+		ensureContinue(SampleTask);
+		OutNum += SampleTask->GetQueuedChunksNum();
+	}
+	return OutNum;
+}
+
 void UATProceduralGeneratorComponent::QueueChunkForTaskAtIndex(AATVoxelChunk* InChunk, int32 InTaskIndex)
 {
 	ensureReturn(TaskArray.IsValidIndex(InTaskIndex));

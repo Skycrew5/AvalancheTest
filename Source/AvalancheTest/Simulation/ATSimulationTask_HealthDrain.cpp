@@ -32,6 +32,8 @@ void UATSimulationTask_HealthDrain::DoWork_SubThread() // UATSimulationTask
 
 	ParallelFor(SelectedUpdatePoints.Num(), [&](int32 InIndex)
 	{
+		DEV_HANDLE_ASYNC_PENDING_STOP();
+
 		const FIntVector& SamplePoint = SelectedUpdatePoints[InIndex];
 		FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
 

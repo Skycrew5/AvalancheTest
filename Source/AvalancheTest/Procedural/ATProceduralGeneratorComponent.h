@@ -43,15 +43,16 @@ protected:
 	void HandleTickUpdate_FromForceTickUpdate();
 	void HandleTickUpdate(float InDeltaSeconds);
 
-	UPROPERTY(Category = "Update", EditAnywhere, BlueprintReadOnly)
-	int32 MaxUpdatesPerSecond;
-
 	UPROPERTY(Transient)
 	FTimerHandle ForceTickUpdateNextFrameTimerHandle;
 //~ End Update
 	
 //~ Begin Queue
 public:
+
+	UFUNCTION(Category = "Queue", BlueprintCallable)
+	int32 GetTotalQueuedChunksNum() const;
+
 	void QueueChunkForTaskAtIndex(class AATVoxelChunk* InChunk, int32 InTaskIndex);
 //~ End Queue
 
@@ -60,6 +61,9 @@ public:
 
 	UFUNCTION(Category = "Tasks", BlueprintCallable)
 	bool IsCurrentTaskActive() const;
+
+	UFUNCTION(Category = "Tasks", BlueprintCallable, meta = (DeterminesOutputType = "InClass"))
+	class UATProceduralGeneratorTask* GetTaskAtIndex(int32 InTaskIndex) const { ensureReturn(TaskArray.IsValidIndex(InTaskIndex), nullptr); return TaskArray[InTaskIndex]; }
 
 	UFUNCTION(Category = "Tasks", BlueprintCallable, meta = (DeterminesOutputType = "InClass"))
 	class UATProceduralGeneratorTask* FindTaskInstanceByClass(TSubclassOf<UATProceduralGeneratorTask> InClass) const;

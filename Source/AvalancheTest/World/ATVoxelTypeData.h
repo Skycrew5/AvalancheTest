@@ -46,7 +46,10 @@ public:
 	float GetStabilityAttachmentMulForDirection(EATAttachmentDirection InDirection) const;
 
 	UPROPERTY(Category = "Stability", EditDefaultsOnly, BlueprintReadOnly)
-	bool bIsFoundation;
+	bool bIsUnbreakable;
+
+	UPROPERTY(Category = "Stability", EditDefaultsOnly, BlueprintReadOnly)
+	bool bHasInfiniteStability;
 
 	UPROPERTY(Category = "Stability", EditDefaultsOnly, BlueprintReadOnly)
 	float AttachmentStrengthMul;

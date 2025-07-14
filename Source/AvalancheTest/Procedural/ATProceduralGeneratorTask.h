@@ -43,6 +43,9 @@ protected:
 public:
 
 	UFUNCTION(Category = "Queue", BlueprintCallable)
+	int32 GetQueuedChunksNum() { return QueuedChunks.Num(); }
+
+	UFUNCTION(Category = "Queue", BlueprintCallable)
 	void QueueChunk(class AATVoxelChunk* InChunk);
 
 protected:

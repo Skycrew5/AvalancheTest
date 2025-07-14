@@ -90,6 +90,12 @@ public:
 
 	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
 	FVector GetChunkCenterWorldLocation() const;
+
+	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
+	bool HasVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
+
+	UFUNCTION(Category = "Getters", BlueprintCallable, meta = (KeyWords = "GetInstanceData"))
+	FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked = true, const bool bInIgnoreQueued = false) const;
 //~ End Voxel Getters
 
 //~ Begin Voxel Setters
@@ -116,16 +122,20 @@ public:
 
 	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
 	bool IsChunkSimulationReady() const { return bChunkSimulationReady; }
+	void MarkChunkAsSimulationReady();
 
-	void MarkChunkAsSimulationReady() { ensure(!bChunkSimulationReady); bChunkSimulationReady = true; }
+	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
+	bool IsReadyToUpdateVoxelsVisibility() const { return bReadyToUpdateVoxelsVisibility; }
+	void UpdateReadyToUpdateVoxelsVisibilityState();
+
 	void HandleUpdates();
 protected:
 
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	bool bEnableVoxelComponentsUpdatesTick;
-
 	UPROPERTY(Transient)
 	bool bChunkSimulationReady;
+
+	UPROPERTY(Transient)
+	bool bReadyToUpdateVoxelsVisibility;
 //~ End Voxel Data
 	
 //~ Begin Debug

@@ -45,6 +45,16 @@ void UATSimulationComponent::TickComponent(float InDeltaSeconds, enum ELevelTick
 	Super::TickComponent(InDeltaSeconds, InTickType, InThisTickFunction);
 
 	HandleTickUpdate(InDeltaSeconds);
+
+	SIZE_T TasksQueuedPointsAllocatedSize = 0;
+	for (UATSimulationTask* SampleTask : TaskArray)
+	{
+		const auto& SampleQueuedPoints = SampleTask->GetConstQueuedPoints();
+		TasksQueuedPointsAllocatedSize += SampleQueuedPoints.GetAllocatedSize();
+	}
+	//UE_LOG(LogVoxels, Log, TEXT("TasksQueuedPointsAllocatedSize %i"), TasksQueuedPointsAllocatedSize);
+	//SET_FLOAT_STAT(STAT_SimulationTasks_QueuedPoints, SIZE_T_TO_MB(TasksQueuedPointsAllocatedSize));
+	SET_MEMORY_STAT(STAT_SimulationTasks_QueuedPoints, TasksQueuedPointsAllocatedSize);
 }
 
 void UATSimulationComponent::EndPlay(const EEndPlayReason::Type InReason) // UActorComponent

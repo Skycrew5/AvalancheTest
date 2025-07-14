@@ -37,22 +37,28 @@ public:
 public:
 
 	UFUNCTION(Category = "Getters | Voxel Instance Data", BlueprintCallable)
-	int32 GetVoxelInstancesNum() const { return Point_To_VoxelInstanceData_Map.Num(); }
+	int32 GetVoxelInstancesNum() const { return Point_To_MeshIndex_Map.Num(); }
 
-	UFUNCTION(Category = "Getters | Voxel Instance Data", BlueprintCallable)
-	bool HasVoxelInstanceDataAtPoint(const FIntVector& InPoint) const { return Point_To_VoxelInstanceData_Map.Contains(InPoint); }
+	UFUNCTION(Category = "Getters", BlueprintCallable)
+	bool HasVoxelOfThisTypeAtPoint(const FIntVector& InPoint) const;
 
-	UFUNCTION(Category = "Getters | Voxel Instance Data", BlueprintCallable)
-	FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint) const;
+	UFUNCTION(Category = "Getters", BlueprintCallable)
+	bool HasVoxelOfAnyTypeAtPoint(const FIntVector& InPoint) const;
+
+	UFUNCTION(Category = "Getters", BlueprintCallable)
+	bool CouldCreateMeshAtPoint(const FIntVector& InPoint) const;
+
+	UFUNCTION(Category = "Getters", BlueprintCallable, meta = (KeyWords = "GetInstanceData"))
+	FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked = true) const;
 
 	UFUNCTION(Category = "Getters | Mesh Index", BlueprintCallable)
-	bool HasMeshAtPoint(const FIntVector& InPoint) const { return Point_To_MeshIndex_MirroredMap.ContainsKey(InPoint); }
+	bool HasMeshAtPoint(const FIntVector& InPoint) const { return Point_To_MeshIndex_Map.Contains(InPoint); }
 
 	UFUNCTION(Category = "Getters | Mesh Index", BlueprintCallable)
-	int32 GetMeshIndexAtPoint(const FIntVector& InPoint) const { return Point_To_MeshIndex_MirroredMap.FindRefByKey(InPoint, INDEX_NONE); }
+	int32 GetMeshIndexAtPoint(const FIntVector& InPoint) const { return Point_To_MeshIndex_Map.FindRef(InPoint, INDEX_NONE); }
 
 	UFUNCTION(Category = "Getters | Mesh Index", BlueprintCallable)
-	const FIntVector& GetPointOfMeshIndex(int32 InMeshIndex) const { return Point_To_MeshIndex_MirroredMap.FindRefByValue(InMeshIndex, FIntVector::ZeroValue); }
+	FIntVector GetPointOfMeshIndex(int32 InMeshIndex, const bool bInChecked = true) const;
 
 	UFUNCTION(Category = "Getters", BlueprintCallable)
 	bool IsVoxelAtPointFullyClosed(const FIntVector& InPoint) const;
@@ -70,7 +76,7 @@ public:
 	UFUNCTION(Category = "Setters | Voxel Instance Data", BlueprintCallable)
 	bool HandleBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInNotify = false);
 
-	bool RelocateMeshInstanceIndex(int32 InPrevIndex, int32 InNewIndex, const bool bInChecked = true);
+	bool HandleMeshInstanceIndexRelocated(int32 InPrevIndex, int32 InNewIndex);
 protected:
 
 //~ End Setters
@@ -86,9 +92,13 @@ public:
 	void QueuePointForVisibilityUpdate(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
 
 	UFUNCTION(Category = "Data", BlueprintCallable, meta = (KeyWords = "UpdateVoxelsVisibilityState"))
-	void UpdateAllVoxelsVisibilityState() { UpdateVoxelsVisibilityState(true); }
+	void ForceUpdateAllVoxelsVisibilityState() { UpdateVoxelsVisibilityState(true); }
 
 	void UpdateVoxelsVisibilityState(const bool bInIgnoreTimeBugdet = false);
+
+	UPROPERTY(Transient)
+	bool bEnableVoxelsVisibilityUpdates;
+
 protected:
 
 	UPROPERTY(Category = "Data", BlueprintReadOnly)
@@ -97,12 +107,11 @@ protected:
 	UPROPERTY(Category = "Data", BlueprintReadOnly)
 	TObjectPtr<const class UATVoxelTypeData> VoxelTypeData;
 
-	// Set from Tree->Chunk for gameplay purposes, not simulation
 	UPROPERTY(Transient)
-	TMap<FIntVector, FVoxelInstanceData> Point_To_VoxelInstanceData_Map;
+	TMap<FIntVector, int32> Point_To_MeshIndex_Map;
 
-	//UPROPERTY(Transient)
-	TMirroredMapPair<FIntVector, int32> Point_To_MeshIndex_MirroredMap;
+	UPROPERTY(Transient)
+	TSet<FIntVector> PossibleMeshPointsSet;
 
 	//UPROPERTY(Transient)
 	TArraySetPair<FIntVector> QueuedVisibilityUpdatePoints;

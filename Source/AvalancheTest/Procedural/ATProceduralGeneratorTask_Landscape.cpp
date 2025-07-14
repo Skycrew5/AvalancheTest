@@ -11,9 +11,17 @@
 
 UATProceduralGeneratorTask_Landscape::UATProceduralGeneratorTask_Landscape()
 {
-	HillsNoiseFrequency = 0.01f;
+	DefaultToWeakWidth = 0.02f;
 
-	DefaultToWeakThreshold = 0.02f;
+	HillsNoiseFrequency = 0.01f;
+	HillsHeightOffset = 0.5f;
+	HillsHeightPow = 3.0f;
+
+	CavesNoiseFrequency = 0.01f;
+	CavesThreshold = 0.4f;
+
+	OresNoiseFrequency = 0.05f;
+	OresThreshold = 0.25f;
 }
 
 //~ Begin Initialize
@@ -23,6 +31,9 @@ void UATProceduralGeneratorTask_Landscape::Initialize(AATVoxelTree* InTargetTree
 
 	ensureReturn(PerlinGenerator == nullptr);
 	PerlinGenerator = UFastNoise2BlueprintLibrary::MakePerlinGenerator();
+
+	//ensureReturn(CellularDistanceGenerator == nullptr);
+	//CellularDistanceGenerator = UFastNoise2BlueprintLibrary::MakeCellularDistanceGenerator(PerlinGenerator);
 }
 //~ End Initialize
 
@@ -33,7 +44,10 @@ void UATProceduralGeneratorTask_Landscape::PreWork_GameThread() // UATProcedural
 	ensureReturn(WeakVoxelTypeData);
 
 	ensureReturn(FoundationVoxelTypeData);
-	ensureReturn(FoundationVoxelTypeData->bIsFoundation);
+	ensureReturn(FoundationVoxelTypeData->bIsUnbreakable);
+	ensureReturn(FoundationVoxelTypeData->bHasInfiniteStability);
+
+	ensureReturn(!OresVoxelTypeDataArray.IsEmpty());
 
 	Super::PreWork_GameThread();
 }
@@ -53,19 +67,14 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 	FIntVector ChunkBackLeftCornerPoint = InTargetChunk->GetChunkBackLeftCornerPoint();
 	FIntVector ChunkSize = FIntVector(InTargetChunk->GetChunkSize());
 
-	TArray<float> PerlinValues3D;
-	FIntVector PerlinStart3D = ChunkBackLeftCornerPoint;
-	FIntVector PerlinSize3D = ChunkSize;
-	/*PerlinGenerator->GenUniformGrid3D(PerlinValues3D, PerlinStart3D, PerlinSize3D, 0.01f, TreeSeed);
-
-	for (int32 SampleArrayIndex = 0; SampleArrayIndex < PerlinValues3D.Num(); ++SampleArrayIndex)
+	/*for (int32 SampleArrayIndex = 0; SampleArrayIndex < GeneratorValues3D.Num(); ++SampleArrayIndex)
 	{
-		float SamplePerlinValue = PerlinValues3D[SampleArrayIndex];
+		float SampleGeneratorValue = GeneratorValues3D[SampleArrayIndex];
 
-		if (SamplePerlinValue > 0.0f)
+		if (SampleGeneratorValue > 0.0f)
 		//if (FMath::RandBool())
 		{
-			if (SamplePerlinValue > 0.1f)
+			if (SampleGeneratorValue > 0.1f)
 			{
 				Data.TypeDataArray[SampleArrayIndex] = WeakVoxelTypeData;
 			}
@@ -75,32 +84,78 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 			}
 		}
 	}*/
-	TArray<float> PerlinValues2D;
-	FIntPoint PerlinStart2D = FIntPoint(ChunkBackLeftCornerPoint.X, ChunkBackLeftCornerPoint.Y);
-	FIntPoint PerlinSize2D = FIntPoint(ChunkSize.X, ChunkSize.Y);
-	PerlinGenerator->GenUniformGrid2D(PerlinValues2D, PerlinStart2D, PerlinSize2D, HillsNoiseFrequency, TreeSeed);
+	TArray<float> HillsValues2D;
+	FIntPoint GeneratorStart2D = FIntPoint(ChunkBackLeftCornerPoint.X, ChunkBackLeftCornerPoint.Y);
+	FIntPoint GeneratorSize2D = FIntPoint(ChunkSize.X, ChunkSize.Y);
+	PerlinGenerator->GenUniformGrid2D(HillsValues2D, GeneratorStart2D, GeneratorSize2D, HillsNoiseFrequency, TreeSeed);
+
+	TArray<float> CavesValues3D;
+	FIntVector GeneratorStart3D = ChunkBackLeftCornerPoint;
+	FIntVector GeneratorSize3D = ChunkSize;
+	PerlinGenerator->GenUniformGrid3D(CavesValues3D, GeneratorStart3D, GeneratorSize3D, CavesNoiseFrequency, TreeSeed + 10);
+
+	TArray<float> OresValues3D;
+	PerlinGenerator->GenUniformGrid3D(OresValues3D, GeneratorStart3D, GeneratorSize3D, OresNoiseFrequency, TreeSeed + 100);
 
 	int32 ChunkTreeMaxZ = TargetTree->GetBoundsSize().Z;
 
-	for (int32 SampleArrayIndex2D = 0; SampleArrayIndex2D < PerlinValues2D.Num(); ++SampleArrayIndex2D)
+	for (int32 SampleArrayIndex2D = 0; SampleArrayIndex2D < HillsValues2D.Num(); ++SampleArrayIndex2D)
 	{
-		float SamplePerlinValue = PerlinValues2D[SampleArrayIndex2D];
-		float SampleNormalizedPerlinValue = (SamplePerlinValue + 1.0f) * 0.5f;
+		float SampleHillsValue2D = HillsValues2D[SampleArrayIndex2D];
 
-		SampleNormalizedPerlinValue = FMath::Pow(SampleNormalizedPerlinValue, TargetTree->PerlinPow);
+		// Normalize
+		SampleHillsValue2D = (SampleHillsValue2D + 1.0f) * 0.5f;
+
+		// Power
+		SampleHillsValue2D = FMath::Pow(SampleHillsValue2D, HillsHeightPow);
+
+		// Offset
+		SampleHillsValue2D = FMath::Lerp(HillsHeightOffset, 1.0f, SampleHillsValue2D);
 
 		for (int32 LocalZ = 0; LocalZ < ChunkSize.Z; ++LocalZ)
 		{
-			int32 GlobalZ = PerlinStart3D.Z + LocalZ;
+			int32 GlobalZ = GeneratorStart3D.Z + LocalZ;
 			float GlobalAlphaZ = float(GlobalZ) / float(ChunkTreeMaxZ);
 
-			if (SampleNormalizedPerlinValue > GlobalAlphaZ)
+			if (GlobalAlphaZ < SampleHillsValue2D) // If below hills
 			{
-				int32 SampleArrayIndex3D = UATWorldFunctionLibrary::ArrayIndex2D_To_Point3D(SampleArrayIndex2D, LocalZ, ChunkSize);
+				int32 SampleArrayIndex3D = UATWorldFunctionLibrary::ArrayIndex2D_To_ArrayIndex3D(SampleArrayIndex2D, LocalZ, ChunkSize);
 
-				if (SampleNormalizedPerlinValue - GlobalAlphaZ > DefaultToWeakThreshold)
+				if (SampleHillsValue2D - GlobalAlphaZ > DefaultToWeakWidth) // If below default voxels layer
 				{
-					Data.TypeDataArray[SampleArrayIndex3D] = WeakVoxelTypeData;
+					float SampleCavesValue3D = CavesValues3D[SampleArrayIndex3D];
+
+					// Normalize
+					SampleCavesValue3D = (SampleCavesValue3D + 1.0f) * 0.5f;
+
+					if (SampleCavesValue3D > CavesThreshold) // If outside cave
+					{
+						float SampleOresValue3D = OresValues3D[SampleArrayIndex3D];
+
+						// Normalize
+						SampleOresValue3D = (SampleOresValue3D + 1.0f) * 0.5f;
+
+						if (SampleOresValue3D < OresThreshold) // If inside ores
+						{
+							float BelowHillsAlpha = (SampleHillsValue2D - GlobalAlphaZ) / SampleHillsValue2D;
+							int32 SampleOreTypeDataIndex = FMath::RoundToInt(BelowHillsAlpha * (float)OresVoxelTypeDataArray.Num()) - 1;
+
+							// Clamp
+							SampleOreTypeDataIndex = FMath::Clamp(SampleOreTypeDataIndex, 0, OresVoxelTypeDataArray.Num() - 1);
+							Data.TypeDataArray[SampleArrayIndex3D] = OresVoxelTypeDataArray[SampleOreTypeDataIndex];
+						}
+						else
+						{
+							if (SampleCavesValue3D > CavesThreshold + DefaultToWeakWidth) // If outside default layer
+							{
+								Data.TypeDataArray[SampleArrayIndex3D] = WeakVoxelTypeData;
+							}
+							else
+							{
+								Data.TypeDataArray[SampleArrayIndex3D] = DefaultVoxelTypeData;
+							}
+						}
+					}
 				}
 				else
 				{
@@ -117,7 +172,7 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 			{
 				FIntVector SamplePoint = FIntVector(SampleX, SampleY, 0);
 				
-				int32 SampleArrayIndex3D = UATWorldFunctionLibrary::Point_To_ArrayIndex(SamplePoint, ChunkSize);
+				int32 SampleArrayIndex3D = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SamplePoint, ChunkSize);
 				Data.TypeDataArray[SampleArrayIndex3D] = FoundationVoxelTypeData;
 			}
 		}
@@ -145,7 +200,7 @@ void UATProceduralGeneratorTask_Landscape::PostWork_GameThread()
 
 			if (const UATVoxelTypeData* SampleTypeData = SampleData.TypeDataArray[SampleArrayIndex])
 			{
-				FIntVector SamplePoint = ChunkBackLeftCornerPoint + UATWorldFunctionLibrary::ArrayIndex_To_Point(SampleArrayIndex, ChunkSize);
+				FIntVector SamplePoint = ChunkBackLeftCornerPoint + UATWorldFunctionLibrary::ArrayIndex3D_To_Point3D(SampleArrayIndex, ChunkSize);
 				TargetTree->SetVoxelAtPoint(SamplePoint, SampleTypeData, true);
 
 				if (TargetTree->IsThisTickUpdatesTimeBudgetExceeded())

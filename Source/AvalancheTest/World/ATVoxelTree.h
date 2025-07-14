@@ -35,6 +35,9 @@ protected:
 public:
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
+	bool IsChunkCoordsInsideTree(const FIntVector& InChunkCoords) const;
+
+	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	FIntVector GetVoxelChunkCoordsAtPoint(const FIntVector& InPoint) const;
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
@@ -57,9 +60,6 @@ public:
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	void UnRegisterChunksUpdateReferenceActor(const AActor* InActor);
-
-	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
-	float PerlinPow = 3.0f;
 
 protected:
 	void HandleChunkUpdates();
@@ -109,7 +109,7 @@ public:
 	bool HasVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
 	UFUNCTION(Category = "Voxel Getters", BlueprintCallable, meta = (KeyWords = "GetInstanceData"))
-	struct FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked = true, const bool bInIgnoreQueued = false) const;
+	FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked = true, const bool bInIgnoreQueued = false) const;
 
 	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
 	int32 GetVoxelNeighborsNumAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
@@ -171,6 +171,9 @@ protected:
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	double TickUpdatesTimeBudgetSeconds;
 
+	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
+	double TickUpdatesTimeBudgetSeconds_PerQueuedChunkAdditive;
+
 	UPROPERTY(Transient)
 	uint64 ThisTickUpdatesTimeBudget_CyclesThreshold;
 
@@ -191,7 +194,7 @@ protected:
 public:
 
 	UFUNCTION(Category = "Simulation", BlueprintCallable)
-	void QueueFullUpdateAtChunk(const FIntVector& InChunkCoords);
+	void QueueFullSimulationUpdateAtChunk(const FIntVector& InChunkCoords);
 
 	UFUNCTION(Category = "Simulation", BlueprintCallable)
 	class UATSimulationComponent* GetSimulationComponent() const { return SimulationComponent; }

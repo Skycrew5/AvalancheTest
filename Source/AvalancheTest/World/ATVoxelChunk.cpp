@@ -42,7 +42,7 @@ void AATVoxelChunk::OnConstruction(const FTransform& InTransform) // AActor
 		for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
 		{
 			ensureContinue(SampleTypeDataAndVoxelComponent.Value);
-			SampleTypeDataAndVoxelComponent.Value->UpdateAllVoxelsVisibilityState();
+			SampleTypeDataAndVoxelComponent.Value->ForceUpdateAllVoxelsVisibilityState();
 		}
 	}
 }
@@ -80,57 +80,7 @@ void AATVoxelChunk::BP_InitChunk_Implementation(AATVoxelTree* InOwnerTree, const
 }
 //~ End Initialize
 
-//~ Begin Voxel Components
-UATVoxelISMC* AATVoxelChunk::GetVoxelComponentAtPoint(const FIntVector& InPoint) const
-{
-	ensureReturn(OwnerTree, nullptr);
-
-	const FVoxelInstanceData& SampleVoxelInstanceData = OwnerTree->GetVoxelInstanceDataAtPoint(InPoint, false);
-	if (SampleVoxelInstanceData.IsTypeDataValid())
-	{
-		ensureReturn(PerTypeVoxelComponentMap.Contains(SampleVoxelInstanceData.TypeData), nullptr);
-		return PerTypeVoxelComponentMap[SampleVoxelInstanceData.TypeData];
-	}
-	else
-	{
-		for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
-		{
-			ensureContinue(SampleTypeDataAndVoxelComponent.Value);
-			if (SampleTypeDataAndVoxelComponent.Value->HasVoxelInstanceDataAtPoint(InPoint))
-			{
-				return SampleTypeDataAndVoxelComponent.Value;
-			}
-		}
-	}
-	return nullptr;
-}
-
-UATVoxelISMC* AATVoxelChunk::GetOrInitVoxelComponentForType(const UATVoxelTypeData* InTypeData)
-{
-	ensureReturn(InTypeData, nullptr);
-
-	if (PerTypeVoxelComponentMap.Contains(InTypeData))
-	{
-		return PerTypeVoxelComponentMap[InTypeData];
-	}
-	UATVoxelISMC* NewVoxelComponent = NewObject<UATVoxelISMC>(this, VoxelComponentClass, FName(TEXT("VoxelComponent_") + InTypeData->GetName()));
-	ensureReturn(NewVoxelComponent, nullptr);
-
-	NewVoxelComponent->BP_InitComponent(this, InTypeData);
-	NewVoxelComponent->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::SnapToTargetIncludingScale);
-	NewVoxelComponent->RegisterComponent();
-
-	PerTypeVoxelComponentMap.Add(InTypeData, NewVoxelComponent);
-	return PerTypeVoxelComponentMap[InTypeData];
-}
-//~ End Voxel Components
-
-//~ Begin Voxel Getters
-FVector AATVoxelChunk::GetChunkCenterWorldLocation() const
-{
-	return GetActorLocation() + FVector((float)GetChunkSize() * GetVoxelSize() * 0.5f);
-}
-
+//~ Begin Voxel Tree
 int32 AATVoxelChunk::GetChunkSize() const
 {
 	UWorld* World = GetWorld();
@@ -161,6 +111,71 @@ int32 AATVoxelChunk::GetChunkSeed() const
 {
 	ensureReturn(OwnerTree, 0);
 	return OwnerTree->GetTreeSeed() + ChunkCoords.X * ChunkCoords.X * ChunkCoords.X + ChunkCoords.Y * ChunkCoords.Y + ChunkCoords.Z;
+}
+//~ End Voxel Tree
+
+//~ Begin Voxel Components
+UATVoxelISMC* AATVoxelChunk::GetVoxelComponentAtPoint(const FIntVector& InPoint) const
+{
+	ensureReturn(OwnerTree, nullptr);
+
+	const FVoxelInstanceData& SampleVoxelInstanceData = OwnerTree->GetVoxelInstanceDataAtPoint(InPoint, false);
+	if (SampleVoxelInstanceData.IsTypeDataValid())
+	{
+		ensureReturn(PerTypeVoxelComponentMap.Contains(SampleVoxelInstanceData.TypeData), nullptr);
+		return PerTypeVoxelComponentMap[SampleVoxelInstanceData.TypeData];
+	}
+	else
+	{
+		for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
+		{
+			ensureContinue(SampleTypeDataAndVoxelComponent.Value);
+			if (SampleTypeDataAndVoxelComponent.Value->CouldCreateMeshAtPoint(InPoint))
+			{
+				return SampleTypeDataAndVoxelComponent.Value;
+			}
+		}
+	}
+	return nullptr;
+}
+
+UATVoxelISMC* AATVoxelChunk::GetOrInitVoxelComponentForType(const UATVoxelTypeData* InTypeData)
+{
+	ensureReturn(InTypeData, nullptr);
+
+	if (PerTypeVoxelComponentMap.Contains(InTypeData))
+	{
+		return PerTypeVoxelComponentMap[InTypeData];
+	}
+	UATVoxelISMC* NewVoxelComponent = NewObject<UATVoxelISMC>(this, VoxelComponentClass, FName(TEXT("VoxelComponent_") + InTypeData->GetName()));
+	ensureReturn(NewVoxelComponent, nullptr);
+
+	NewVoxelComponent->BP_InitComponent(this, InTypeData);
+	NewVoxelComponent->AttachToComponent(GetRootComponent(), FAttachmentTransformRules::SnapToTargetIncludingScale);
+	NewVoxelComponent->RegisterComponent();
+	NewVoxelComponent->bEnableVoxelsVisibilityUpdates = bReadyToUpdateVoxelsVisibility;
+
+	PerTypeVoxelComponentMap.Add(InTypeData, NewVoxelComponent);
+	return PerTypeVoxelComponentMap[InTypeData];
+}
+//~ End Voxel Components
+
+//~ Begin Voxel Getters
+FVector AATVoxelChunk::GetChunkCenterWorldLocation() const
+{
+	return GetActorLocation() + FVector((float)GetChunkSize() * GetVoxelSize() * 0.5f);
+}
+
+bool AATVoxelChunk::HasVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued) const
+{
+	ensureReturn(OwnerTree, false);
+	return OwnerTree->HasVoxelInstanceDataAtPoint(InPoint, bInIgnoreQueued);
+}
+
+FVoxelInstanceData& AATVoxelChunk::GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked, const bool bInIgnoreQueued) const
+{
+	ensureReturn(OwnerTree, const_cast<FVoxelInstanceData&>(FVoxelInstanceData::Invalid));
+	return OwnerTree->GetVoxelInstanceDataAtPoint(InPoint, bInChecked, bInIgnoreQueued);
 }
 //~ End Voxel Getters
 
@@ -219,6 +234,74 @@ bool AATVoxelChunk::IsThisTickUpdatesTimeBudgetExceeded() const
 {
 	ensureReturn(OwnerTree, false);
 	return OwnerTree->IsThisTickUpdatesTimeBudgetExceeded();
+}
+
+static const TArray<FIntVector> UpdateReadyToUpdateVoxelsVisibilityState_SideOffsets = {
+	FIntVector(1, 0, 0),
+	FIntVector(-1, 0, 0),
+	FIntVector(0, 1, 0),
+	FIntVector(0, -1, 0),
+	FIntVector(0, 0, 1),
+	FIntVector(0, 0, -1)
+};
+
+void AATVoxelChunk::MarkChunkAsSimulationReady()
+{
+	ensure(!bChunkSimulationReady);
+	bChunkSimulationReady = true;
+
+	UpdateReadyToUpdateVoxelsVisibilityState();
+
+	for (const FIntVector& SampleOffset : UpdateReadyToUpdateVoxelsVisibilityState_SideOffsets)
+	{
+		if (AATVoxelChunk* SampleNeighborChunk = OwnerTree->GetVoxelChunkAtCoords(ChunkCoords + SampleOffset))
+		{
+			SampleNeighborChunk->UpdateReadyToUpdateVoxelsVisibilityState();
+		}
+	}
+}
+
+void AATVoxelChunk::UpdateReadyToUpdateVoxelsVisibilityState()
+{
+	if (bReadyToUpdateVoxelsVisibility)
+	{
+		return;
+	}
+	ensureReturn(OwnerTree);
+	for (const FIntVector& SampleOffset : UpdateReadyToUpdateVoxelsVisibilityState_SideOffsets)
+	{
+		const FIntVector& SampleNeighborChunkCoords = ChunkCoords + SampleOffset;
+
+		if (OwnerTree->IsChunkCoordsInsideTree(SampleNeighborChunkCoords))
+		{
+			if (AATVoxelChunk* SampleNeighborChunk = OwnerTree->GetVoxelChunkAtCoords(SampleNeighborChunkCoords))
+			{
+				if (SampleNeighborChunk->IsChunkSimulationReady())
+				{
+					// Good
+				}
+				else
+				{
+					return;
+				}
+			}
+			else
+			{
+				return;
+			}
+		}
+		else
+		{
+			// Good
+		}
+	}
+	bReadyToUpdateVoxelsVisibility = true;
+
+	for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
+	{
+		ensureContinue(SampleTypeDataAndVoxelComponent.Value);
+		SampleTypeDataAndVoxelComponent.Value->bEnableVoxelsVisibilityUpdates = bReadyToUpdateVoxelsVisibility;
+	}
 }
 
 void AATVoxelChunk::HandleUpdates()

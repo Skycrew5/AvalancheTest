@@ -33,8 +33,8 @@ public:
 protected:
 	virtual void AllocatePerChunkData(class AATVoxelChunk* InChunk) override { PerChunkData.Add(InChunk); } // UATProceduralGeneratorTask
 
-	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
-	float HillsNoiseFrequency;
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float DefaultToWeakWidth;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<const class UATVoxelTypeData> DefaultVoxelTypeData;
@@ -46,10 +46,34 @@ protected:
 	TObjectPtr<const class UATVoxelTypeData> FoundationVoxelTypeData;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
-	float DefaultToWeakThreshold;
+	TArray<TObjectPtr<const class UATVoxelTypeData>> OresVoxelTypeDataArray;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
+	float HillsNoiseFrequency;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float HillsHeightOffset;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
+	float HillsHeightPow;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
+	float CavesNoiseFrequency;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float CavesThreshold;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
+	float OresNoiseFrequency;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float OresThreshold;
 
 	UPROPERTY(Transient)
 	TObjectPtr<class UFastNoise2PerlinGenerator> PerlinGenerator;
+
+	//UPROPERTY(Transient)
+	//TObjectPtr<class UFastNoise2CellularDistanceGenerator> CellularDistanceGenerator;
 
 	struct FTaskChunkData
 	{

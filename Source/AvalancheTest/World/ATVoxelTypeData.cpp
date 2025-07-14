@@ -8,7 +8,9 @@ UATVoxelTypeData::UATVoxelTypeData()
 {
 	DisplayName = FText::FromString(TEXT("Unnamed Voxel Type"));
 
-	bIsFoundation = false;
+	bIsUnbreakable = false;
+	bHasInfiniteStability = false;
+
 	AttachmentStrengthMul = 1.0f;
 	MaxHealth = 1.0f;
 }

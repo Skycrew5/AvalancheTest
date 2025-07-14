@@ -26,6 +26,10 @@ void UATSimulationTask::DeInitialize()
 
 	if (!AsyncTaskPtr->TryAbandonTask())
 	{
+#if UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
+		DEV_bPendingStop = true;
+#endif // UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
+
 		AsyncTaskPtr->EnsureCompletion();
 	}
 	delete AsyncTaskPtr;

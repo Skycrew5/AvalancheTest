@@ -8,6 +8,16 @@
 
 #include "ATSimulationTask.generated.h"
 
+#if UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
+	#define DEV_HANDLE_ASYNC_PENDING_STOP(...) \
+		if (DEV_bPendingStop) \
+		{ \
+			return __VA_ARGS__; \
+		}
+#else
+	#define DEV_HANDLE_ASYNC_PENDING_STOP()
+#endif // UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
+
 UENUM(BlueprintType, meta = (DisplayName = "[AT] Simulation Task Phase"))
 enum class EATSimulationTaskPhase : uint8
 {
@@ -42,6 +52,8 @@ protected:
 
 //~ Begin Queue
 public:
+
+	const TArraySetPair<FIntVector>& GetConstQueuedPoints() const { return QueuedPoints; }
 	void QueuePoint(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
 protected:
 	virtual bool ShouldSelectQueuedPointForUpdate(const FIntVector& InPoint) const;
@@ -61,6 +73,11 @@ public:
 	virtual void PreWork_GameThread();
 	virtual void DoWork_SubThread() { ensure(false); }
 	virtual void PostWork_GameThread() { ensure(false); }
+
+#if UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
+	TAtomic<bool> DEV_bPendingStop;
+#endif // UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
+
 protected:
 	virtual void AllocateCacheAtPoint(const FIntVector& InPoint) {}
 	virtual void ResetCacheAtPoint(const FIntVector& InPoint) {}
@@ -84,6 +101,7 @@ public:
 	void DoWork()
 	{
 		ensureReturn(TargetTask);
+		TargetTask->DEV_bPendingStop = false;
 		TargetTask->DoWork_SubThread();
 	}
 
