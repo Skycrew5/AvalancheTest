@@ -35,6 +35,7 @@ AATVoxelTree::AATVoxelTree(const FObjectInitializer& InObjectInitializer)
 
 	TickUpdatesTimeBudgetSeconds = 0.010;
 	TickUpdatesTimeBudgetSeconds_PerQueuedChunkAdditive = 0.0001;
+	TickUpdatesTimeBudgetSeconds_PerSkipSimulationPointQueueAdditive = 0.000001;
 }
 
 //~ Begin Actor
@@ -70,6 +71,7 @@ void AATVoxelTree::Tick(float InDeltaSeconds) // AActor
 	HandleTickUpdate(InDeltaSeconds);
 
 	SET_MEMORY_STAT(STAT_VoxelData_Queued_Point_To_VoxelInstanceData_Map, Queued_Point_To_VoxelInstanceData_Map.GetAllocatedSize());
+	SET_MEMORY_STAT(STAT_VoxelData_Queued_PointsSkipSimulationQueue_Set, Queued_PointsSkipSimulationQueue_Set.GetAllocatedSize());
 	SET_MEMORY_STAT(STAT_VoxelData_Point_To_VoxelInstanceData_Map, Point_To_VoxelInstanceData_Map.GetAllocatedSize());
 }
 
@@ -332,7 +334,7 @@ bool AATVoxelTree::SetVoxelAtPoint(const FIntVector& InPoint, const UATVoxelType
 
 		if (!SampleChunk->IsChunkSimulationReady())
 		{
-			QueuedPointsSkipSimulationQueue.Add(InPoint);
+			Queued_PointsSkipSimulationQueue_Set.Add(InPoint);
 		}
 		return true;
 	}
@@ -453,7 +455,12 @@ void AATVoxelTree::HandleTickUpdate_FromForceTickUpdate()
 void AATVoxelTree::HandleTickUpdate(float InDeltaSeconds)
 {
 	ensureReturn(ProceduralGeneratorComponent);
-	SetThisTickUpdatesTimeBudget(TickUpdatesTimeBudgetSeconds + (double)ProceduralGeneratorComponent->GetTotalQueuedChunksNum() * TickUpdatesTimeBudgetSeconds_PerQueuedChunkAdditive);
+
+	double ThisTickUpdatesTimeBudgetSeconds = TickUpdatesTimeBudgetSeconds;
+	ThisTickUpdatesTimeBudgetSeconds += (double)ProceduralGeneratorComponent->GetTotalQueuedChunksNum() * TickUpdatesTimeBudgetSeconds_PerQueuedChunkAdditive;
+	ThisTickUpdatesTimeBudgetSeconds += (double)Queued_PointsSkipSimulationQueue_Set.Num() * TickUpdatesTimeBudgetSeconds_PerSkipSimulationPointQueueAdditive;
+
+	SetThisTickUpdatesTimeBudget(ThisTickUpdatesTimeBudgetSeconds);
 
 	HandleChunkUpdates();
 }
@@ -497,9 +504,16 @@ void AATVoxelTree::HandleQueuedVoxelInstanceData(const FIntVector& InPoint)
 	{
 		Point_To_VoxelInstanceData_Map.Remove(InPoint);
 	}
-	if (QueuedPointsSkipSimulationQueue.Contains(InPoint))
+	ensure(Queued_PointsSkipSimulationQueue_Set.Num() <= Queued_Point_To_VoxelInstanceData_Map.Num());
+
+	if (Queued_PointsSkipSimulationQueue_Set.Contains(InPoint))
 	{
-		QueuedPointsSkipSimulationQueue.Remove(InPoint);
+		Queued_PointsSkipSimulationQueue_Set.Remove(InPoint);
+
+		if (Queued_PointsSkipSimulationQueue_Set.IsEmpty())
+		{
+			Queued_PointsSkipSimulationQueue_Set.Compact();
+		}
 	}
 	else
 	{

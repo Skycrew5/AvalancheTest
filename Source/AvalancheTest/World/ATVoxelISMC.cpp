@@ -102,7 +102,7 @@ FIntVector UATVoxelISMC::GetPointOfMeshIndex(int32 InMeshIndex, const bool bInCh
 	}
 	FTransform TargetWorldTransform;
 	GetInstanceTransform(InMeshIndex, TargetWorldTransform, true);
-	return UATWorldFunctionLibrary::WorldLocation_To_Point3D( TargetWorldTransform.GetLocation(), GetVoxelSize());
+	return UATWorldFunctionLibrary::WorldLocation_To_Point3D(TargetWorldTransform.GetLocation(), GetVoxelSize());
 }
 
 bool UATVoxelISMC::IsVoxelAtPointFullyClosed(const FIntVector& InPoint) const

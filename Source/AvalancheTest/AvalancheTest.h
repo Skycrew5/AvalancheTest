@@ -18,6 +18,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogVoxels, Log, All);
 DECLARE_STATS_GROUP(TEXT("Voxels memory and other stats."), STATGROUP_Voxels, STATCAT_Performance);
 
 DECLARE_MEMORY_STAT(TEXT("Voxel Data: Queued_Point_To_VoxelInstanceData_Map"), STAT_VoxelData_Queued_Point_To_VoxelInstanceData_Map, STATGROUP_Voxels);
+DECLARE_MEMORY_STAT(TEXT("Voxel Data: Queued_PointsSkipSimulationQueue_Set"), STAT_VoxelData_Queued_PointsSkipSimulationQueue_Set, STATGROUP_Voxels);
 DECLARE_MEMORY_STAT(TEXT("Voxel Data: Point_To_VoxelInstanceData_Map"), STAT_VoxelData_Point_To_VoxelInstanceData_Map, STATGROUP_Voxels);
 
 DECLARE_MEMORY_STAT(TEXT("Simulation Tasks: QueuedPoints"), STAT_SimulationTasks_QueuedPoints, STATGROUP_Voxels);
@@ -29,3 +30,5 @@ DECLARE_MEMORY_STAT(TEXT("Voxel Components: Point_To_MeshIndex_Map"), STAT_Voxel
 
 #define DEBUG_VOXELS 1
 //#define DEBUG_VOXELS 0
+
+#define LERP_VECTOR2D(InVector2D, InAlpha) FMath::Lerp(InVector2D.X, InVector2D.Y, InAlpha)

@@ -8,7 +8,7 @@
 FIntVector UATWorldFunctionLibrary::WorldLocation_To_Point3D(const FVector& InWorldLocation, const float InVoxelSize)
 {
 	FVector VoxelScaledWorldLocation = (InWorldLocation / InVoxelSize);
-	return FIntVector(FMath::CeilToInt(VoxelScaledWorldLocation.X), FMath::CeilToInt(VoxelScaledWorldLocation.Y), FMath::CeilToInt(VoxelScaledWorldLocation.Z));
+	return FIntVector(FMath::FloorToInt(VoxelScaledWorldLocation.X), FMath::FloorToInt(VoxelScaledWorldLocation.Y), FMath::FloorToInt(VoxelScaledWorldLocation.Z));
 }
 
 FIntPoint UATWorldFunctionLibrary::WorldLocation_To_PointXY(const FVector& InWorldLocation, const float InVoxelSize)

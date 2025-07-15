@@ -34,10 +34,10 @@ protected:
 	virtual void AllocatePerChunkData(class AATVoxelChunk* InChunk) override { PerChunkData.Add(InChunk); } // UATProceduralGeneratorTask
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float DefaultToWeakWidth;
+	float StrongToWeakWidth;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<const class UATVoxelTypeData> DefaultVoxelTypeData;
+	TObjectPtr<const class UATVoxelTypeData> StrongVoxelTypeData;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<const class UATVoxelTypeData> WeakVoxelTypeData;
@@ -47,6 +47,9 @@ protected:
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
 	TArray<TObjectPtr<const class UATVoxelTypeData>> OresVoxelTypeDataArray;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	FVector2D AboveHillsOresWidthMinMax;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
 	float HillsNoiseFrequency;

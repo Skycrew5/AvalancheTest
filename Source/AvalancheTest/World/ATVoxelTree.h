@@ -174,6 +174,9 @@ protected:
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
 	double TickUpdatesTimeBudgetSeconds_PerQueuedChunkAdditive;
 
+	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
+	double TickUpdatesTimeBudgetSeconds_PerSkipSimulationPointQueueAdditive;
+
 	UPROPERTY(Transient)
 	uint64 ThisTickUpdatesTimeBudget_CyclesThreshold;
 
@@ -181,7 +184,7 @@ protected:
 	TMap<FIntVector, FVoxelInstanceData> Queued_Point_To_VoxelInstanceData_Map;
 
 	UPROPERTY(Transient)
-	TSet<FIntVector> QueuedPointsSkipSimulationQueue;
+	TSet<FIntVector> Queued_PointsSkipSimulationQueue_Set;
 
 	UPROPERTY(Transient)
 	TMap<FIntVector, FVoxelInstanceData> Point_To_VoxelInstanceData_Map;

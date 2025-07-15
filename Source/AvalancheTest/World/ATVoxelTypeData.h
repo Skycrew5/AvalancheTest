@@ -37,7 +37,27 @@ public:
 
 	UPROPERTY(Category = "UI", EditDefaultsOnly, BlueprintReadOnly)
 	FText DisplayName;
+
+	UPROPERTY(Category = "UI", EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<UMaterialInterface> ImageMaterial;
 //~ End UI
+	
+//~ Begin Mesh
+public:
+
+	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<UStaticMesh> StaticMesh;
+
+	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
+	TMap<int32, TObjectPtr<UMaterialInterface>> StaticMeshOverrideMaterials;
+//~ End Mesh
+	
+//~ Begin Inventory
+public:
+
+	UPROPERTY(Category = "Inventory", EditDefaultsOnly, BlueprintReadOnly)
+	bool bAddToInventory;
+//~ End Inventory
 
 //~ Begin Stability
 public:
@@ -72,13 +92,10 @@ protected:
 	};
 //~ End Stability
 	
-//~ Begin Mesh
+//~ Begin Break
 public:
 
-	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
-	TObjectPtr<UStaticMesh> StaticMesh;
-
-	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
-	TMap<int32, TObjectPtr<UMaterialInterface>> StaticMeshOverrideMaterials;
-//~ End Mesh
+	UPROPERTY(Category = "Break", EditDefaultsOnly, BlueprintReadOnly)
+	float BrokenVoxelLandHitDamage;
+//~ End Break
 };

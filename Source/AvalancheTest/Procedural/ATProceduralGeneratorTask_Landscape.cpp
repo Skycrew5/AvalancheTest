@@ -11,7 +11,8 @@
 
 UATProceduralGeneratorTask_Landscape::UATProceduralGeneratorTask_Landscape()
 {
-	DefaultToWeakWidth = 0.02f;
+	StrongToWeakWidth = 0.02f;
+	AboveHillsOresWidthMinMax = FVector2D(-0.01f, 0.02f);
 
 	HillsNoiseFrequency = 0.01f;
 	HillsHeightOffset = 0.5f;
@@ -40,7 +41,7 @@ void UATProceduralGeneratorTask_Landscape::Initialize(AATVoxelTree* InTargetTree
 //~ Begin Task
 void UATProceduralGeneratorTask_Landscape::PreWork_GameThread() // UATProceduralGeneratorTask
 {
-	ensureReturn(DefaultVoxelTypeData);
+	ensureReturn(StrongVoxelTypeData);
 	ensureReturn(WeakVoxelTypeData);
 
 	ensureReturn(FoundationVoxelTypeData);
@@ -63,6 +64,8 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 	int32 TreeSeed = InTargetChunk->GetOwnerTree()->GetTreeSeed();
 	int32 ChunkSeed = InTargetChunk->GetChunkSeed();
 
+	FRandomStream RandomStream = FRandomStream(ChunkSeed + 116);
+
 	FIntVector ChunkCoords = InTargetChunk->GetChunkCoords();
 	FIntVector ChunkBackLeftCornerPoint = InTargetChunk->GetChunkBackLeftCornerPoint();
 	FIntVector ChunkSize = FIntVector(InTargetChunk->GetChunkSize());
@@ -80,7 +83,7 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 			}
 			else
 			{
-				Data.TypeDataArray[SampleArrayIndex] = DefaultVoxelTypeData;
+				Data.TypeDataArray[SampleArrayIndex] = StrongVoxelTypeData;
 			}
 		}
 	}*/
@@ -101,10 +104,7 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 
 	for (int32 SampleArrayIndex2D = 0; SampleArrayIndex2D < HillsValues2D.Num(); ++SampleArrayIndex2D)
 	{
-		float SampleHillsValue2D = HillsValues2D[SampleArrayIndex2D];
-
-		// Normalize
-		SampleHillsValue2D = (SampleHillsValue2D + 1.0f) * 0.5f;
+		float SampleHillsValue2D = (HillsValues2D[SampleArrayIndex2D] + 1.0f) * 0.5f; // Normalized
 
 		// Power
 		SampleHillsValue2D = FMath::Pow(SampleHillsValue2D, HillsHeightPow);
@@ -117,49 +117,53 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 			int32 GlobalZ = GeneratorStart3D.Z + LocalZ;
 			float GlobalAlphaZ = float(GlobalZ) / float(ChunkTreeMaxZ);
 
-			if (GlobalAlphaZ < SampleHillsValue2D) // If below hills
+			const bool bBelowHills = GlobalAlphaZ < SampleHillsValue2D;
+			const bool bBelowStrongHillsLayer = (SampleHillsValue2D - GlobalAlphaZ) > StrongToWeakWidth;
+
+			int32 SampleArrayIndex3D = UATWorldFunctionLibrary::ArrayIndex2D_To_ArrayIndex3D(SampleArrayIndex2D, LocalZ, ChunkSize);
+			float SampleCavesValue3D = (CavesValues3D[SampleArrayIndex3D] + 1.0f) * 0.5f; // Normalized
+
+			const bool bInsideCave = SampleCavesValue3D < CavesThreshold;
+			const bool bOutsideStrongCavesLayer = SampleCavesValue3D > (CavesThreshold + StrongToWeakWidth);
+
+			float SampleOresValue3D = (OresValues3D[SampleArrayIndex3D] + 1.0f) * 0.5f; 
+			const bool bInsideOres = SampleOresValue3D < OresThreshold;
+
+			const bool bAboveHillsOres = bInsideOres && (GlobalAlphaZ < (SampleHillsValue2D + LERP_VECTOR2D(AboveHillsOresWidthMinMax, RandomStream.GetFraction())));
+
+			if (bAboveHillsOres)
 			{
-				int32 SampleArrayIndex3D = UATWorldFunctionLibrary::ArrayIndex2D_To_ArrayIndex3D(SampleArrayIndex2D, LocalZ, ChunkSize);
-
-				if (SampleHillsValue2D - GlobalAlphaZ > DefaultToWeakWidth) // If below default voxels layer
+				goto SetOre;
+			}
+			if (bBelowHills)
+			{
+				if (bInsideCave)
 				{
-					float SampleCavesValue3D = CavesValues3D[SampleArrayIndex3D];
-
-					// Normalize
-					SampleCavesValue3D = (SampleCavesValue3D + 1.0f) * 0.5f;
-
-					if (SampleCavesValue3D > CavesThreshold) // If outside cave
-					{
-						float SampleOresValue3D = OresValues3D[SampleArrayIndex3D];
-
-						// Normalize
-						SampleOresValue3D = (SampleOresValue3D + 1.0f) * 0.5f;
-
-						if (SampleOresValue3D < OresThreshold) // If inside ores
-						{
-							float BelowHillsAlpha = (SampleHillsValue2D - GlobalAlphaZ) / SampleHillsValue2D;
-							int32 SampleOreTypeDataIndex = FMath::RoundToInt(BelowHillsAlpha * (float)OresVoxelTypeDataArray.Num()) - 1;
-
-							// Clamp
-							SampleOreTypeDataIndex = FMath::Clamp(SampleOreTypeDataIndex, 0, OresVoxelTypeDataArray.Num() - 1);
-							Data.TypeDataArray[SampleArrayIndex3D] = OresVoxelTypeDataArray[SampleOreTypeDataIndex];
-						}
-						else
-						{
-							if (SampleCavesValue3D > CavesThreshold + DefaultToWeakWidth) // If outside default layer
-							{
-								Data.TypeDataArray[SampleArrayIndex3D] = WeakVoxelTypeData;
-							}
-							else
-							{
-								Data.TypeDataArray[SampleArrayIndex3D] = DefaultVoxelTypeData;
-							}
-						}
-					}
+					Data.TypeDataArray[SampleArrayIndex3D] = nullptr;
 				}
 				else
 				{
-					Data.TypeDataArray[SampleArrayIndex3D] = DefaultVoxelTypeData;
+					if (bInsideOres)
+					{
+					SetOre:
+						float BelowHillsAlpha = (SampleHillsValue2D - GlobalAlphaZ) / SampleHillsValue2D;
+						int32 SampleOreTypeDataIndex = FMath::RoundToInt(BelowHillsAlpha * (float)OresVoxelTypeDataArray.Num()) - 1;
+
+						// Clamp
+						SampleOreTypeDataIndex = FMath::Clamp(SampleOreTypeDataIndex, 0, OresVoxelTypeDataArray.Num() - 1);
+						Data.TypeDataArray[SampleArrayIndex3D] = OresVoxelTypeDataArray[SampleOreTypeDataIndex];
+					}
+					else
+					{
+						if (bBelowStrongHillsLayer && bOutsideStrongCavesLayer)
+						{
+							Data.TypeDataArray[SampleArrayIndex3D] = WeakVoxelTypeData;
+						}
+						else
+						{
+							Data.TypeDataArray[SampleArrayIndex3D] = StrongVoxelTypeData;
+						}
+					}
 				}
 			}
 		}
