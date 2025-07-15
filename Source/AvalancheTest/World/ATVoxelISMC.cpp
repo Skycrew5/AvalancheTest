@@ -141,14 +141,14 @@ void UATVoxelISMC::HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint, 
 	TryQueuePointForDebugUpdate(InPoint);
 }
 
-bool UATVoxelISMC::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInNotify)
+bool UATVoxelISMC::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const FVoxelBreakData& InBreakData)
 {
 	HandleSetVoxelInstanceDataAtPoint(InPoint, FVoxelInstanceData::Invalid);
 
-	if (bInNotify)
+	if (InBreakData.bNotify)
 	{
 		ensureReturn(OwnerChunk, true);
-		OwnerChunk->OnBreakVoxelAtPoint.Broadcast(this, InPoint);
+		OwnerChunk->OnBreakVoxelAtPoint.Broadcast(this, InPoint, InBreakData);
 	}
 	return true;
 }

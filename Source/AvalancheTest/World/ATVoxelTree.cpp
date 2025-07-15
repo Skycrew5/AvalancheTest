@@ -89,7 +89,9 @@ int32 FloorDiv(int32 A, int32 B)
 //~ Begin Voxel Chunks
 bool AATVoxelTree::IsChunkCoordsInsideTree(const FIntVector& InChunkCoords) const
 {
-	return (InChunkCoords.X >= 0 && InChunkCoords.X < TreeSizeInChunks.X) && (InChunkCoords.Y >= 0 && InChunkCoords.Y < TreeSizeInChunks.Y);
+	return (InChunkCoords.X >= 0 && InChunkCoords.X < TreeSizeInChunks.X)
+		&& (InChunkCoords.Y >= 0 && InChunkCoords.Y < TreeSizeInChunks.Y)
+		&& (InChunkCoords.Z >= 0 && InChunkCoords.Z < TreeSizeInChunks.Z);
 }
 
 FIntVector AATVoxelTree::GetVoxelChunkCoordsAtPoint(const FIntVector& InPoint) const
@@ -315,7 +317,7 @@ bool AATVoxelTree::SetVoxelAtPoint(const FIntVector& InPoint, const UATVoxelType
 
 	if (bInForced)
 	{
-		BreakVoxelAtPoint(InPoint, true);
+		BreakVoxelAtPoint(InPoint, FVoxelBreakData(true, false));
 	}
 	else if (HasVoxelInstanceDataAtPoint(InPoint))
 	{
@@ -349,9 +351,9 @@ bool AATVoxelTree::SetVoxelsAtPoints(const TArray<FIntVector>& InPoints, const U
 	return bAnySet;
 }
 
-bool AATVoxelTree::BreakVoxelAtPoint(const FIntVector& InPoint, const bool bInForced, const bool bInNotify)
+bool AATVoxelTree::BreakVoxelAtPoint(const FIntVector& InPoint, const FVoxelBreakData& InBreakData)
 {
-	if (!bInForced && !CanBreakVoxelAtPoint(InPoint))
+	if (!InBreakData.bForced && !CanBreakVoxelAtPoint(InPoint))
 	{
 		return false;
 	}
@@ -359,7 +361,7 @@ bool AATVoxelTree::BreakVoxelAtPoint(const FIntVector& InPoint, const bool bInFo
 	{
 		if (HasVoxelInstanceDataAtPoint(InPoint))
 		{
-			SampleChunk->HandleBreakVoxelAtPoint(InPoint, bInNotify);
+			SampleChunk->HandleBreakVoxelAtPoint(InPoint, InBreakData);
 		}
 		Queued_Point_To_VoxelInstanceData_Map.Add(InPoint, FVoxelInstanceData::Invalid);
 		return true;
@@ -367,13 +369,13 @@ bool AATVoxelTree::BreakVoxelAtPoint(const FIntVector& InPoint, const bool bInFo
 	return false;
 }
 
-bool AATVoxelTree::BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const bool bInForced, const bool bInNotify)
+bool AATVoxelTree::BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const FVoxelBreakData& InBreakData)
 {
 	bool bAnyBroken = false;
 
 	for (const FIntVector& SamplePoint : InPoints)
 	{
-		bAnyBroken |= BreakVoxelAtPoint(SamplePoint, bInForced, bInNotify);
+		bAnyBroken |= BreakVoxelAtPoint(SamplePoint, InBreakData);
 	}
 	return bAnyBroken;
 }

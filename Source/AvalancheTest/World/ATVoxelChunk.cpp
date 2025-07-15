@@ -198,11 +198,11 @@ void AATVoxelChunk::HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint,
 	}
 }
 
-void AATVoxelChunk::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInNotify)
+void AATVoxelChunk::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const FVoxelBreakData& InBreakData)
 {
 	if (UATVoxelISMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
 	{
-		TargetComponent->HandleBreakVoxelAtPoint(InPoint, bInNotify);
+		TargetComponent->HandleBreakVoxelAtPoint(InPoint, InBreakData);
 	}
 }
 

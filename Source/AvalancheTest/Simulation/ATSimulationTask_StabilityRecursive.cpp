@@ -232,7 +232,7 @@ void UATSimulationTask_StabilityRecursive::PostWork_GameThread()
 		}
 		else
 		{
-			TargetTree->BreakVoxelAtPoint(SamplePoint, true, true); // Will update Chunk too
+			TargetTree->BreakVoxelAtPoint(SamplePoint, FVoxelBreakData(true, true)); // Will update Chunk too
 		}
 		//ensureContinue(HealthDrainSimulationTask);
 		//HealthDrainSimulationTask->QueuePoint(SamplePoint);

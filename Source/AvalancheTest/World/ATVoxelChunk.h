@@ -8,7 +8,7 @@
 
 #include "ATVoxelChunk.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FBreakVoxelEventSignature, class UATVoxelISMC*, InVoxelComponent, const FIntVector&, InPoint);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FBreakVoxelEventSignature, class UATVoxelISMC*, InVoxelComponent, const FIntVector&, InPoint, const FVoxelBreakData&, InBreakData);
 
 /**
  * 
@@ -104,8 +104,8 @@ public:
 	UFUNCTION(Category = "Voxel Setters", BlueprintCallable, meta = (KeyWords = "AddVoxelAt, PlaceVoxelAt"))
 	void HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const struct FVoxelInstanceData& InVoxelInstanceData);
 
-	UFUNCTION(Category = "Voxel Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelAt, DeleteVoxelAt"))
-	void HandleBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInNotify = false);
+	UFUNCTION(Category = "Voxel Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelAt, DeleteVoxelAt", AutoCreateRefTerm = "InBreakData"))
+	void HandleBreakVoxelAtPoint(const FIntVector& InPoint, const FVoxelBreakData& InBreakData);
 
 	//UFUNCTION(Category = "Setters", BlueprintCallable)
 	//void HandleSetVoxelStabilityAtPoint(const FIntVector& InPoint, float InNewStability);

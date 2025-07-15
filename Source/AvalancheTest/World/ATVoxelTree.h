@@ -105,19 +105,19 @@ protected:
 //~ Begin Voxel Getters
 public:
 
-	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
+	UFUNCTION(Category = "Voxel Getters", BlueprintCallable, meta = (AdvancedDisplay = "bInIgnoreQueued"))
 	bool HasVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
-	UFUNCTION(Category = "Voxel Getters", BlueprintCallable, meta = (KeyWords = "GetInstanceData"))
+	UFUNCTION(Category = "Voxel Getters", BlueprintCallable, meta = (KeyWords = "GetInstanceData", AdvancedDisplay = "bInChecked, bInIgnoreQueued"))
 	FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked = true, const bool bInIgnoreQueued = false) const;
 
-	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
+	UFUNCTION(Category = "Voxel Getters", BlueprintCallable, meta = (AdvancedDisplay = "bInIgnoreQueued"))
 	int32 GetVoxelNeighborsNumAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
 	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
 	void GetAllVoxelPointsInRadius(const FIntVector& InCenterPoint, int32 InRadius, TArray<FIntVector>& OutPoints) const;
 
-	UFUNCTION(Category = "Voxel Getters | Break", BlueprintCallable)
+	UFUNCTION(Category = "Voxel Getters | Break", BlueprintCallable, meta = (AdvancedDisplay = "bInIgnoreQueued"))
 	bool CanBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
 	UFUNCTION(Category = "Voxel Chunks | Bounds", BlueprintCallable)
@@ -136,11 +136,11 @@ public:
 	UFUNCTION(Category = "Voxel Setters | Set", BlueprintCallable, meta = (KeyWords = "AddVoxelsAt, PlaceVoxelsAt"))
 	bool SetVoxelsAtPoints(const TArray<FIntVector>& InPoints, const class UATVoxelTypeData* InTypeData, const bool bInForced = false);
 
-	UFUNCTION(Category = "Voxel Setters | Break", BlueprintCallable, meta = (KeyWords = "RemoveVoxelAt, DeleteVoxelAt"))
-	bool BreakVoxelAtPoint(const FIntVector& InPoint, const bool bInForced = false, const bool bInNotify = false);
+	UFUNCTION(Category = "Voxel Setters | Break", BlueprintCallable, meta = (KeyWords = "RemoveVoxelAt, DeleteVoxelAt", AutoCreateRefTerm = "InBreakData"))
+	bool BreakVoxelAtPoint(const FIntVector& InPoint, const FVoxelBreakData& InBreakData);
 
-	UFUNCTION(Category = "Voxel Setters | Break", BlueprintCallable, meta = (KeyWords = "RemoveVoxelsAt, DeleteVoxelsAt"))
-	bool BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const bool bInForced = false, const bool bInNotify = false);
+	UFUNCTION(Category = "Voxel Setters | Break", BlueprintCallable, meta = (KeyWords = "RemoveVoxelsAt, DeleteVoxelsAt", AutoCreateRefTerm = "InBreakData"))
+	bool BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const FVoxelBreakData& InBreakData);
 
 	UFUNCTION(Category = "Voxel Setters | Per Chunk", BlueprintCallable)
 	void FillChunkWithVoxels(const FIntVector& InChunkCoords, const UATVoxelTypeData* InTypeData, const bool bInForced = false);

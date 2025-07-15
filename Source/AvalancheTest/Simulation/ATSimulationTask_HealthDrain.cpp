@@ -73,7 +73,7 @@ void UATSimulationTask_HealthDrain::PostWork_GameThread()
 		}
 		else
 		{
-			TargetTree->BreakVoxelAtPoint(SamplePoint, true, true); // Will update Chunk too
+			TargetTree->BreakVoxelAtPoint(SamplePoint, FVoxelBreakData(true, true)); // Will update Chunk too
 		}
 	}
 	if (SelectedUpdatePoints.IsEmpty())

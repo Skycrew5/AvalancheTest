@@ -123,6 +123,27 @@ struct FVoxelInstanceData
 };
 
 USTRUCT(BlueprintType)
+struct FVoxelBreakData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bForced = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bNotify = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<AActor> Source = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr<AController> Instigator = nullptr;
+
+	FVoxelBreakData(bool bInForced = false, bool bInNotify = true, AActor* InSource = nullptr, AController* InInstigator = nullptr)
+		: bForced(bInForced), bNotify(bInNotify), Source(InSource), Instigator(InInstigator) {}
+};
+
+USTRUCT(BlueprintType)
 struct FVoxelChunkDebugData_Entry
 {
 	GENERATED_BODY()

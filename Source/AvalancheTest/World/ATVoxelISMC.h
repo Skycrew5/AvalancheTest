@@ -73,8 +73,8 @@ public:
 	UFUNCTION(Category = "Setters | Voxel Instance Data", BlueprintCallable, meta = (KeyWords = "AddVoxelAt, PlaceVoxelAt"))
 	void HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const struct FVoxelInstanceData& InVoxelInstanceData);
 
-	UFUNCTION(Category = "Setters | Voxel Instance Data", BlueprintCallable)
-	bool HandleBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInNotify = false);
+	UFUNCTION(Category = "Setters | Voxel Instance Data", BlueprintCallable, meta = (AutoCreateRefTerm = "InBreakData"))
+	bool HandleBreakVoxelAtPoint(const FIntVector& InPoint, const FVoxelBreakData& InBreakData);
 
 	bool HandleMeshInstanceIndexRelocated(int32 InPrevIndex, int32 InNewIndex);
 protected:
