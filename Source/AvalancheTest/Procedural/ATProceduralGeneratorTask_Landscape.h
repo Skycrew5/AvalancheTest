@@ -43,7 +43,7 @@ protected:
 	TObjectPtr<const class UATVoxelTypeData> WeakVoxelTypeData;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<const class UATVoxelTypeData> FoundationVoxelTypeData;
+	TObjectPtr<const class UATVoxelTypeData> BedrockVoxelTypeData;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
 	TArray<TObjectPtr<const class UATVoxelTypeData>> OresVoxelTypeDataArray;
@@ -64,13 +64,22 @@ protected:
 	float CavesNoiseFrequency;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float CavesThreshold;
+	float CavesNoiseThreshold;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
 	float OresNoiseFrequency;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
-	float OresThreshold;
+	float OresNoiseThreshold;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly)
+	float BedrockNoiseFrequency;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float BedrockNoiseThreshold;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	FIntPoint BedrockWidthVoxelsSidesBottom;
 
 	UPROPERTY(Transient)
 	TObjectPtr<class UFastNoise2PerlinGenerator> PerlinGenerator;

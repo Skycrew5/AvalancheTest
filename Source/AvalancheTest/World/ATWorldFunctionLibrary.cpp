@@ -52,13 +52,20 @@ int32 UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(const FIntVector& InPoint
 	return InPoint3D.X + InPoint3D.Y * (InBoxSize.X) + InPoint3D.Z * (InBoxSize.X * InBoxSize.Y);
 }
 
-FIntVector UATWorldFunctionLibrary::ArrayIndex2D_To_Point3D(const int32 InArrayIndex2D, const int32 InZ, const FIntVector& InBoxSize)
+FIntPoint UATWorldFunctionLibrary::ArrayIndex2D_To_Point2D(const int32 InArrayIndex2D, const FIntPoint& InRectSize)
 {
-	return FIntVector(InArrayIndex2D % InBoxSize.X, InArrayIndex2D / InBoxSize.Y, InZ);
+	return FIntPoint(InArrayIndex2D % InRectSize.X, InArrayIndex2D / InRectSize.Y);
+}
+
+FIntVector UATWorldFunctionLibrary::ArrayIndex2D_To_Point3D(const int32 InArrayIndex2D, const int32 InZ, const FIntPoint& InRectSize)
+{
+	const FIntPoint& Point2D = ArrayIndex2D_To_Point2D(InArrayIndex2D, InRectSize);
+	return FIntVector(Point2D.X, Point2D.Y, InZ);
 }
 
 int32 UATWorldFunctionLibrary::ArrayIndex2D_To_ArrayIndex3D(const int32 InArrayIndex2D, const int32 InZ, const FIntVector& InBoxSize)
 {
-	return Point3D_To_ArrayIndex3D(ArrayIndex2D_To_Point3D(InArrayIndex2D, InZ, InBoxSize), InBoxSize);
+	const FIntPoint& RectSize = FIntPoint(InBoxSize.X, InBoxSize.Y);
+	return Point3D_To_ArrayIndex3D(ArrayIndex2D_To_Point3D(InArrayIndex2D, InZ, RectSize), InBoxSize);
 }
 //~ End Indices

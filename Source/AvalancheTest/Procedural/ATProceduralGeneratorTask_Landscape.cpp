@@ -18,11 +18,15 @@ UATProceduralGeneratorTask_Landscape::UATProceduralGeneratorTask_Landscape()
 	HillsHeightOffset = 0.5f;
 	HillsHeightPow = 3.0f;
 
-	CavesNoiseFrequency = 0.01f;
-	CavesThreshold = 0.4f;
+	CavesNoiseFrequency = 0.04f;
+	CavesNoiseThreshold = 0.25f;
 
 	OresNoiseFrequency = 0.05f;
-	OresThreshold = 0.25f;
+	OresNoiseThreshold = 0.25f;
+
+	BedrockNoiseFrequency = 0.01f;
+	BedrockNoiseThreshold = 0.25f;
+	BedrockWidthVoxelsSidesBottom = FIntPoint(16, 8);
 }
 
 //~ Begin Initialize
@@ -44,9 +48,9 @@ void UATProceduralGeneratorTask_Landscape::PreWork_GameThread() // UATProcedural
 	ensureReturn(StrongVoxelTypeData);
 	ensureReturn(WeakVoxelTypeData);
 
-	ensureReturn(FoundationVoxelTypeData);
-	ensureReturn(FoundationVoxelTypeData->bIsUnbreakable);
-	ensureReturn(FoundationVoxelTypeData->bHasInfiniteStability);
+	ensureReturn(BedrockVoxelTypeData);
+	ensureReturn(BedrockVoxelTypeData->bIsUnbreakable);
+	ensureReturn(BedrockVoxelTypeData->bHasInfiniteStability);
 
 	ensureReturn(!OresVoxelTypeDataArray.IsEmpty());
 
@@ -63,8 +67,6 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 	ensureReturn(InTargetChunk->GetOwnerTree());
 	int32 TreeSeed = InTargetChunk->GetOwnerTree()->GetTreeSeed();
 	int32 ChunkSeed = InTargetChunk->GetChunkSeed();
-
-	FRandomStream RandomStream = FRandomStream(ChunkSeed + 116);
 
 	FIntVector ChunkCoords = InTargetChunk->GetChunkCoords();
 	FIntVector ChunkBackLeftCornerPoint = InTargetChunk->GetChunkBackLeftCornerPoint();
@@ -100,10 +102,28 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 	TArray<float> OresValues3D;
 	PerlinGenerator->GenUniformGrid3D(OresValues3D, GeneratorStart3D, GeneratorSize3D, OresNoiseFrequency, TreeSeed + 100);
 
-	int32 ChunkTreeMaxZ = TargetTree->GetBoundsSize().Z;
+	FIntVector TreeBounds = TargetTree->GetBoundsSize();
+	int32 ChunkTreeMaxZ = TreeBounds.Z;
 
 	for (int32 SampleArrayIndex2D = 0; SampleArrayIndex2D < HillsValues2D.Num(); ++SampleArrayIndex2D)
 	{
+		FIntPoint LocalXY = UATWorldFunctionLibrary::ArrayIndex2D_To_Point2D(SampleArrayIndex2D, GeneratorSize2D);
+		FIntPoint GlobalXY = GeneratorStart2D + LocalXY;
+
+		FRandomStream RandomStreamXY = FRandomStream(TreeSeed + GetTypeHash(GlobalXY));
+
+		const int32 BottomBedrockWidth = FMath::CeilToInt((float)BedrockWidthVoxelsSidesBottom.Y * FMath::Lerp(0.5f, 1.0f, RandomStreamXY.GetFraction()));
+		const float AboveHillsOresWidth = LERP_VECTOR2D(AboveHillsOresWidthMinMax, RandomStreamXY.GetFraction());
+
+		FRandomStream RandomStreamX = FRandomStream(TreeSeed + GlobalXY.X * GlobalXY.X - GlobalXY.X % 43);
+		FRandomStream RandomStreamY = FRandomStream(TreeSeed + GlobalXY.Y * GlobalXY.Y - GlobalXY.Y % 24);
+
+		const int32 SideXBedrockWidth = FMath::CeilToInt((float)BedrockWidthVoxelsSidesBottom.X * FMath::Lerp(0.5f, 1.0f, RandomStreamY.GetFraction()));
+		const int32 SideYBedrockWidth = FMath::CeilToInt((float)BedrockWidthVoxelsSidesBottom.X * FMath::Lerp(0.5f, 1.0f, RandomStreamX.GetFraction()));
+
+		const FIntPoint LeftBackOffsetXY = GlobalXY;
+		const FIntPoint RightFrontOffsetXY = FIntPoint(TreeBounds.X, TreeBounds.Y) - GlobalXY;
+
 		float SampleHillsValue2D = (HillsValues2D[SampleArrayIndex2D] + 1.0f) * 0.5f; // Normalized
 
 		// Power
@@ -117,25 +137,35 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 			int32 GlobalZ = GeneratorStart3D.Z + LocalZ;
 			float GlobalAlphaZ = float(GlobalZ) / float(ChunkTreeMaxZ);
 
+			FRandomStream RandomStreamZ = FRandomStream(TreeSeed + GlobalZ);
+
 			const bool bBelowHills = GlobalAlphaZ < SampleHillsValue2D;
 			const bool bBelowStrongHillsLayer = (SampleHillsValue2D - GlobalAlphaZ) > StrongToWeakWidth;
 
 			int32 SampleArrayIndex3D = UATWorldFunctionLibrary::ArrayIndex2D_To_ArrayIndex3D(SampleArrayIndex2D, LocalZ, ChunkSize);
 			float SampleCavesValue3D = (CavesValues3D[SampleArrayIndex3D] + 1.0f) * 0.5f; // Normalized
 
-			const bool bInsideCave = SampleCavesValue3D < CavesThreshold;
-			const bool bOutsideStrongCavesLayer = SampleCavesValue3D > (CavesThreshold + StrongToWeakWidth);
+			const bool bInsideCave = SampleCavesValue3D < CavesNoiseThreshold;
+			const bool bOutsideStrongCavesLayer = SampleCavesValue3D > (CavesNoiseThreshold + StrongToWeakWidth);
 
 			float SampleOresValue3D = (OresValues3D[SampleArrayIndex3D] + 1.0f) * 0.5f; 
-			const bool bInsideOres = SampleOresValue3D < OresThreshold;
+			const bool bInsideOres = SampleOresValue3D < OresNoiseThreshold;
 
-			const bool bAboveHillsOres = bInsideOres && (GlobalAlphaZ < (SampleHillsValue2D + LERP_VECTOR2D(AboveHillsOresWidthMinMax, RandomStream.GetFraction())));
+			const bool bInsideOresAboveHills = bInsideOres && (GlobalAlphaZ < (SampleHillsValue2D + AboveHillsOresWidth));
 
-			if (bAboveHillsOres)
+			const bool bInsideBottomBedrock = GlobalZ < BottomBedrockWidth;
+			const bool bInsideSideXBedrock = bBelowHills && ((LeftBackOffsetXY.X < SideXBedrockWidth) || (RightFrontOffsetXY.X < SideXBedrockWidth));
+			const bool bInsideSideYBedrock = bBelowHills && ((LeftBackOffsetXY.Y < SideYBedrockWidth) || (RightFrontOffsetXY.Y < SideYBedrockWidth));
+
+			if (bInsideBottomBedrock || bInsideSideXBedrock || bInsideSideYBedrock)
 			{
-				goto SetOre;
+				Data.TypeDataArray[SampleArrayIndex3D] = BedrockVoxelTypeData;
 			}
-			if (bBelowHills)
+			else if (bInsideOresAboveHills)
+			{
+				goto ForceSetOre;
+			}
+			else if (bBelowHills)
 			{
 				if (bInsideCave)
 				{
@@ -145,7 +175,7 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 				{
 					if (bInsideOres)
 					{
-					SetOre:
+					ForceSetOre:
 						float BelowHillsAlpha = (SampleHillsValue2D - GlobalAlphaZ) / SampleHillsValue2D;
 						int32 SampleOreTypeDataIndex = FMath::RoundToInt(BelowHillsAlpha * (float)OresVoxelTypeDataArray.Num()) - 1;
 
@@ -165,19 +195,6 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 						}
 					}
 				}
-			}
-		}
-	}
-	if (ChunkCoords.Z == 0)
-	{
-		for (int32 SampleX = 0; SampleX < ChunkSize.X; ++SampleX)
-		{
-			for (int32 SampleY = 0; SampleY < ChunkSize.Y; ++SampleY)
-			{
-				FIntVector SamplePoint = FIntVector(SampleX, SampleY, 0);
-				
-				int32 SampleArrayIndex3D = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SamplePoint, ChunkSize);
-				Data.TypeDataArray[SampleArrayIndex3D] = FoundationVoxelTypeData;
 			}
 		}
 	}
