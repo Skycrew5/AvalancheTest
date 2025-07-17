@@ -54,12 +54,12 @@ protected:
 public:
 
 	const TArraySetPair<FIntVector>& GetConstQueuedPoints() const { return QueuedPoints; }
-	void QueuePoint(const FIntVector& InPoint, const bool bInQueueNeighborsToo = true);
+	void QueuePoint(const FIntVector& InPoint, const bool bInQueueNeighborsToo);
 protected:
 	virtual bool ShouldSelectQueuedPointForUpdate(const FIntVector& InPoint) const;
 
 	UPROPERTY(Category = "Queue", EditAnywhere, BlueprintReadWrite)
-	int32 QueueNeighborsRadius = 6;
+	int32 QueueNeighborsRadius;
 
 	TArraySetPair<FIntVector> QueuedPoints;
 //~ End Queue
@@ -79,8 +79,8 @@ public:
 #endif // UE_BUILD_DEBUG || UE_BUILD_DEVELOPMENT
 
 protected:
-	virtual void AllocateCacheAtPoint(const FIntVector& InPoint) {}
-	virtual void ResetCacheAtPoint(const FIntVector& InPoint) {}
+	virtual void OnSelectedUpdatePointAdded(const FIntVector& InPoint) {}
+	virtual void OnQueuedPointAdded(const FIntVector& InPoint) {}
 
 	void FinishPostWork_GameThread();
 

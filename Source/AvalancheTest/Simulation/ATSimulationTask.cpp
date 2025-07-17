@@ -6,7 +6,7 @@
 
 UATSimulationTask::UATSimulationTask()
 {
-	QueueNeighborsRadius = 6;
+	QueueNeighborsRadius = 2;
 	
 }
 
@@ -41,17 +41,16 @@ void UATSimulationTask::DeInitialize()
 void UATSimulationTask::QueuePoint(const FIntVector& InPoint, const bool bInQueueNeighborsToo)
 {
 	QueuedPoints.Add(InPoint);
-	ResetCacheAtPoint(InPoint);
+	OnQueuedPointAdded(InPoint);
 
-	if (bInQueueNeighborsToo)
+	if (bInQueueNeighborsToo && QueueNeighborsRadius > 0)
 	{
 		TArray<FIntVector> PointsInRadius;
 		TargetTree->GetAllVoxelPointsInRadius(InPoint, QueueNeighborsRadius, PointsInRadius);
 
 		for (const FIntVector& SamplePoint : PointsInRadius)
 		{
-			QueuedPoints.Add(SamplePoint);
-			ResetCacheAtPoint(SamplePoint);
+			QueuePoint(SamplePoint, false);
 		}
 	}
 }
@@ -102,7 +101,7 @@ void UATSimulationTask::PreWork_GameThread()
 		if (ShouldSelectQueuedPointForUpdate(SamplePoint))
 		{
 			SelectedUpdatePoints.Add(SamplePoint);
-			AllocateCacheAtPoint(SamplePoint);
+			OnSelectedUpdatePointAdded(SamplePoint);
 		}
 	}
 	if (SelectedUpdatePoints.IsEmpty())

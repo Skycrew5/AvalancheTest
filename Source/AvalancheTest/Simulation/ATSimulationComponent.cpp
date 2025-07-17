@@ -3,7 +3,7 @@
 #include "Simulation/ATSimulationComponent.h"
 
 #include "Simulation/ATSimulationTask.h"
-#include "Simulation/ATSimulationTask_HealthDrain.h"
+#include "Simulation/ATSimulationTask_Avalanche.h"
 #include "Simulation/ATSimulationTask_StabilityRecursive.h"
 
 #include "World/ATVoxelTree.h"
@@ -15,7 +15,7 @@ UATSimulationComponent::UATSimulationComponent()
 
 	TaskArray = {
 		CreateDefaultSubobject<UATSimulationTask_StabilityRecursive>(TEXT("SimulationTask_StabilityRecursive")),
-		//CreateDefaultSubobject<UATSimulationTask_HealthDrain>(TEXT("SimulationTask_HealthDrain"))
+		CreateDefaultSubobject<UATSimulationTask_Avalanche>(TEXT("SimulationTask_Avalanche"))
 	};
 	bEnableSimulationTasks = true;
 	MaxUpdatesPerSecond = 10000;
@@ -126,6 +126,8 @@ UATSimulationTask* UATSimulationComponent::FindTaskInstanceByClass(TSubclassOf<U
 {
 	for (UATSimulationTask* SampleTask : TaskArray)
 	{
+		ensureContinue(SampleTask);
+
 		if (SampleTask->IsA(InClass))
 		{
 			return SampleTask;

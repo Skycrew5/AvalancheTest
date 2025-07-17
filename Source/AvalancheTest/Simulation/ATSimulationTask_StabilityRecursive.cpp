@@ -3,7 +3,7 @@
 #include "Simulation/ATSimulationTask_StabilityRecursive.h"
 
 #include "Simulation/ATSimulationComponent.h"
-#include "Simulation/ATSimulationTask_HealthDrain.h"
+#include "Simulation/ATSimulationTask_Avalanche.h"
 
 #include "World/ATVoxelTree.h"
 #include "World/ATVoxelChunk.h"
@@ -73,6 +73,8 @@ UATSimulationTask_StabilityRecursive::UATSimulationTask_StabilityRecursive()
 		&DirectionsOrder5,
 		&DirectionsOrder6
 	};
+
+	AvalancheStabilityThreshold = 0.25f;
 }
 
 //~ Begin Initialize
@@ -83,8 +85,8 @@ void UATSimulationTask_StabilityRecursive::Initialize(AATVoxelTree* InTargetTree
 	UATSimulationComponent* SimulationComponent = InTargetTree->GetSimulationComponent();
 	ensureReturn(SimulationComponent);
 
-	//HealthDrainSimulationTask = SimulationComponent->FindTaskInstance<UATSimulationTask_HealthDrain>();
-	//ensureReturn(HealthDrainSimulationTask);
+	AvalancheSimulationTask = SimulationComponent->FindTaskInstance<UATSimulationTask_Avalanche>();
+	ensureReturn(AvalancheSimulationTask);
 }
 
 void UATSimulationTask_StabilityRecursive::DeInitialize() // UATSimulationTask
@@ -222,21 +224,17 @@ void UATSimulationTask_StabilityRecursive::PostWork_GameThread()
 
 		SampleData.Stability = UpdatedSelectedPointsStabilities.Pop();
 
-		if (SampleData.Stability > 0.25f)
-		{
-			AATVoxelChunk* SampleChunk = TargetTree->GetVoxelChunkAtPoint(SamplePoint);
-			ensureContinue(SampleChunk);
+		AATVoxelChunk* SampleChunk = TargetTree->GetVoxelChunkAtPoint(SamplePoint);
+		ensureContinue(SampleChunk);
 
-			//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.Stability);
-			SampleChunk->HandleSetVoxelInstanceDataAtPoint(SamplePoint, SampleData);
-		}
-		else
-		{
-			TargetTree->BreakVoxelAtPoint(SamplePoint, FVoxelBreakData(true, true)); // Will update Chunk too
-		}
-		//ensureContinue(HealthDrainSimulationTask);
-		//HealthDrainSimulationTask->QueuePoint(SamplePoint);
+		//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.Stability);
+		SampleChunk->HandleSetVoxelInstanceDataAtPoint(SamplePoint, SampleData);
 
+		if (SampleData.Stability <= AvalancheStabilityThreshold)
+		{
+			ensureContinue(AvalancheSimulationTask);
+			AvalancheSimulationTask->QueuePoint(SamplePoint, false);
+		}
 		if (bEnablePointsCache)
 		{
 			PointsCache[SamplePoint].bIsThreadSafe = true;

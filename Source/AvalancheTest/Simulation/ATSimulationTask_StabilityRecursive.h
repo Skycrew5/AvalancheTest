@@ -33,8 +33,8 @@ public:
 	virtual void DoWork_SubThread() override; // UATSimulationTask
 	virtual void PostWork_GameThread() override; // UATSimulationTask
 protected:
-	virtual void AllocateCacheAtPoint(const FIntVector& InPoint) override { PointsCache.Add(InPoint); } // UATSimulationTask
-	virtual void ResetCacheAtPoint(const FIntVector& InPoint) override { PointsCache.Remove(InPoint); } // UATSimulationTask
+	virtual void OnSelectedUpdatePointAdded(const FIntVector& InPoint) override { PointsCache.Add(InPoint); } // UATSimulationTask
+	virtual void OnQueuedPointAdded(const FIntVector& InPoint) override { PointsCache.Remove(InPoint); } // UATSimulationTask
 
 	struct FRecursiveThreadData
 	{
@@ -109,11 +109,14 @@ protected:
 
 	TArray<TArray<EATAttachmentDirection>*> UsedDirectionsOrders;
 //~ End Directions
-	
-//~ Begin Next
+
+//~ Begin Avalanche
 protected:
 
-	//UPROPERTY(Category = "Next", EditAnywhere, BlueprintReadOnly)
-	//TObjectPtr<class UATSimulationTask_HealthDrain> HealthDrainSimulationTask;
-//~ End Next
+	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
+	float AvalancheStabilityThreshold;
+
+	UPROPERTY(Transient)
+	TObjectPtr<class UATSimulationTask_Avalanche> AvalancheSimulationTask;
+//~ End Avalanche
 };

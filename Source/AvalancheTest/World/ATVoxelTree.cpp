@@ -544,7 +544,7 @@ void AATVoxelTree::HandleQueuedVoxelInstanceData(const FIntVector& InPoint)
 	}
 	else
 	{
-		SimulationComponent->QueuePointForTaskAtIndex(0, InPoint);
+		SimulationComponent->QueuePointForTaskAtIndex(0, InPoint, true);
 	}
 	Queued_Point_To_VoxelInstanceData_Map.Remove(InPoint);
 }

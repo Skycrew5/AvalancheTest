@@ -51,7 +51,7 @@ protected:
 
 //~ Begin Queue
 public:
-	void QueuePointForTaskAtIndex(int32 InTaskIndex, const FIntVector& InPoint, const bool bInQueueNeighborPointsToo = true);
+	void QueuePointForTaskAtIndex(int32 InTaskIndex, const FIntVector& InPoint, const bool bInQueueNeighborPointsToo);
 //~ End Queue
 
 //~ Begin Tasks
