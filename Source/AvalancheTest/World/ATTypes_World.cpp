@@ -3,7 +3,9 @@
 #include "World/ATTypes_World.h"
 
 #include "World/ATVoxelISMC.h"
+#include "World/ATVoxelTree.h"
 #include "World/ATVoxelChunk.h"
+#include "World/ATWorldFunctionLibrary.h"
 
 #if DEBUG_VOXELS
 	#pragma optimize("", off)
@@ -11,6 +13,36 @@
 
 const FVoxelInstanceData FVoxelInstanceData::Invalid = FVoxelInstanceData();
 //const FVoxelCompoundData FVoxelCompoundData::Invalid = FVoxelCompoundData();
+
+void FSortedChunksBySquaredDistance::UpdateDistancesAndSort(const AATVoxelTree* InTree, const bool bInReverse)
+{
+	for (FChunkWithSquaredDistance& SampleData : DataArray)
+	{
+		AATVoxelChunk* SampleChunk = SampleData.Chunk;
+		ensureContinue(SampleChunk);
+
+		int32 NewSquaredDistance = INT_MAX;
+
+		for (const AActor* UpdateReferenceActor : InTree->GetChunksUpdateReferenceActors())
+		{
+			FIntVector ReferencePoint = UATWorldFunctionLibrary::WorldLocation_To_Point3D(UpdateReferenceActor->GetActorLocation(), InTree->GetVoxelSize());
+			FIntVector ReferenceChunkCoords = InTree->GetVoxelChunkCoordsAtPoint(ReferencePoint);
+
+			FIntVector DifferenceVector = SampleChunk->GetChunkCoords() - ReferenceChunkCoords;
+			int32 ThisDistanceSquared = FMath::Square(DifferenceVector.X) + FMath::Square(DifferenceVector.Y) + FMath::Square(DifferenceVector.Z);
+
+			if (ThisDistanceSquared < NewSquaredDistance)
+			{
+				NewSquaredDistance = ThisDistanceSquared;
+			}
+		}
+		SampleData.SquaredDistance = NewSquaredDistance;
+	}
+	DataArray.Sort([bInReverse](const FChunkWithSquaredDistance& InA, const FChunkWithSquaredDistance& InB)
+	{
+		return (InA.SquaredDistance < InB.SquaredDistance) == bInReverse;
+	});
+}
 
 /*void FVoxelCompoundData::GetAllPoints(TArray<FIntVector>& OutPoints) const
 {

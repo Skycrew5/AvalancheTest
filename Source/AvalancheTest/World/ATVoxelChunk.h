@@ -94,8 +94,11 @@ public:
 	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
 	bool HasVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
-	UFUNCTION(Category = "Getters", BlueprintCallable, meta = (KeyWords = "GetInstanceData"))
+	UFUNCTION(Category = "Voxel Getters", BlueprintCallable, meta = (KeyWords = "GetInstanceData"))
 	FVoxelInstanceData& GetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInChecked = true, const bool bInIgnoreQueued = false) const;
+
+	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
+	bool IsPointInsideTree(const FIntVector& InPoint) const;
 //~ End Voxel Getters
 
 //~ Begin Voxel Setters

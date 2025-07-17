@@ -100,14 +100,14 @@ int32 UATProceduralGeneratorComponent::GetTotalQueuedChunksNum() const
 	return OutNum;
 }
 
-void UATProceduralGeneratorComponent::QueueChunkForTaskAtIndex(AATVoxelChunk* InChunk, int32 InTaskIndex)
+void UATProceduralGeneratorComponent::QueueChunksForTaskAtIndex(const TArray<AATVoxelChunk*>& InChunks, int32 InTaskIndex)
 {
 	ensureReturn(TaskArray.IsValidIndex(InTaskIndex));
 
 	UATProceduralGeneratorTask* TargetTask = TaskArray[InTaskIndex];
 	ensureReturn(TargetTask);
 
-	TargetTask->QueueChunk(InChunk);
+	TargetTask->QueueChunks(InChunks);
 }
 //~ End Queue
 

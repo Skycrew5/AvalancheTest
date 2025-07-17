@@ -61,9 +61,11 @@ public:
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	void UnRegisterChunksUpdateReferenceActor(const AActor* InActor);
 
+	const TArray<const AActor*>& GetChunksUpdateReferenceActors() const { return ChunksUpdateReferenceActors; }
 protected:
 	void HandleChunkUpdates();
-	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY);
+	void UpdateSortedChunkArray();
+	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY, TArray<AATVoxelChunk*>& OutNewChunks);
 
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class AATVoxelChunk> ChunkClass;
@@ -83,11 +85,17 @@ protected:
 	UPROPERTY(Transient)
 	FIntVector BoundsSize;
 
-	UPROPERTY(Transient)
+	UPROPERTY(Transient, BlueprintReadOnly)
 	TArray<TObjectPtr<const AActor>> ChunksUpdateReferenceActors;
 
 	UPROPERTY(Transient)
 	TMap<FIntVector, TObjectPtr<AATVoxelChunk>> ChunksMap;
+
+	UPROPERTY(Transient)
+	FSortedChunksBySquaredDistance SortedChunksData;
+
+	UPROPERTY(Transient)
+	FTimerHandle UpdateSortedChunkArrayTimerHandle;
 //~ End Voxel Chunks
 	
 //~ Begin Voxel Generation

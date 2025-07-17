@@ -4,6 +4,8 @@
 
 #include "AvalancheTest.h"
 
+#include "World/ATTypes_World.h"
+
 #include "ATProceduralGeneratorTask.generated.h"
 
 UENUM(BlueprintType, meta = (DisplayName = "[AT] Procedural Generator Task Phase"))
@@ -43,16 +45,16 @@ protected:
 public:
 
 	UFUNCTION(Category = "Queue", BlueprintCallable)
-	int32 GetQueuedChunksNum() { return QueuedChunks.Num(); }
+	int32 GetQueuedChunksNum() { return QueuedChunksData.DataArray.Num(); }
 
 	UFUNCTION(Category = "Queue", BlueprintCallable)
-	void QueueChunk(class AATVoxelChunk* InChunk);
+	void QueueChunks(const TArray<class AATVoxelChunk*>& InChunks);
 
 protected:
 	virtual bool ShouldSelectQueuedChunkForUpdate(class AATVoxelChunk* InChunk) const { return true; }
 
-	UPROPERTY(Category = "Queue", BlueprintReadOnly)
-	TArray<TObjectPtr<class AATVoxelChunk>> QueuedChunks;
+	UPROPERTY(Transient)
+	FSortedChunksBySquaredDistance QueuedChunksData;
 //~ End Queue
 
 //~ Begin Task

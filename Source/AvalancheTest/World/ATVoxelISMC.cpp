@@ -19,7 +19,6 @@ UATVoxelISMC::UATVoxelISMC()
 	bSupportRemoveAtSwap = true;
 
 	SetCollisionProfileName(TEXT("Voxel"));
-	SetNumCustomDataFloats(4);
 
 	bDebugStabilityValues = true;
 	bDebugHealthValues = true;
@@ -67,6 +66,7 @@ void UATVoxelISMC::BP_InitComponent_Implementation(AATVoxelChunk* InOwnerChunk, 
 	{
 		SetMaterial(SampleIndexAndMaterial.Key, SampleIndexAndMaterial.Value);
 	}
+	SetNumCustomDataFloats(bDebugHealthValues ? 2 : (bDebugStabilityValues ? 1 : 0));
 }
 //~ End Initialize
 
@@ -107,16 +107,17 @@ FIntVector UATVoxelISMC::GetPointOfMeshIndex(int32 InMeshIndex, const bool bInCh
 
 bool UATVoxelISMC::IsVoxelAtPointFullyClosed(const FIntVector& InPoint) const
 {
-	if (HasVoxelOfAnyTypeAtPoint(InPoint + FIntVector(1, 0, 0)) &&
-		HasVoxelOfAnyTypeAtPoint(InPoint + FIntVector(-1, 0, 0)) &&
-		HasVoxelOfAnyTypeAtPoint(InPoint + FIntVector(0, 1, 0)) &&
-		HasVoxelOfAnyTypeAtPoint(InPoint + FIntVector(0, -1, 0)) &&
-		HasVoxelOfAnyTypeAtPoint(InPoint + FIntVector(0, 0, 1)) &&
-		HasVoxelOfAnyTypeAtPoint(InPoint + FIntVector(0, 0, -1)))
+	ensureReturn(OwnerChunk, false);
+
+	for (const FIntVector& SampleOffset : FATVoxelUtils::SideOffsets)
 	{
-		return true;
+		FIntVector SamplePoint = InPoint + SampleOffset;
+		if (OwnerChunk->IsPointInsideTree(SamplePoint) && !HasVoxelOfAnyTypeAtPoint(SamplePoint))
+		{
+			return false;
+		}
 	}
-	return false;
+	return true;
 }
 
 float UATVoxelISMC::GetVoxelSize() const

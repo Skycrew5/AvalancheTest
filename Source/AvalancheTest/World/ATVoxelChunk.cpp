@@ -177,6 +177,12 @@ FVoxelInstanceData& AATVoxelChunk::GetVoxelInstanceDataAtPoint(const FIntVector&
 	ensureReturn(OwnerTree, const_cast<FVoxelInstanceData&>(FVoxelInstanceData::Invalid));
 	return OwnerTree->GetVoxelInstanceDataAtPoint(InPoint, bInChecked, bInIgnoreQueued);
 }
+
+bool AATVoxelChunk::IsPointInsideTree(const FIntVector& InPoint) const
+{
+	ensureReturn(OwnerTree, false);
+	return OwnerTree->IsPointInsideTree(InPoint);
+}
 //~ End Voxel Getters
 
 //~ Begin Voxel Setters
@@ -236,15 +242,6 @@ bool AATVoxelChunk::IsThisTickUpdatesTimeBudgetExceeded() const
 	return OwnerTree->IsThisTickUpdatesTimeBudgetExceeded();
 }
 
-static const TArray<FIntVector> UpdateReadyToUpdateVoxelsVisibilityState_SideOffsets = {
-	FIntVector(1, 0, 0),
-	FIntVector(-1, 0, 0),
-	FIntVector(0, 1, 0),
-	FIntVector(0, -1, 0),
-	FIntVector(0, 0, 1),
-	FIntVector(0, 0, -1)
-};
-
 void AATVoxelChunk::MarkChunkAsSimulationReady()
 {
 	ensure(!bChunkSimulationReady);
@@ -252,7 +249,7 @@ void AATVoxelChunk::MarkChunkAsSimulationReady()
 
 	UpdateReadyToUpdateVoxelsVisibilityState();
 
-	for (const FIntVector& SampleOffset : UpdateReadyToUpdateVoxelsVisibilityState_SideOffsets)
+	for (const FIntVector& SampleOffset : FATVoxelUtils::SideOffsets)
 	{
 		if (AATVoxelChunk* SampleNeighborChunk = OwnerTree->GetVoxelChunkAtCoords(ChunkCoords + SampleOffset))
 		{
@@ -268,7 +265,7 @@ void AATVoxelChunk::UpdateReadyToUpdateVoxelsVisibilityState()
 		return;
 	}
 	ensureReturn(OwnerTree);
-	for (const FIntVector& SampleOffset : UpdateReadyToUpdateVoxelsVisibilityState_SideOffsets)
+	for (const FIntVector& SampleOffset : FATVoxelUtils::SideOffsets)
 	{
 		const FIntVector& SampleNeighborChunkCoords = ChunkCoords + SampleOffset;
 
@@ -359,7 +356,7 @@ void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerCont
 			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Type Data"), TargetTypeDataPtr->GetName()));
 			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Health"), TargetData.Health));
 			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Stability"), TargetData.Stability));
-			//InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Attachment Directions"), EATAttachmentDirection_Utils::CreateStringFromAttachmentDirections(TargetData.AttachmentDirections)));
+			//InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Attachment Directions"), FATVoxelUtils::CreateStringFromAttachmentDirections(TargetData.AttachmentDirections)));
 		}
 		InOutData.InstanceHighlightTransform = FTransform(FRotator::ZeroRotator, UATWorldFunctionLibrary::GetVoxelCenterWorldLocation(TargetPoint, GetVoxelSize()), FVector(GetVoxelSize() * 0.5f));
 	}

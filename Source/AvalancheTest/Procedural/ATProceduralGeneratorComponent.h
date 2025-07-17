@@ -53,7 +53,7 @@ public:
 	UFUNCTION(Category = "Queue", BlueprintCallable)
 	int32 GetTotalQueuedChunksNum() const;
 
-	void QueueChunkForTaskAtIndex(class AATVoxelChunk* InChunk, int32 InTaskIndex);
+	void QueueChunksForTaskAtIndex(const TArray<class AATVoxelChunk*>& InChunks, int32 InTaskIndex);
 //~ End Queue
 
 //~ Begin Tasks

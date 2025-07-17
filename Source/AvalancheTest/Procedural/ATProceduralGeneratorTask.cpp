@@ -34,10 +34,14 @@ void UATProceduralGeneratorTask::DeInitialize()
 //~ End Initialize
 
 //~ Begin Queue
-void UATProceduralGeneratorTask::QueueChunk(AATVoxelChunk* InChunk)
+void UATProceduralGeneratorTask::QueueChunks(const TArray<AATVoxelChunk*>& InChunks)
 {
-	ensureReturn(!QueuedChunks.Contains(InChunk));
-	QueuedChunks.Add(InChunk);
+	for (AATVoxelChunk* SampleChunk : InChunks)
+	{
+		ensureContinue(!QueuedChunksData.DataArray.Contains(SampleChunk));
+		QueuedChunksData.DataArray.Add(FChunkWithSquaredDistance(SampleChunk));
+	}
+	QueuedChunksData.UpdateDistancesAndSort(TargetTree, true);
 }
 //~ End Queue
 
@@ -73,9 +77,9 @@ void UATProceduralGeneratorTask::PreWork_GameThread()
 	ensureReturn(SelectedChunks.IsEmpty());
 	ensureReturn(TargetTree);
 
-	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !QueuedChunks.IsEmpty())
+	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !QueuedChunksData.DataArray.IsEmpty())
 	{
-		TObjectPtr<class AATVoxelChunk> SampleChunk = QueuedChunks.Pop();
+		TObjectPtr<class AATVoxelChunk> SampleChunk = QueuedChunksData.DataArray.Pop();
 
 		if (ShouldSelectQueuedChunkForUpdate(SampleChunk))
 		{

@@ -156,9 +156,9 @@ float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAll
 
 	if (InCurrentRecursionLevel > MaxRecursionLevel)
 	{
-		return 1.0f * EATAttachmentDirection_Utils::BaseAttachmentStrengthMuls[InNeighborDirection];
+		return 1.0f * FATVoxelUtils::BaseAttachmentStrengthMuls[InNeighborDirection];
 	}
-	FIntVector SamplePoint = InTargetPoint + EATAttachmentDirection_Utils::IntOffsets[InNeighborDirection];
+	FIntVector SamplePoint = InTargetPoint + FATVoxelUtils::IntOffsets[InNeighborDirection];
 
 	if (FRecursivePointCache* PointCachePtr = PointsCache.Find(SamplePoint))
 	{

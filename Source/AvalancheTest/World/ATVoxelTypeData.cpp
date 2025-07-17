@@ -56,7 +56,7 @@ float UATVoxelTypeData::GetStabilityAttachmentMulForDirection(EATAttachmentDirec
 
 void UATVoxelTypeData::InitCachedAttachmentStrengthMuls()
 {
-	using namespace EATAttachmentDirection_Utils;
+	using namespace FATVoxelUtils;
 
 	CachedAttachmentStrengthMuls.Empty(AttachmentDirectionsArray.Num());
 	for (EATAttachmentDirection SampleDirection : AttachmentDirectionsArray)

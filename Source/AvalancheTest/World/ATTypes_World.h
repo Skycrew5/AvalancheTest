@@ -22,7 +22,7 @@ enum class EATAttachmentDirection : uint8
 	Bottom
 };
 
-namespace EATAttachmentDirection_Utils
+namespace FATVoxelUtils
 {
 	const TArray<EATAttachmentDirection> AttachmentDirectionsArray = {
 		EATAttachmentDirection::None,
@@ -101,6 +101,15 @@ namespace EATAttachmentDirection_Utils
 		OutString.RemoveFromEnd(" | ");
 		return OutString;
 	}
+
+	const TArray<FIntVector> SideOffsets = {
+		FIntVector(1, 0, 0),
+		FIntVector(-1, 0, 0),
+		FIntVector(0, 1, 0),
+		FIntVector(0, -1, 0),
+		FIntVector(0, 0, 1),
+		FIntVector(0, 0, -1)
+	};
 }
 
 USTRUCT(BlueprintType)
@@ -141,6 +150,54 @@ struct FVoxelBreakData
 
 	FVoxelBreakData(bool bInForced = false, bool bInNotify = true, AActor* InSource = nullptr, AController* InInstigator = nullptr)
 		: bForced(bInForced), bNotify(bInNotify), Source(InSource), Instigator(InInstigator) {}
+};
+
+USTRUCT()
+struct FChunkWithSquaredDistance
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TObjectPtr<class AATVoxelChunk> Chunk = nullptr;
+
+	UPROPERTY()
+	int32 SquaredDistance = 0;
+
+	operator TObjectPtr<class AATVoxelChunk>() const
+	{
+		return Chunk;
+	}
+
+	bool operator==(const FChunkWithSquaredDistance& InOther) const
+	{
+		return Chunk == InOther.Chunk;
+	}
+
+	bool operator!=(const FChunkWithSquaredDistance& InOther) const
+	{
+		return Chunk != InOther.Chunk;
+	}
+
+	bool operator==(const TObjectPtr<class AATVoxelChunk>& InOtherChunk) const
+	{
+		return Chunk == InOtherChunk;
+	}
+
+	bool operator!=(const TObjectPtr<class AATVoxelChunk>& InOtherChunk) const
+	{
+		return Chunk != InOtherChunk;
+	}
+};
+
+USTRUCT()
+struct FSortedChunksBySquaredDistance
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FChunkWithSquaredDistance> DataArray;
+
+	void UpdateDistancesAndSort(const class AATVoxelTree* InTree, const bool bInReverse);
 };
 
 USTRUCT(BlueprintType)
