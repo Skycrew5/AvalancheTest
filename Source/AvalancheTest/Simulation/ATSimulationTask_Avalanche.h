@@ -37,6 +37,9 @@ protected:
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
 	float InstantAvalancheStabilityThreshold;
 
+	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
+	float InstantAvalanchePerWorkProbability;
+
 	UPROPERTY(Transient)
 	double NextAvalancheTime;
 

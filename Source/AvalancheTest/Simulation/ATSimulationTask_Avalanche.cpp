@@ -9,8 +9,9 @@ UATSimulationTask_Avalanche::UATSimulationTask_Avalanche()
 {
 	QueueNeighborsRadius = 0;
 
-	AvalancheCooldown = 2.0;
+	AvalancheCooldown = 5.0;
 	InstantAvalancheStabilityThreshold = 0.01f;
+	InstantAvalanchePerWorkProbability = 0.001f;
 }
 
 //~ Begin Task
@@ -28,7 +29,7 @@ void UATSimulationTask_Avalanche::DoWork_SubThread() // UATSimulationTask
 
 		ensureReturn(PointsAvalancheCounterMap.Contains(SamplePoint));
 
-		if (SampleData.Stability <= InstantAvalancheStabilityThreshold)
+		if (SampleData.Stability <= InstantAvalancheStabilityThreshold || InstantAvalanchePerWorkProbability >= FMath::FRand())
 		{
 			PointsAvalancheCounterMap[SamplePoint] = INT_MAX;
 		}
