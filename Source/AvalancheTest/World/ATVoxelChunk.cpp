@@ -112,6 +112,12 @@ int32 AATVoxelChunk::GetChunkSeed() const
 	ensureReturn(OwnerTree, 0);
 	return OwnerTree->GetTreeSeed() + ChunkCoords.X * ChunkCoords.X * ChunkCoords.X + ChunkCoords.Y * ChunkCoords.Y + ChunkCoords.Z;
 }
+
+bool AATVoxelChunk::IsChunkOnTreeSide(const bool bInIgnoreBottom) const
+{
+	ensureReturn(OwnerTree, false);
+	return OwnerTree->IsChunkCoordsOnTreeSide(ChunkCoords, bInIgnoreBottom);
+}
 //~ End Voxel Tree
 
 //~ Begin Voxel Components
@@ -246,6 +252,7 @@ void AATVoxelChunk::MarkChunkAsSimulationReady()
 {
 	ensure(!bChunkSimulationReady);
 	bChunkSimulationReady = true;
+	OnBecomeSimulationReady.Broadcast();
 
 	UpdateReadyToUpdateVoxelsVisibilityState();
 
@@ -293,6 +300,7 @@ void AATVoxelChunk::UpdateReadyToUpdateVoxelsVisibilityState()
 		}
 	}
 	bReadyToUpdateVoxelsVisibility = true;
+	OnBecomeReadyToUpdateVoxelsVisibility.Broadcast();
 
 	for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
 	{
@@ -324,7 +332,7 @@ void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerCont
 	// Common
 	InOutData.ChunkHighlightTransform = FTransform(FRotator::ZeroRotator, GetChunkCenterWorldLocation(), FVector((float)GetChunkSize() * GetVoxelSize() * 0.5f));
 
-	InOutData.Label = GetActorLabel();
+	InOutData.Label = GetActorNameOrLabel();
 	InOutData.LabelColor = FColor::MakeRandomSeededColor(GetChunkSeed());
 
 	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Chunk Size"), GetChunkSize()));

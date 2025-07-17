@@ -37,6 +37,9 @@ public:
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	bool IsChunkCoordsInsideTree(const FIntVector& InChunkCoords) const;
 
+	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
+	bool IsChunkCoordsOnTreeSide(const FIntVector& InChunkCoords, const bool bInIgnoreBottom) const;
+
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	FIntVector GetVoxelChunkCoordsAtPoint(const FIntVector& InPoint) const;
 

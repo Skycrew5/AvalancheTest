@@ -98,6 +98,13 @@ bool AATVoxelTree::IsChunkCoordsInsideTree(const FIntVector& InChunkCoords) cons
 		&& (InChunkCoords.Z >= 0 && InChunkCoords.Z < TreeSizeInChunks.Z);
 }
 
+bool AATVoxelTree::IsChunkCoordsOnTreeSide(const FIntVector& InChunkCoords, const bool bInIgnoreBottom) const
+{
+	return (InChunkCoords.X == 0 || InChunkCoords.X == (TreeSizeInChunks.X - 1))
+		|| (InChunkCoords.Y == 0 || InChunkCoords.Y == (TreeSizeInChunks.Y - 1))
+		|| (bInIgnoreBottom ? false : (InChunkCoords.Z == 0 || InChunkCoords.Z == TreeSizeInChunks.Z - 1));
+}
+
 FIntVector AATVoxelTree::GetVoxelChunkCoordsAtPoint(const FIntVector& InPoint) const
 {
 	//return FIntVector(InPoint.X / ChunkSize, InPoint.Y / ChunkSize, InPoint.Z / ChunkSize);

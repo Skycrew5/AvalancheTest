@@ -4,6 +4,8 @@
 
 #include "AvalancheTest.h"
 
+#include "ScWTypes_Delegates.h"
+
 #include "World/ATTypes_World.h"
 
 #include "ATVoxelChunk.generated.h"
@@ -54,6 +56,9 @@ public:
 
 	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
 	int32 GetChunkSeed() const;
+
+	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
+	bool IsChunkOnTreeSide(const bool bInIgnoreBottom) const;
 
 protected:
 
@@ -133,6 +138,12 @@ public:
 
 	void HandleUpdates();
 protected:
+
+	UPROPERTY(Category = "Voxel Data", BlueprintAssignable)
+	FDefaultEventSignature OnBecomeSimulationReady;
+
+	UPROPERTY(Category = "Voxel Data", BlueprintAssignable)
+	FDefaultEventSignature OnBecomeReadyToUpdateVoxelsVisibility;
 
 	UPROPERTY(Transient)
 	bool bChunkSimulationReady;

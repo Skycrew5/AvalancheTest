@@ -14,17 +14,19 @@
 #define LOCTEXT_NAMESPACE "AvalancheToolsModule"
 
 /**
- * Implements the Redaktor module.
+ * Implements the AvalancheTools module.
  */
 class FAvalancheToolsModuleImplementation : public FAvalancheToolsModule
 {
 
 public:
 
+	//FDelegateHandle OnPostEngineInitDelegateHandle;
+
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
 	virtual void StartupModule() override // IModuleInterface
 	{
-		FCoreDelegates::OnPostEngineInit.AddRaw(this, &FAvalancheToolsModuleImplementation::OnPostEngineInit);
+		//OnPostEngineInitDelegateHandle = FCoreDelegates::OnPostEngineInit.AddRaw(this, &FAvalancheToolsModuleImplementation::OnPostEngineInit);
 
 		FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"));
 
@@ -49,16 +51,18 @@ public:
 	// we call this function before unloading the module.
 	virtual void ShutdownModule() override // IModuleInterface
 	{
+		//FCoreDelegates::OnPostEngineInit.Remove(OnPostEngineInitDelegateHandle);
+
 		FGlobalTabmanager::Get()->UnregisterNomadTabSpawner("VoxelsEditor");
 
 		FPropertyEditorModule& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>(TEXT("PropertyEditor"));
 		PropertyModule.UnregisterCustomClassLayout("ATVoxelChunk");
 
-		if (IPlacementModeModule* PlacementModeModulePtr = FModuleManager::GetModulePtr<IPlacementModeModule>(TEXT("PlacementMode")))
+		/*if (IPlacementModeModule* PlacementModeModulePtr = FModuleManager::GetModulePtr<IPlacementModeModule>(TEXT("PlacementMode")))
 		{
 			PlacementModeModulePtr->UnregisterPlacementCategory(FAvalancheToolsPlacementCategories::Voxels());
 			PlacementModeModulePtr->OnPlacementModeCategoryRefreshed().Remove(PlacementModeCategoryRefreshHandle);
-		}
+		}*/
 #if WITH_GAMEPLAY_DEBUGGER
 		//If the gameplay debugger is available, unregister the category
 		if (IGameplayDebugger::IsAvailable())
@@ -69,7 +73,7 @@ public:
 #endif
 	}
 
-	void OnPostEngineInit()
+	/*void OnPostEngineInit()
 	{
 		IPlacementModeModule& PlacementModeModule = FModuleManager::GetModuleChecked<IPlacementModeModule>(TEXT("PlacementMode"));
 
@@ -135,7 +139,7 @@ private:
 		}
 	}
 	TArray<FPlacementModeID> VoxelsCategoryItemIDs;
-	FDelegateHandle PlacementModeCategoryRefreshHandle;
+	FDelegateHandle PlacementModeCategoryRefreshHandle;*/
 };
 
 IMPLEMENT_MODULE(FAvalancheToolsModuleImplementation, AvalancheTools)
