@@ -4,7 +4,7 @@
 
 #include "AvalancheTest.h"
 
-#include "ScWTypes_Containers.h"
+#include "ScWTypes_CommonContainers.h"
 
 #include "ATSimulationTask.generated.h"
 

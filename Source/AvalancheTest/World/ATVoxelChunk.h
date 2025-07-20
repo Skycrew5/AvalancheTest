@@ -4,7 +4,7 @@
 
 #include "AvalancheTest.h"
 
-#include "ScWTypes_Delegates.h"
+#include "ScWTypes_CommonDelegates.h"
 
 #include "World/ATTypes_World.h"
 
