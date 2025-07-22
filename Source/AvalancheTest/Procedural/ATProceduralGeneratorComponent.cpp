@@ -4,6 +4,7 @@
 
 #include "Procedural/ATProceduralGeneratorTask.h"
 #include "Procedural/ATProceduralGeneratorTask_Landscape.h"
+#include "Procedural/ATProceduralGeneratorTask_PlayerStart.h"
 
 #include "World/ATVoxelTree.h"
 
@@ -14,6 +15,7 @@ UATProceduralGeneratorComponent::UATProceduralGeneratorComponent()
 
 	TaskArray = {
 		CreateDefaultSubobject<UATProceduralGeneratorTask_Landscape>(TEXT("ProceduralGeneratorTask_Landscape")),
+		CreateDefaultSubobject<UATProceduralGeneratorTask_PlayerStart>(TEXT("ProceduralGeneratorTask_PlayerStart")),
 	};
 	bEnableProceduralTasks = true;
 }
@@ -31,9 +33,12 @@ void UATProceduralGeneratorComponent::BeginPlay() // UActorComponent
 {
 	Super::BeginPlay();
 
-	for (UATProceduralGeneratorTask* SampleTask : TaskArray)
+	for (int32 SampleIndex = 0; SampleIndex < TaskArray.Num(); ++SampleIndex)
 	{
-		SampleTask->Initialize(OwnerTree);
+		UATProceduralGeneratorTask* SampleTask = TaskArray[SampleIndex];
+
+		ensureContinue(SampleTask);
+		SampleTask->Initialize(this, SampleIndex);
 	}
 }
 

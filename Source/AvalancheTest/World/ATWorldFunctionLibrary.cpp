@@ -57,6 +57,11 @@ FIntPoint UATWorldFunctionLibrary::ArrayIndex2D_To_Point2D(const int32 InArrayIn
 	return FIntPoint(InArrayIndex2D % InRectSize.X, InArrayIndex2D / InRectSize.Y);
 }
 
+int32 UATWorldFunctionLibrary::Point2D_To_ArrayIndex2D(const FIntPoint& InPoint2D, const FIntPoint& InRectSize)
+{
+	return InPoint2D.X + InPoint2D.Y * InRectSize.X;
+}
+
 FIntVector UATWorldFunctionLibrary::ArrayIndex2D_To_Point3D(const int32 InArrayIndex2D, const int32 InZ, const FIntPoint& InRectSize)
 {
 	const FIntPoint& Point2D = ArrayIndex2D_To_Point2D(InArrayIndex2D, InRectSize);

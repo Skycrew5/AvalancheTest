@@ -2,7 +2,10 @@
 
 #include "Procedural/ATProceduralGeneratorTask.h"
 
+#include "Procedural/ATProceduralGeneratorComponent.h"
+
 #include "World/ATVoxelTree.h"
+#include "World/ATVoxelChunk.h"
 
 UATProceduralGeneratorTask::UATProceduralGeneratorTask()
 {
@@ -10,14 +13,23 @@ UATProceduralGeneratorTask::UATProceduralGeneratorTask()
 }
 
 //~ Begin Initialize
-void UATProceduralGeneratorTask::Initialize(AATVoxelTree* InTargetTree)
+void UATProceduralGeneratorTask::Initialize(UATProceduralGeneratorComponent* InOwnerComponent, int32 InTaskIndex)
 {
-	ensureReturn(InTargetTree);
-	TargetTree = InTargetTree;
+	OwnerComponent = InOwnerComponent;
+	ensureReturn(OwnerComponent);
+
+	OwnerTree = OwnerComponent->GetOwnerTree();
+	ensureReturn(OwnerTree);
 
 	check(AsyncTaskPtr == nullptr);
 	AsyncTaskPtr = new FAsyncTask<FATProceduralGeneratorTask_AsyncTask>();
 	AsyncTaskPtr->GetTask().TargetTask = this;
+
+	int32 NextTaskIndex = InTaskIndex + 1;
+	if (OwnerComponent->HasTaskAtIndex(NextTaskIndex))
+	{
+		NextTask = OwnerComponent->GetTaskAtIndex(NextTaskIndex);
+	}
 }
 
 void UATProceduralGeneratorTask::DeInitialize()
@@ -41,7 +53,7 @@ void UATProceduralGeneratorTask::QueueChunks(const TArray<AATVoxelChunk*>& InChu
 		ensureContinue(!QueuedChunksData.DataArray.Contains(SampleChunk));
 		QueuedChunksData.DataArray.Add(FChunkWithSquaredDistance(SampleChunk));
 	}
-	QueuedChunksData.UpdateDistancesAndSort(TargetTree, true);
+	QueuedChunksData.UpdateDistancesAndSort(OwnerTree, true);
 }
 //~ End Queue
 
@@ -75,9 +87,9 @@ void UATProceduralGeneratorTask::PreWork_GameThread()
 	ensureReturn(AsyncTaskPtr->IsDone());
 
 	ensureReturn(SelectedChunks.IsEmpty());
-	ensureReturn(TargetTree);
+	ensureReturn(OwnerTree);
 
-	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !QueuedChunksData.DataArray.IsEmpty())
+	while (!OwnerTree->IsThisTickUpdatesTimeBudgetExceeded() && !QueuedChunksData.DataArray.IsEmpty())
 	{
 		TObjectPtr<class AATVoxelChunk> SampleChunk = QueuedChunksData.DataArray.Pop();
 
@@ -92,6 +104,35 @@ void UATProceduralGeneratorTask::PreWork_GameThread()
 		return;
 	}
 	AsyncTaskPtr->StartBackgroundTask();
+}
+
+void UATProceduralGeneratorTask::FinishPostWorkWithChunk(AATVoxelChunk* InChunk)
+{
+	if (NextTask)
+	{
+		PushChunkForNextTask(InChunk);
+	}
+	else
+	{
+		HandleLastTaskFinishedForChunk(InChunk);
+	}
+	ensureReturn(SelectedChunks.Contains(InChunk));
+	SelectedChunks.RemoveSingle(InChunk);
+}
+
+void UATProceduralGeneratorTask::PushChunkForNextTask(AATVoxelChunk* InChunk)
+{
+	ensureReturn(InChunk);
+	ensureReturn(NextTask);
+	NextTask->QueueChunks({ InChunk });
+}
+
+void UATProceduralGeneratorTask::HandleLastTaskFinishedForChunk(AATVoxelChunk* InChunk)
+{
+	ensureReturn(InChunk);
+	InChunk->MarkChunkAsSimulationReady();
+
+	RemovePerChunkData(InChunk);
 }
 
 void UATProceduralGeneratorTask::FinishPostWork_GameThread()

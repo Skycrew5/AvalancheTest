@@ -50,6 +50,9 @@ public:
 	class AATVoxelChunk* GetVoxelChunkAtPoint(const FIntVector& InPoint) const { return GetVoxelChunkAtCoords(GetVoxelChunkCoordsAtPoint(InPoint)); }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
+	FIntVector GetTreeSizeInChunks() const { return TreeSizeInChunks; }
+
+	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	int32 GetChunkSize() const { return ChunkSize; }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)

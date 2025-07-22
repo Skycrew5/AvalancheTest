@@ -27,9 +27,14 @@ protected:
 //~ End ActorComponent
 
 //~ Begin Owner
+public:
+
+	UFUNCTION(Category = "Owner", BlueprintCallable)
+	class AATVoxelTree* GetOwnerTree() const { return OwnerTree; }
+
 protected:
 
-	UPROPERTY(Category = "Owner", BlueprintReadOnly)
+	UPROPERTY(Transient)
 	TObjectPtr<class AATVoxelTree> OwnerTree;
 //~ End Owner
 
@@ -62,7 +67,10 @@ public:
 	UFUNCTION(Category = "Tasks", BlueprintCallable)
 	bool IsCurrentTaskActive() const;
 
-	UFUNCTION(Category = "Tasks", BlueprintCallable, meta = (DeterminesOutputType = "InClass"))
+	UFUNCTION(Category = "Tasks", BlueprintCallable)
+	bool HasTaskAtIndex(int32 InTaskIndex) const { return TaskArray.IsValidIndex(InTaskIndex); }
+
+	UFUNCTION(Category = "Tasks", BlueprintCallable)
 	class UATProceduralGeneratorTask* GetTaskAtIndex(int32 InTaskIndex) const { ensureReturn(TaskArray.IsValidIndex(InTaskIndex), nullptr); return TaskArray[InTaskIndex]; }
 
 	UFUNCTION(Category = "Tasks", BlueprintCallable, meta = (DeterminesOutputType = "InClass"))

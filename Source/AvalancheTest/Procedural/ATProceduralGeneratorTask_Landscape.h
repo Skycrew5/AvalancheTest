@@ -22,16 +22,18 @@ public:
 	
 //~ Begin Initialize
 public:
-	virtual void Initialize(class AATVoxelTree* InTargetTree) override; // UATProceduralGeneratorTask
+	virtual void Initialize(class UATProceduralGeneratorComponent* InOwnerComponent, int32 InTaskIndex) override; // UATProceduralGeneratorTask
 //~ End Initialize
 	
 //~ Begin Task
 public:
 	virtual void PreWork_GameThread() override; // UATProceduralGeneratorTask
+	virtual void DoWorkGlobalOnce_SubThread() override; // UATProceduralGeneratorTask
 	virtual void DoWorkForSelectedChunk_SubThread(const class AATVoxelChunk* InTargetChunk) override; // UATProceduralGeneratorTask
 	virtual void PostWork_GameThread() override; // UATProceduralGeneratorTask
 protected:
 	virtual void AllocatePerChunkData(class AATVoxelChunk* InChunk) override { PerChunkData.Add(InChunk); } // UATProceduralGeneratorTask
+	virtual void RemovePerChunkData(class AATVoxelChunk* InChunk) override { PerChunkData.Remove(InChunk); } // UATProceduralGeneratorTask
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float StrongToWeakWidth;
@@ -86,12 +88,34 @@ protected:
 
 	//UPROPERTY(Transient)
 	//TObjectPtr<class UFastNoise2CellularDistanceGenerator> CellularDistanceGenerator;
+//~ End Task
+	
+//~ Begin Data
+public:
 
-	struct FTaskChunkData
+	UFUNCTION(Category = "Data", BlueprintCallable)
+	float GetHillsValueAtPoint2D(const FIntPoint& InPoint2D) const;
+
+	struct FPerChunkData_Landscape
 	{
+		TArray<float> CavesNoiseValues3D;
+		TArray<float> OresNoiseValues3D;
+
 		TArray<TObjectPtr<const class UATVoxelTypeData>> TypeDataArray;
 		int32 LastProcessedIndex = INDEX_NONE;
 	};
-	TMap<TObjectPtr<class AATVoxelChunk>, FTaskChunkData> PerChunkData;
-//~ End Task
+
+	const FPerChunkData_Landscape InvalidChunkData = FPerChunkData_Landscape();
+
+	const FPerChunkData_Landscape& GetChunkData(const class AATVoxelChunk* InChunk) const { ensureReturn(PerChunkData.Contains(InChunk), InvalidChunkData); return PerChunkData[InChunk]; }
+protected:
+
+	UPROPERTY(Transient)
+	TArray<float> HillsValues2D;
+
+	UPROPERTY(Transient)
+	FIntPoint HillsBoundsSize2D;
+
+	TMap<TObjectPtr<class AATVoxelChunk>, FPerChunkData_Landscape> PerChunkData;
+//~ End Data
 };

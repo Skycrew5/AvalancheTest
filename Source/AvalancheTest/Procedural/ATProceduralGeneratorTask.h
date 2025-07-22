@@ -30,16 +30,19 @@ public:
 
 //~ Begin Initialize
 public:
-	virtual void Initialize(class AATVoxelTree* InTargetTree);
+	virtual void Initialize(class UATProceduralGeneratorComponent* InOwnerComponent, int32 InTaskIndex);
 	virtual void DeInitialize();
 //~ End Initialize
 	
-//~ Begin Target
+//~ Begin Owner
 protected:
 
-	UPROPERTY(Category = "Target", BlueprintReadOnly)
-	TObjectPtr<class AATVoxelTree> TargetTree;
-//~ End Target
+	UPROPERTY(Category = "Owner", BlueprintReadOnly)
+	TObjectPtr<class UATProceduralGeneratorComponent> OwnerComponent;
+
+	UPROPERTY(Category = "Owner", BlueprintReadOnly)
+	TObjectPtr<class AATVoxelTree> OwnerTree;
+//~ End Owner
 	
 //~ Begin Queue
 public:
@@ -66,12 +69,24 @@ public:
 	UFUNCTION(Category = "Task", BlueprintCallable)
 	const TArray<class AATVoxelChunk*>& GetSelectedChunks() const { return SelectedChunks; }
 
+	UFUNCTION(Category = "Task", BlueprintCallable)
+	bool WasDoWorkGlobalOnceCompleted() const { return bDoWorkGlobalOnceCompleted; }
+
 	virtual void PreWork_GameThread();
+
+	virtual void DoWorkGlobalOnce_SubThread() { }
+	void MarkDoWorkGlobalOnceAsCompleted() { bDoWorkGlobalOnceCompleted = true; }
+
 	virtual void DoWorkForSelectedChunk_SubThread(const class AATVoxelChunk* InTargetChunk) { ensure(false); }
 	virtual void PostWork_GameThread() { ensure(false); }
 protected:
 	virtual void AllocatePerChunkData(class AATVoxelChunk* InChunk) {}
 	virtual void RemovePerChunkData(class AATVoxelChunk* InChunk) {}
+
+	void FinishPostWorkWithChunk(class AATVoxelChunk* InChunk);
+
+	virtual void PushChunkForNextTask(class AATVoxelChunk* InChunk);
+	virtual void HandleLastTaskFinishedForChunk(class AATVoxelChunk* InChunk);
 
 	void FinishPostWork_GameThread();
 
@@ -79,10 +94,20 @@ protected:
 	TArray<TObjectPtr<class AATVoxelChunk>> SelectedChunks;
 
 	UPROPERTY(Transient)
+	bool bDoWorkGlobalOnceCompleted;
+
+	UPROPERTY(Transient)
 	bool bPendingPostWork;
 
 	FAsyncTask<class FATProceduralGeneratorTask_AsyncTask>* AsyncTaskPtr;
 //~ End Task
+
+//~ Begin Next
+protected:
+
+	UPROPERTY(Transient)
+	TObjectPtr<class UATProceduralGeneratorTask> NextTask;
+//~ End Next
 };
 
 class FATProceduralGeneratorTask_AsyncTask : public FNonAbandonableTask
@@ -92,6 +117,12 @@ public:
 	void DoWork()
 	{
 		ensureReturn(TargetTask);
+
+		if (!TargetTask->WasDoWorkGlobalOnceCompleted())
+		{
+			TargetTask->DoWorkGlobalOnce_SubThread();
+			TargetTask->MarkDoWorkGlobalOnceAsCompleted();
+		}
 		ParallelFor(TargetTask->GetSelectedChunks().Num(), [this](int32 InIndex)
 		{
 			const auto& SelectedChunks = TargetTask->GetSelectedChunks();

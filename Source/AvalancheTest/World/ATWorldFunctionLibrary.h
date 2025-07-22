@@ -49,6 +49,9 @@ public:
 	static FIntPoint ArrayIndex2D_To_Point2D(const int32 InArrayIndex2D, const FIntPoint& InRectSize);
 
 	UFUNCTION(Category = "Indices", BlueprintCallable)
+	static int32 Point2D_To_ArrayIndex2D(const FIntPoint& InPoint2D, const FIntPoint& InRectSize);
+
+	UFUNCTION(Category = "Indices", BlueprintCallable)
 	static FIntVector ArrayIndex2D_To_Point3D(const int32 InArrayIndex2D, const int32 InZ, const FIntPoint& InRectSize);
 
 	UFUNCTION(Category = "Indices", BlueprintCallable)
