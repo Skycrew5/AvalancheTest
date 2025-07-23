@@ -62,7 +62,7 @@ void UATProceduralGeneratorTask_Landscape::DoWorkGlobalOnce_SubThread() // UATPr
 	int32 TreeSeed = OwnerTree->GetTreeSeed();
 	FIntVector TreeBoundsSize = OwnerTree->GetBoundsSize();
 
-	HillsBoundsSize2D = FIntPoint(TreeBoundsSize.X, TreeBoundsSize.Y)
+	HillsBoundsSize2D = FIntPoint(TreeBoundsSize.X, TreeBoundsSize.Y);
 
 	ensure(HillsValues2D.IsEmpty());
 	PerlinGenerator->GenUniformGrid2D(HillsValues2D, FIntPoint::ZeroValue, HillsBoundsSize2D, HillsNoiseFrequency, TreeSeed);
@@ -167,7 +167,7 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 				const bool bInsideCave = SampleCavesValue3D < CavesNoiseThreshold;
 				const bool bOutsideStrongCavesLayer = SampleCavesValue3D > (CavesNoiseThreshold + StrongToWeakWidth);
 
-				float SampleOresValue3D = (Data.OresNoiseValues3D[SampleArrayIndex3D] + 1.0f) * 0.5f;
+				float SampleOresValue3D = (Data.OresNoiseValues3D[SampleArrayIndex3D] + 1.0f) * 0.5f; // Normalized
 				const bool bInsideOres = SampleOresValue3D < OresNoiseThreshold;
 
 				const bool bInsideOresAboveHills = bInsideOres && (GlobalAlphaZ < (SampleHillsValue2D + AboveHillsOresWidth));
