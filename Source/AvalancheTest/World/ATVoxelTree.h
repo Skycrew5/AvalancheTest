@@ -85,7 +85,7 @@ protected:
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
 	float VoxelSize;
 
-	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadOnly)
+	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadWrite)
 	int32 ChunksUpdateMaxSquareExtent;
 
 	UPROPERTY(Transient)
