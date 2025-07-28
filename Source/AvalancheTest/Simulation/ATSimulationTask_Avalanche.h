@@ -32,7 +32,7 @@ protected:
 protected:
 
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
-	float AvalancheCooldown;
+	double AvalancheCooldown;
 
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
 	float InstantAvalancheStabilityThreshold;

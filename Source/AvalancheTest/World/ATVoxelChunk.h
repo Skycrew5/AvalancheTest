@@ -10,7 +10,7 @@
 
 #include "ATVoxelChunk.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FBreakVoxelEventSignature, class UATVoxelISMC*, InVoxelComponent, const FIntVector&, InPoint, const FVoxelBreakData&, InBreakData);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FBreakVoxelEventSignature, class UATVoxelISMC*, InVoxelComponent, const FIntVector&, InPoint, const FVoxelBreakData&, InBreakData);
 
 /**
  * 
@@ -78,8 +78,8 @@ public:
 	UFUNCTION(Category = "Voxel Components", BlueprintCallable, meta = (KeyWords = "GetInstancedStaticMesh, GetVoxelInstancedStaticMesh, GetVoxelComponentForType"))
 	class UATVoxelISMC* GetOrInitVoxelComponentForType(const class UATVoxelTypeData* InTypeData);
 
-	UPROPERTY(Category = "Setters", BlueprintAssignable)
-	FBreakVoxelEventSignature OnBreakVoxelAtPoint;
+	//UPROPERTY(Category = "Setters", BlueprintAssignable)
+	//FBreakVoxelEventSignature OnBreakVoxelAtPoint;
 
 protected:
 

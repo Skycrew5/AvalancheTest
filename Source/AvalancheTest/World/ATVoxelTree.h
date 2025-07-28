@@ -10,6 +10,8 @@
 
 #include "ATVoxelTree.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FBreakVoxelsEventSignature, const class UATVoxelTypeData*, InTypeData, const TArray<FIntVector>&, InPoints, const FVoxelBreakData&, InBreakData);
+
 /**
  *
  */
@@ -134,10 +136,10 @@ public:
 	UFUNCTION(Category = "Voxel Getters | Break", BlueprintCallable, meta = (AdvancedDisplay = "bInIgnoreQueued"))
 	bool CanBreakVoxelAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued = false) const;
 
-	UFUNCTION(Category = "Voxel Chunks | Bounds", BlueprintCallable)
+	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
 	bool IsPointInsideTree(const FIntVector& InPoint) const;
 
-	UFUNCTION(Category = "Voxel Chunks | Bounds", BlueprintCallable)
+	UFUNCTION(Category = "Voxel Getters", BlueprintCallable)
 	bool IsPointInsideSimulationReadyChunk(const FIntVector& InPoint) const;
 //~ End Voxel Getters
 	
@@ -156,11 +158,25 @@ public:
 	UFUNCTION(Category = "Voxel Setters | Break", BlueprintCallable, meta = (KeyWords = "RemoveVoxelsAt, DeleteVoxelsAt", AutoCreateRefTerm = "InBreakData"))
 	bool BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const FVoxelBreakData& InBreakData);
 
+	UFUNCTION(Category = "Voxel Setters | Break", BlueprintCallable, meta = (KeyWords = "ClearAll, BreakAllVoxels"))
+	void BreakAllVoxelsAtChunk(const FIntVector& InChunkCoords, const bool bInForced = false);
+
 	UFUNCTION(Category = "Voxel Setters | Per Chunk", BlueprintCallable)
 	void FillChunkWithVoxels(const FIntVector& InChunkCoords, const UATVoxelTypeData* InTypeData, const bool bInForced = false);
 
-	UFUNCTION(Category = "Voxel Setters | Per Chunk", BlueprintCallable, meta = (KeyWords = "ClearAll, BreakAllVoxels"))
-	void BreakAllVoxelsAtChunk(const FIntVector& InChunkCoords, const bool bInForced = false);
+	UPROPERTY(Category = "Voxel Setters | Break", BlueprintAssignable)
+	FBreakVoxelsEventSignature OnBreakVoxelsAtPoints;
+
+protected:
+	void HandleBrokenVoxelsUpdates();
+
+	struct FBrokenVoxelsData
+	{
+		TArray<FIntVector> Points;
+		FVoxelBreakData BreakData;
+	};
+
+	TMap<const class UATVoxelTypeData*, FBrokenVoxelsData> Queued_VoxelTypeData_To_BrokenVoxelsData_Map;
 //~ End Voxel Setters
 	
 //~ Begin Voxel Data
@@ -170,7 +186,7 @@ public:
 	bool IsThisTickUpdatesTimeBudgetExceeded() const;
 
 	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
-	void SetThisTickUpdatesTimeBudget(double InTimeSeconds);
+	void SetThisTickUpdatesTimeBudget(double InTimeMs);
 
 	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
 	void ForceTickUpdateNextFrame();
@@ -183,13 +199,13 @@ protected:
 	void HandleTickUpdate(float InDeltaSeconds);
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	double TickUpdatesTimeBudgetSeconds;
+	double TickUpdatesTimeBudgetMs;
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	double TickUpdatesTimeBudgetSeconds_PerQueuedChunkAdditive;
+	double TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive;
 
 	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	double TickUpdatesTimeBudgetSeconds_PerSkipSimulationPointQueueAdditive;
+	double TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive;
 
 	UPROPERTY(Transient)
 	uint64 ThisTickUpdatesTimeBudget_CyclesThreshold;

@@ -33,9 +33,9 @@ AATVoxelTree::AATVoxelTree(const FObjectInitializer& InObjectInitializer)
 
 	TreeSeed = 1337;
 
-	TickUpdatesTimeBudgetSeconds = 0.010;
-	TickUpdatesTimeBudgetSeconds_PerQueuedChunkAdditive = 0.0;
-	TickUpdatesTimeBudgetSeconds_PerSkipSimulationPointQueueAdditive = 0.000001;
+	TickUpdatesTimeBudgetMs = 10.000;
+	TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive = 0.0;
+	TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive = 0.001;
 }
 
 //~ Begin Actor
@@ -390,10 +390,22 @@ bool AATVoxelTree::BreakVoxelAtPoint(const FIntVector& InPoint, const FVoxelBrea
 	{
 		if (HasVoxelInstanceDataAtPoint(InPoint))
 		{
+			FVoxelInstanceData& SampleData = GetVoxelInstanceDataAtPoint(InPoint);
 			SampleChunk->HandleBreakVoxelAtPoint(InPoint, InBreakData);
+
+			Queued_Point_To_VoxelInstanceData_Map.Add(InPoint, FVoxelInstanceData::Invalid);
+
+			if (InBreakData.bNotify)
+			{
+				FBrokenVoxelsData& SampleBrokenVoxelsData = Queued_VoxelTypeData_To_BrokenVoxelsData_Map.FindOrAdd(SampleData.TypeData, FBrokenVoxelsData({}, InBreakData));
+
+				ensureIf(!SampleBrokenVoxelsData.Points.Contains(InPoint))
+				{
+					SampleBrokenVoxelsData.Points.Add(InPoint);
+				}
+			}
+			return true;
 		}
-		Queued_Point_To_VoxelInstanceData_Map.Add(InPoint, FVoxelInstanceData::Invalid);
-		return true;
 	}
 	return false;
 }
@@ -407,6 +419,24 @@ bool AATVoxelTree::BreakVoxelsAtPoints(const TArray<FIntVector>& InPoints, const
 		bAnyBroken |= BreakVoxelAtPoint(SamplePoint, InBreakData);
 	}
 	return bAnyBroken;
+}
+
+void AATVoxelTree::BreakAllVoxelsAtChunk(const FIntVector& InChunkCoords, const bool bInForced)
+{
+	FIntVector ChunkOffset = InChunkCoords * ChunkSize;
+	TArray<FIntVector> VoxelPoints;
+
+	for (int32 SampleX = 0; SampleX < ChunkSize; ++SampleX)
+	{
+		for (int32 SampleY = 0; SampleY < ChunkSize; ++SampleY)
+		{
+			for (int32 SampleZ = 0; SampleZ < ChunkSize; ++SampleZ)
+			{
+				VoxelPoints.Add(ChunkOffset + FIntVector(SampleX, SampleY, SampleZ));
+			}
+		}
+	}
+	BreakVoxelsAtPoints(VoxelPoints, bInForced);
 }
 
 void AATVoxelTree::FillChunkWithVoxels(const FIntVector& InChunkCoords, const UATVoxelTypeData* InTypeData, const bool bInForced)
@@ -427,22 +457,30 @@ void AATVoxelTree::FillChunkWithVoxels(const FIntVector& InChunkCoords, const UA
 	SetVoxelsAtPoints(VoxelPoints, InTypeData, bInForced);
 }
 
-void AATVoxelTree::BreakAllVoxelsAtChunk(const FIntVector& InChunkCoords, const bool bInForced)
+void AATVoxelTree::HandleBrokenVoxelsUpdates()
 {
-	FIntVector ChunkOffset = InChunkCoords * ChunkSize;
-	TArray<FIntVector> VoxelPoints;
-
-	for (int32 SampleX = 0; SampleX < ChunkSize; ++SampleX)
+	if (Queued_VoxelTypeData_To_BrokenVoxelsData_Map.IsEmpty())
 	{
-		for (int32 SampleY = 0; SampleY < ChunkSize; ++SampleY)
+		Queued_VoxelTypeData_To_BrokenVoxelsData_Map.Compact();
+	}
+	else
+	{
+		TArray<const UATVoxelTypeData*> QueuedVoxelTypeDataArray;
+		Queued_VoxelTypeData_To_BrokenVoxelsData_Map.GenerateKeyArray(QueuedVoxelTypeDataArray);
+
+		for (const UATVoxelTypeData* SampleVoxelTypeData : QueuedVoxelTypeDataArray)
 		{
-			for (int32 SampleZ = 0; SampleZ < ChunkSize; ++SampleZ)
+			const FBrokenVoxelsData& SampleBrokenVoxelsData = Queued_VoxelTypeData_To_BrokenVoxelsData_Map[SampleVoxelTypeData];
+			OnBreakVoxelsAtPoints.Broadcast(SampleVoxelTypeData, SampleBrokenVoxelsData.Points, SampleBrokenVoxelsData.BreakData);
+
+			Queued_VoxelTypeData_To_BrokenVoxelsData_Map.Remove(SampleVoxelTypeData);
+
+			//if (IsThisTickUpdatesTimeBudgetExceeded())
 			{
-				VoxelPoints.Add(ChunkOffset + FIntVector(SampleX, SampleY, SampleZ));
+			//	break;
 			}
 		}
 	}
-	BreakVoxelsAtPoints(VoxelPoints, bInForced);
 }
 //~ End Voxel Setters
 
@@ -452,9 +490,9 @@ bool AATVoxelTree::IsThisTickUpdatesTimeBudgetExceeded() const
 	return FPlatformTime::Cycles64() > ThisTickUpdatesTimeBudget_CyclesThreshold;
 }
 
-void AATVoxelTree::SetThisTickUpdatesTimeBudget(double InTimeSeconds)
+void AATVoxelTree::SetThisTickUpdatesTimeBudget(double InTimeMs)
 {
-	ThisTickUpdatesTimeBudget_CyclesThreshold = FPlatformTime::Cycles64() + FPlatformTime::SecondsToCycles64(InTimeSeconds);
+	ThisTickUpdatesTimeBudget_CyclesThreshold = FPlatformTime::Cycles64() + FPlatformTime::SecondsToCycles64(InTimeMs * 0.001);
 }
 
 void AATVoxelTree::ForceTickUpdateNextFrame()
@@ -483,12 +521,13 @@ void AATVoxelTree::HandleTickUpdate(float InDeltaSeconds)
 {
 	ensureReturn(ProceduralGeneratorComponent);
 
-	double ThisTickUpdatesTimeBudgetSeconds = TickUpdatesTimeBudgetSeconds;
-	ThisTickUpdatesTimeBudgetSeconds += (double)ProceduralGeneratorComponent->GetTotalQueuedChunksNum() * TickUpdatesTimeBudgetSeconds_PerQueuedChunkAdditive;
-	ThisTickUpdatesTimeBudgetSeconds += (double)Queued_PointsSkipSimulationQueue_Set.Num() * TickUpdatesTimeBudgetSeconds_PerSkipSimulationPointQueueAdditive;
+	double ThisTickUpdatesTimeBudgetMs = TickUpdatesTimeBudgetMs;
+	ThisTickUpdatesTimeBudgetMs += (double)ProceduralGeneratorComponent->GetTotalQueuedChunksNum() * TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive;
+	ThisTickUpdatesTimeBudgetMs += (double)Queued_PointsSkipSimulationQueue_Set.Num() * TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive;
 
-	SetThisTickUpdatesTimeBudget(ThisTickUpdatesTimeBudgetSeconds);
+	SetThisTickUpdatesTimeBudget(ThisTickUpdatesTimeBudgetMs);
 
+	HandleBrokenVoxelsUpdates();
 	HandleChunkUpdates();
 }
 

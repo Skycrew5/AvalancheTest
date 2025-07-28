@@ -2,6 +2,8 @@
 
 #include "World/ATVoxelISMC.h"
 
+#include "Gameplay/ScWGameplayFunctionLibrary.h"
+
 #include "World/ATVoxelChunk.h"
 #include "World/ATVoxelTypeData.h"
 #include "World/ATWorldFunctionLibrary.h"
@@ -62,10 +64,7 @@ void UATVoxelISMC::BP_InitComponent_Implementation(AATVoxelChunk* InOwnerChunk, 
 	ensureReturn(InTypeData->StaticMesh);
 	SetStaticMesh(InTypeData->StaticMesh);
 
-	for (const auto& SampleIndexAndMaterial : InTypeData->StaticMeshOverrideMaterials)
-	{
-		SetMaterial(SampleIndexAndMaterial.Key, SampleIndexAndMaterial.Value);
-	}
+	UScWGameplayFunctionLibrary::ApplyOverrideMaterialsToMeshComponent(this, InTypeData->StaticMeshOverrideMaterials);
 	SetNumCustomDataFloats(bDebugHealthValues ? 2 : (bDebugStabilityValues ? 1 : 0));
 }
 //~ End Initialize
@@ -149,7 +148,7 @@ bool UATVoxelISMC::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const FVox
 	if (InBreakData.bNotify)
 	{
 		ensureReturn(OwnerChunk, true);
-		OwnerChunk->OnBreakVoxelAtPoint.Broadcast(this, InPoint, InBreakData);
+		//OwnerChunk->OnBreakVoxelAtPoint.Broadcast(this, InPoint, InBreakData);
 	}
 	return true;
 }

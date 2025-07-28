@@ -49,7 +49,8 @@ public:
 	TObjectPtr<UStaticMesh> StaticMesh;
 
 	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
-	TMap<int32, TObjectPtr<UMaterialInterface>> StaticMeshOverrideMaterials;
+	//TMap<int32, TObjectPtr<UMaterialInterface>> StaticMeshOverrideMaterials;
+	TMap<int32, UMaterialInterface*> StaticMeshOverrideMaterials;
 //~ End Mesh
 	
 //~ Begin Inventory

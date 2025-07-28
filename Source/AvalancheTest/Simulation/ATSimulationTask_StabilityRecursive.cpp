@@ -191,7 +191,7 @@ float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAll
 			if (InCurrentRecursionLevel + 1 == MaxRecursionLevel && InThreadData.DirectionsOrderPtr != &DirectionsOrder_OnlyBottom)
 			{
 				InThreadData.DirectionsOrderPtr = &DirectionsOrder_OnlyBottom;
-				InCurrentRecursionLevel = 0u;
+				InCurrentRecursionLevel = MaxRecursionLevel - 8;
 			}
 			for (EATAttachmentDirection SampleDirection : (*InThreadData.DirectionsOrderPtr))
 			{

@@ -10,6 +10,7 @@ UATSimulationTask_Avalanche::UATSimulationTask_Avalanche()
 	QueueNeighborsRadius = 0;
 
 	AvalancheCooldown = 5.0;
+
 	InstantAvalancheStabilityThreshold = 0.01f;
 	InstantAvalanchePerWorkProbability = 0.001f;
 }
