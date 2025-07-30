@@ -108,7 +108,19 @@ void UATSimulationTask::PreWork_GameThread()
 	{
 		return;
 	}
-	AsyncTaskPtr->StartBackgroundTask();
+	BeginWork_GameThread();
+}
+
+void UATSimulationTask::BeginWork_GameThread()
+{
+	if (CVarVoxelTree_ForceSyncUpdates.GetValueOnGameThread() > 0)
+	{
+		AsyncTaskPtr->StartSynchronousTask();
+	}
+	else
+	{
+		AsyncTaskPtr->StartBackgroundTask();
+	}
 }
 
 void UATSimulationTask::FinishPostWork_GameThread()

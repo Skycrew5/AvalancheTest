@@ -9,18 +9,19 @@ UATSimulationTask_Avalanche::UATSimulationTask_Avalanche()
 {
 	QueueNeighborsRadius = 0;
 
-	AvalancheCooldown = 5.0;
+	//AvalancheCooldown = 5.0;
+
+	AvalancheRequiredCycles = 5;
 
 	InstantAvalancheStabilityThreshold = 0.01f;
 	InstantAvalanchePerWorkProbability = 0.001f;
+
+	AvalancheCyclesCountdown = AvalancheRequiredCycles;
 }
 
 //~ Begin Task
 void UATSimulationTask_Avalanche::DoWork_SubThread() // UATSimulationTask
 {
-	//float DeltaTime = GetWorld()->DeltaTimeSeconds;
-	float DeltaTime = 1.0f / 30.0f;
-
 	ParallelFor(SelectedUpdatePoints.Num(), [&](int32 InIndex)
 	{
 		DEV_HANDLE_ASYNC_PENDING_STOP();
@@ -39,19 +40,24 @@ void UATSimulationTask_Avalanche::DoWork_SubThread() // UATSimulationTask
 			++PointsAvalancheCounterMap[SamplePoint];
 		}
 	});
+	AvalancheCyclesCountdown -= 1;
 	bPendingPostWork = true;
 }
 
 void UATSimulationTask_Avalanche::PostWork_GameThread()
 {
-	UWorld* World = GetWorld();
-	ensureReturn(World);
+	//UWorld* World = GetWorld();
+	//ensureReturn(World);
 
-	double CurrentTime = World->GetTimeSeconds();
-	if (CurrentTime >= NextAvalancheTime)
+	//double CurrentTime = World->GetTimeSeconds();
+	//if (CurrentTime >= NextAvalancheTime)
+
+	ensure(AvalancheCyclesCountdown >= 0);
+	if (AvalancheCyclesCountdown == 0)
 	{
 		PendingAvalanchePointsNum = PointsAvalancheCounterMap.Num();
-		NextAvalancheTime = CurrentTime + AvalancheCooldown;
+		//NextAvalancheTime = CurrentTime + AvalancheCooldown;
+		AvalancheCyclesCountdown = AvalancheRequiredCycles;
 	}
 	ensureReturn(TargetTree);
 	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !SelectedUpdatePoints.IsEmpty())

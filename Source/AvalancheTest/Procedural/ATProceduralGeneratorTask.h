@@ -73,6 +73,7 @@ public:
 	bool WasDoWorkGlobalOnceCompleted() const { return bDoWorkGlobalOnceCompleted; }
 
 	virtual void PreWork_GameThread();
+	void BeginWork_GameThread();
 
 	virtual void DoWorkGlobalOnce_SubThread() { }
 	void MarkDoWorkGlobalOnceAsCompleted() { bDoWorkGlobalOnceCompleted = true; }

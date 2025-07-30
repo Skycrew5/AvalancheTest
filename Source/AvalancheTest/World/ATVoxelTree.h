@@ -10,6 +10,13 @@
 
 #include "ATVoxelTree.generated.h"
 
+static TAutoConsoleVariable<int32> CVarVoxelTree_ForceSyncUpdates(
+	TEXT("VoxelTree.ForceSyncUpdates"),
+	0,
+	TEXT("Force sync updates"),
+	ECVF_Default
+);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FBreakVoxelsEventSignature, const class UATVoxelTypeData*, InTypeData, const TArray<FIntVector>&, InPoints, const FVoxelBreakData&, InBreakData);
 
 /**

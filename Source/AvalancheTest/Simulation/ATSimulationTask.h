@@ -71,6 +71,7 @@ public:
 	EATSimulationTaskPhase GetCurrentTaskPhase() const;
 
 	virtual void PreWork_GameThread();
+	void BeginWork_GameThread();
 	virtual void DoWork_SubThread() { ensure(false); }
 	virtual void PostWork_GameThread() { ensure(false); }
 

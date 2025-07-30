@@ -31,8 +31,11 @@ protected:
 //~ Begin Avalanche
 protected:
 
+	//UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
+	//double AvalancheCooldown;
+
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
-	double AvalancheCooldown;
+	int32 AvalancheRequiredCycles;
 
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
 	float InstantAvalancheStabilityThreshold;
@@ -40,8 +43,11 @@ protected:
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
 	float InstantAvalanchePerWorkProbability;
 
+	//UPROPERTY(Transient)
+	//double NextAvalancheTime;
+
 	UPROPERTY(Transient)
-	double NextAvalancheTime;
+	int32 AvalancheCyclesCountdown;
 
 	UPROPERTY(Transient)
 	int32 PendingAvalanchePointsNum;

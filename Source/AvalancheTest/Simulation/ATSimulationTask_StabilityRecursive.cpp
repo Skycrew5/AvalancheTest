@@ -14,6 +14,8 @@ UATSimulationTask_StabilityRecursive::UATSimulationTask_StabilityRecursive()
 	bEnablePointsCache = false;
 	MaxRecursionLevel = 48u;
 
+	QueueFeedbackRadius = 2;
+
 	DirectionsOrder1 = {
 		EATAttachmentDirection::Bottom,
 		EATAttachmentDirection::Right,
@@ -97,6 +99,36 @@ void UATSimulationTask_StabilityRecursive::DeInitialize() // UATSimulationTask
 }
 //~ End Initialize
 	
+//~ Begin Queue
+bool UATSimulationTask_StabilityRecursive::ShouldSelectQueuedPointForUpdate(const FIntVector& InPoint) const // UATSimulationTask
+{
+	return FeedbackSelectedPointsSet.Contains(InPoint) || Super::ShouldSelectQueuedPointForUpdate(InPoint);
+}
+
+void UATSimulationTask_StabilityRecursive::QueuePointsFeedback(const FIntVector& InPoint)
+{
+	TArray<FIntVector> PointsInRadius;
+	TargetTree->GetAllVoxelPointsInRadius(InPoint, QueueFeedbackRadius, PointsInRadius);
+
+	for (const FIntVector& SamplePoint : PointsInRadius)
+	{
+		if (SamplePoint != InPoint)
+		{
+			FeedbackSelectedPointsSet.Add(SamplePoint);
+		}
+	}
+}
+
+void UATSimulationTask_StabilityRecursive::ApplyFeedbackPoints()
+{
+	for (const FIntVector& SamplePoint : FeedbackSelectedPointsSet)
+	{
+		QueuePoint(SamplePoint, false);
+	}
+	FeedbackSelectedPointsSet.Empty();
+}
+//~ End Queue
+
 //~ Begin Task
 void UATSimulationTask_StabilityRecursive::DoWork_SubThread() // UATSimulationTask
 {
@@ -188,11 +220,11 @@ float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAll
 			InThreadData.ThisOrderUpdatedPoints.Add(SamplePoint);
 			float AccumulatedStability = 0.0f;
 
-			if (InCurrentRecursionLevel + 1 == MaxRecursionLevel && InThreadData.DirectionsOrderPtr != &DirectionsOrder_OnlyBottom)
+			/*if (InCurrentRecursionLevel + 1 == MaxRecursionLevel && InThreadData.DirectionsOrderPtr != &DirectionsOrder_OnlyBottom)
 			{
 				InThreadData.DirectionsOrderPtr = &DirectionsOrder_OnlyBottom;
 				InCurrentRecursionLevel = MaxRecursionLevel - 8;
-			}
+			}*/
 			for (EATAttachmentDirection SampleDirection : (*InThreadData.DirectionsOrderPtr))
 			{
 				if (AccumulatedStability < 1.0f)
@@ -222,6 +254,7 @@ void UATSimulationTask_StabilityRecursive::PostWork_GameThread()
 		FIntVector SamplePoint = SelectedUpdatePoints.Pop();
 		FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false);
 
+		float PrevStability = SampleData.Stability;
 		SampleData.Stability = UpdatedSelectedPointsStabilities.Pop();
 
 		AATVoxelChunk* SampleChunk = TargetTree->GetVoxelChunkAtPoint(SamplePoint);
@@ -234,6 +267,11 @@ void UATSimulationTask_StabilityRecursive::PostWork_GameThread()
 		{
 			ensureContinue(AvalancheSimulationTask);
 			AvalancheSimulationTask->QueuePoint(SamplePoint, false);
+
+			if (PrevStability > AvalancheStabilityThreshold)
+			{
+				QueuePointsFeedback(SamplePoint);
+			}
 		}
 		if (bEnablePointsCache)
 		{
@@ -250,6 +288,7 @@ void UATSimulationTask_StabilityRecursive::PostWork_GameThread()
 	}
 	if (SelectedUpdatePoints.IsEmpty())
 	{
+		ApplyFeedbackPoints();
 		FinishPostWork_GameThread();
 	}
 }

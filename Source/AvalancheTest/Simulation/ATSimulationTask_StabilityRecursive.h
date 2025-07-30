@@ -28,6 +28,19 @@ public:
 	virtual void DeInitialize() override; // UATSimulationTask
 //~ End Initialize
 	
+//~ Begin Queue
+protected:
+	virtual bool ShouldSelectQueuedPointForUpdate(const FIntVector& InPoint) const override; // UATSimulationTask
+	void QueuePointsFeedback(const FIntVector& InPoint);
+	void ApplyFeedbackPoints();
+
+	UPROPERTY(Category = "Queue", EditAnywhere, BlueprintReadWrite)
+	int32 QueueFeedbackRadius;
+
+	UPROPERTY(Transient)
+	TSet<FIntVector> FeedbackSelectedPointsSet;
+//~ End Queue
+
 //~ Begin Task
 public:
 	virtual void DoWork_SubThread() override; // UATSimulationTask
@@ -70,17 +83,17 @@ protected:
 
 	float DoWork_SubThread_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None, uint8 InCurrentRecursionLevel = 0u);
 
-	//UPROPERTY(Transient)
-	TMap<FIntVector, FRecursivePointCache> PointsCache;
-
-	UPROPERTY(Transient)
-	TArray<float> UpdatedSelectedPointsStabilities;
-
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadWrite)
 	bool bEnablePointsCache;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadWrite)
 	uint8 MaxRecursionLevel;
+
+	//UPROPERTY(Transient)
+	TMap<FIntVector, FRecursivePointCache> PointsCache;
+
+	UPROPERTY(Transient)
+	TArray<float> UpdatedSelectedPointsStabilities;
 //~ End Task
 
 //~ Begin Directions

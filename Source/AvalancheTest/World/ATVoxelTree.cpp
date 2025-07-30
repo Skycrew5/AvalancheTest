@@ -525,6 +525,10 @@ void AATVoxelTree::HandleTickUpdate(float InDeltaSeconds)
 	ThisTickUpdatesTimeBudgetMs += (double)ProceduralGeneratorComponent->GetTotalQueuedChunksNum() * TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive;
 	ThisTickUpdatesTimeBudgetMs += (double)Queued_PointsSkipSimulationQueue_Set.Num() * TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive;
 
+	if (CVarVoxelTree_ForceSyncUpdates.GetValueOnGameThread() > 0)
+	{
+		ThisTickUpdatesTimeBudgetMs = 10000.0; // Help synchronous updates with 10 seconds budget
+	}
 	SetThisTickUpdatesTimeBudget(ThisTickUpdatesTimeBudgetMs);
 
 	HandleBrokenVoxelsUpdates();
