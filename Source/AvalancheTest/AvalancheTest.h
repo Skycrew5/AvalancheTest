@@ -10,6 +10,8 @@
 #include "InstancedStaticMeshDelegates.h"
 #include "Components/InstancedStaticMeshComponent.h"
 
+#include "GameFramework/SaveGame.h"
+
 #include "UnrealCommons.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogATGameplay, Log, All);

@@ -92,4 +92,20 @@ protected:
 	UPROPERTY(Category = "Tasks", BlueprintReadOnly)
 	int32 CurrentTaskIndex;
 //~ End Tasks
+
+//~ Begin Editor
+public:
+
+	UFUNCTION(Category = "Editor", CallInEditor)
+	void GenerateVoxelTreeData();
+
+	UPROPERTY(Category = "Editor", EditAnywhere, BlueprintReadWrite)
+	FString VoxelTreeDataSaveSlot;
+
+	UPROPERTY(Category = "Editor", BlueprintReadWrite)
+	bool bPendingSaveGeneratedData;
+
+protected:
+	void FinishGenerateVoxelTreeData();
+//~ End Editor
 };

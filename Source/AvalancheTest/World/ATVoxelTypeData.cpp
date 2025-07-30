@@ -17,6 +17,7 @@ UATVoxelTypeData::UATVoxelTypeData()
 	MaxHealth = 1.0f;
 
 	BrokenVoxelLandHitDamage = 4.0f;
+	StraightSheddingDepth = 0;
 }
 
 //~ Begin Initialize

@@ -98,5 +98,8 @@ public:
 
 	UPROPERTY(Category = "Break", EditDefaultsOnly, BlueprintReadOnly)
 	float BrokenVoxelLandHitDamage;
+
+	UPROPERTY(Category = "Break", EditDefaultsOnly, BlueprintReadOnly)
+	int32 StraightSheddingDepth;
 //~ End Break
 };

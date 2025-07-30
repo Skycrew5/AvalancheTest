@@ -2,6 +2,8 @@
 
 #include "Procedural/ATProceduralGeneratorComponent.h"
 
+#include "Framework/ATSaveGame_VoxelTree.h"
+
 #include "Procedural/ATProceduralGeneratorTask.h"
 #include "Procedural/ATProceduralGeneratorTask_Landscape.h"
 #include "Procedural/ATProceduralGeneratorTask_PlayerStart.h"
@@ -18,6 +20,8 @@ UATProceduralGeneratorComponent::UATProceduralGeneratorComponent()
 		CreateDefaultSubobject<UATProceduralGeneratorTask_PlayerStart>(TEXT("ProceduralGeneratorTask_PlayerStart")),
 	};
 	bEnableProceduralTasks = true;
+
+	VoxelTreeDataSaveSlot = TEXT("VoxelTreeData/DefaultSlot");
 }
 
 //~ Begin ActorComponent
@@ -32,6 +36,8 @@ void UATProceduralGeneratorComponent::OnRegister() // UActorComponent
 void UATProceduralGeneratorComponent::BeginPlay() // UActorComponent
 {
 	Super::BeginPlay();
+
+	UATSaveGame_VoxelTree::LoadSlot(OwnerTree, VoxelTreeDataSaveSlot);
 
 	for (int32 SampleIndex = 0; SampleIndex < TaskArray.Num(); ++SampleIndex)
 	{
@@ -172,6 +178,13 @@ void UATProceduralGeneratorComponent::HandleProceduralTasks()
 			break;
 		}
 	}
+	if (bPendingSaveGeneratedData)
+	{
+		if (CurrentTaskIndex == (TaskArray.Num() - 1) && bMoveToNextTask) // Just finished the last task
+		{
+			FinishGenerateVoxelTreeData();
+		}
+	}
 	if (bMoveToNextTask)
 	{
 		IncrementCurrentTaskIndex();
@@ -184,3 +197,26 @@ void UATProceduralGeneratorComponent::IncrementCurrentTaskIndex()
 	CurrentTaskIndex = (CurrentTaskIndex + 1) % TaskArray.Num();
 }
 // End Tasks
+
+//~ Begin Editor
+void UATProceduralGeneratorComponent::GenerateVoxelTreeData()
+{
+	ensureReturn(OwnerTree);
+	const auto& ChunksMap = OwnerTree->GetChunksMap();
+
+	TArray<AATVoxelChunk*> ChunksToQueue;
+	ChunksMap.GenerateValueArray(ChunksToQueue);
+
+	QueueChunksForTaskAtIndex(ChunksToQueue, 0);
+
+	bTickInEditor = true;
+}
+
+void UATProceduralGeneratorComponent::FinishGenerateVoxelTreeData()
+{
+	bTickInEditor = false;
+	bPendingSaveGeneratedData = false;
+
+	UATSaveGame_VoxelTree::SaveSlot(OwnerTree, VoxelTreeDataSaveSlot);
+}
+//~ End Editor

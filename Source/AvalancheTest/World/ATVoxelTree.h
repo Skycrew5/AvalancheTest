@@ -26,6 +26,8 @@ UCLASS(meta = (DisplayName = "[AT] Voxel Tree"))
 class AVALANCHETEST_API AATVoxelTree : public AActor
 {
 	GENERATED_BODY()
+
+	friend class UATSaveGame_VoxelTree;
 	
 public:
 
@@ -44,6 +46,9 @@ protected:
 public:
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
+	const TMap<FIntVector, AATVoxelChunk*>& GetChunksMap() const { return ChunksMap; }
+
+	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	bool IsChunkCoordsInsideTree(const FIntVector& InChunkCoords) const;
 
 	UFUNCTION(Category = "Voxel Tree", BlueprintCallable)
@@ -59,7 +64,7 @@ public:
 	class AATVoxelChunk* GetVoxelChunkAtPoint(const FIntVector& InPoint) const { return GetVoxelChunkAtCoords(GetVoxelChunkCoordsAtPoint(InPoint)); }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
-	FIntVector GetTreeSizeInChunks() const { return TreeSizeInChunks; }
+	const FIntVector& GetTreeSizeInChunks() const { return TreeSizeInChunks; }
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	int32 GetChunkSize() const { return ChunkSize; }
@@ -104,7 +109,7 @@ protected:
 	TArray<TObjectPtr<const AActor>> ChunksUpdateReferenceActors;
 
 	UPROPERTY(Transient)
-	TMap<FIntVector, TObjectPtr<AATVoxelChunk>> ChunksMap;
+	TMap<FIntVector, AATVoxelChunk*> ChunksMap;
 
 	UPROPERTY(Transient)
 	FSortedChunksBySquaredDistance SortedChunksData;

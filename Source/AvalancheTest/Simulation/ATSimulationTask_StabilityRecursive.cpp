@@ -220,11 +220,11 @@ float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAll
 			InThreadData.ThisOrderUpdatedPoints.Add(SamplePoint);
 			float AccumulatedStability = 0.0f;
 
-			/*if (InCurrentRecursionLevel + 1 == MaxRecursionLevel && InThreadData.DirectionsOrderPtr != &DirectionsOrder_OnlyBottom)
+			if (SampleData.TypeData->StraightSheddingDepth > 0 && InCurrentRecursionLevel + 1 == MaxRecursionLevel && InThreadData.DirectionsOrderPtr != &DirectionsOrder_OnlyBottom)
 			{
 				InThreadData.DirectionsOrderPtr = &DirectionsOrder_OnlyBottom;
-				InCurrentRecursionLevel = MaxRecursionLevel - 8;
-			}*/
+				InCurrentRecursionLevel = MaxRecursionLevel - SampleData.TypeData->StraightSheddingDepth;
+			}
 			for (EATAttachmentDirection SampleDirection : (*InThreadData.DirectionsOrderPtr))
 			{
 				if (AccumulatedStability < 1.0f)
