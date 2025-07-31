@@ -74,6 +74,8 @@ protected:
 	{
 		uint8 ColorValue;
 		float StabilityValue;
+		float MassValue;
+		float AvalancheValue;
 	};
 
 	//UPROPERTY(Transient)
@@ -86,6 +88,9 @@ protected:
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
 	float AvalancheStabilityThreshold;
 
+	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
+	float AvalancheMassThreshold;
+
 	UPROPERTY(Transient)
 	TObjectPtr<class UATSimulationTask_Avalanche> AvalancheSimulationTask;
 //~ End Avalanche
@@ -95,6 +100,7 @@ protected:
 	bool IsPointInBoundingBox(const FIntVector& InPoint) const;
 
 	void InitDataForPoints(const TArray<FIntVector>& InPoints);
-	void GetDirtyNeighbors(const FIntVector& InPoint, TArray<FIntVector>& OutDirtyNeighbors);
+	void GetDirtyNeighbors(const FIntVector& InPoint, TArray<FIntVector>& OutDirtyNeighbors) const;
+	float GetAttachmentNeighbors(const FIntVector& InPoint, TArray<FIntVector>& OutAttachmentNeighbors) const;
 //~ End Utils
 };

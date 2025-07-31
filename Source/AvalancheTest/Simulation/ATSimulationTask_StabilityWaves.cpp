@@ -8,7 +8,6 @@
 #include "World/ATVoxelTree.h"
 #include "World/ATVoxelChunk.h"
 #include "World/ATVoxelTypeData.h"
-#include "World/ATWorldFunctionLibrary.h"
 
 UATSimulationTask_StabilityWaves::UATSimulationTask_StabilityWaves()
 {
@@ -17,13 +16,14 @@ UATSimulationTask_StabilityWaves::UATSimulationTask_StabilityWaves()
 	SupportedColorValue = 2u;
 	UpdatedNeighborColorValue = 3u;
 
-	BelowStabilityConveyMul = 0.98f;
+	BelowStabilityConveyMul = 1.0f;
 	SideStabilityConveyMul = 0.24f;
 
 	WaveIterationsHardLimit = 128;
-	BoundingBoxAdditionalExtent = 64;
+	BoundingBoxAdditionalExtent = 8;
 
 	AvalancheStabilityThreshold = 0.25f;
+	AvalancheMassThreshold = 4.0f;
 }
 
 //~ Begin Initialize
@@ -51,6 +51,8 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 {
 	InitDataForPoints(SelectedUpdatePoints);
 
+	BoundingBoxDataMap.GenerateKeyArray(SelectedUpdatePoints);
+
 	for (int32 SampleZ = BoundingBoxMin.Z; SampleZ <= BoundingBoxMax.Z; ++SampleZ)
 	{
 		TArray<FIntPoint> SupportedPoints2D;
@@ -60,9 +62,12 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 			for (int32 SampleY = BoundingBoxMin.Y; SampleY <= BoundingBoxMax.Y; ++SampleY)
 			{
 				FIntVector SamplePoint = FIntVector(SampleX, SampleY, SampleZ);
-				int32 SampleDataIndex = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SamplePoint - BoundingBoxMin, BoundingBoxSize);
 
-				if (BoundingBoxDataMap[SamplePoint] == DirtyColorValue)
+				if (!BoundingBoxDataMap.Contains(SamplePoint))
+				{
+					continue;
+				}
+				if (BoundingBoxDataMap[SamplePoint].ColorValue == DirtyColorValue)
 				{
 					if (SampleZ > 0)
 					{
@@ -71,14 +76,16 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 						float BelowStability = 0.0f;
 						if (IsPointInBoundingBox(BelowPoint))
 						{
-							int32 BelowDataIndex = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(BelowPoint - BoundingBoxMin, BoundingBoxSize);
-							BelowStability = BoundingBoxDataMap[BelowPoint].StabilityValue;
-
-							if (BelowStability > 0.0f)
+							if (BoundingBoxDataMap.Contains(BelowPoint))
 							{
-								BoundingBoxColorData[SampleDataIndex] = SupportedColorValue;
-								BoundingBoxStabilityData[SampleDataIndex] = BelowStability * BelowStabilityConveyMul;
-								SupportedPoints2D.Add(FIntPoint(SampleX, SampleY));
+								BelowStability = BoundingBoxDataMap[BelowPoint].StabilityValue;
+
+								if (BelowStability > 0.0f)
+								{
+									BoundingBoxDataMap[SamplePoint].ColorValue = SupportedColorValue;
+									BoundingBoxDataMap[SamplePoint].StabilityValue = BelowStability * BelowStabilityConveyMul;
+									SupportedPoints2D.Add(FIntPoint(SampleX, SampleY));
+								}
 							}
 						}
 						else
@@ -86,14 +93,14 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 							ensureContinue(TargetTree);
 							//BelowStability = TargetTree->GetVoxelInstanceDataAtPoint(BelowPoint, false, true).Stability;
 
-							BoundingBoxColorData[SampleDataIndex] = SupportedColorValue;
-							BoundingBoxStabilityData[SampleDataIndex] = 1.0f;
+							BoundingBoxDataMap[SamplePoint].ColorValue = SupportedColorValue;
+							BoundingBoxDataMap[SamplePoint].StabilityValue = 1.0f;
 						}
 					}
 					else
 					{
-						BoundingBoxColorData[SampleDataIndex] = SupportedColorValue;
-						BoundingBoxStabilityData[SampleDataIndex] = 1.0f;
+						BoundingBoxDataMap[SamplePoint].ColorValue = SupportedColorValue;
+						BoundingBoxDataMap[SamplePoint].StabilityValue = 1.0f;
 					}
 				}
 			}
@@ -109,29 +116,25 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 			for (const FIntPoint& SampleSupportedPoint2D : Temp_SupportedPoints2D)
 			{
 				FIntVector SampleSupportedPoint3D = FIntVector(SampleSupportedPoint2D.X, SampleSupportedPoint2D.Y, SampleZ);
-				int32 SampleSupportedDataIndex = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SampleSupportedPoint3D - BoundingBoxMin, BoundingBoxSize);
 
 				TArray<FIntVector> DirtyNeighbors3D;
 				GetDirtyNeighbors(SampleSupportedPoint3D, DirtyNeighbors3D);
 
 				for (const FIntVector& SampleDirtyNeighbor3D : DirtyNeighbors3D)
 				{
-					int32 SampleDirtyNeighborDataIndex = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SampleDirtyNeighbor3D - BoundingBoxMin, BoundingBoxSize);
-					BoundingBoxStabilityData[SampleDirtyNeighborDataIndex] += BoundingBoxStabilityData[SampleSupportedDataIndex] * SideStabilityConveyMul;
+					BoundingBoxDataMap[SampleDirtyNeighbor3D].StabilityValue += BoundingBoxDataMap[SampleSupportedPoint3D].StabilityValue * SideStabilityConveyMul;
 				}
 			}
 			for (const FIntPoint& SampleSupportedPoint2D : Temp_SupportedPoints2D)
 			{
 				FIntVector SampleSupportedPoint3D = FIntVector(SampleSupportedPoint2D.X, SampleSupportedPoint2D.Y, SampleZ);
-				int32 SampleSupportedDataIndex = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SampleSupportedPoint3D - BoundingBoxMin, BoundingBoxSize);
 
 				TArray<FIntVector> DirtyNeighbors3D;
 				GetDirtyNeighbors(SampleSupportedPoint3D, DirtyNeighbors3D);
 
 				for (const FIntVector& SampleDirtyNeighbor3D : DirtyNeighbors3D)
 				{
-					int32 SampleDirtyNeighborDataIndex = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SampleDirtyNeighbor3D - BoundingBoxMin, BoundingBoxSize);
-					BoundingBoxColorData[SampleDirtyNeighborDataIndex] = UpdatedNeighborColorValue;
+					BoundingBoxDataMap[SampleDirtyNeighbor3D].ColorValue = UpdatedNeighborColorValue;
 
 					if (!SupportedPoints2D.Contains(FIntPoint(SampleDirtyNeighbor3D.X, SampleDirtyNeighbor3D.Y)))
 					{
@@ -140,6 +143,80 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 				}
 			}
 		}
+		UE_LOG(LogTemp, Verbose, TEXT("StabilityWaves: Z = %d, Iterations = %d"), SampleZ, CurrentIteration);
+	}
+	for (int32 SampleZ = BoundingBoxMin.Z; SampleZ <= BoundingBoxMax.Z; ++SampleZ)
+	{
+		struct FStabilityPointData
+		{
+			float StabilityValue;
+			FIntPoint PointXY;
+
+			bool operator<(const FStabilityPointData& InOther) const { return StabilityValue < InOther.StabilityValue; }
+		};
+		TArray<FStabilityPointData> StabilitySortedPointsXY;
+
+		for (int32 SampleX = BoundingBoxMin.X; SampleX <= BoundingBoxMax.X; ++SampleX)
+		{
+			for (int32 SampleY = BoundingBoxMin.Y; SampleY <= BoundingBoxMax.Y; ++SampleY)
+			{
+				FIntVector SamplePoint = FIntVector(SampleX, SampleY, SampleZ);
+
+				if (!BoundingBoxDataMap.Contains(SamplePoint))
+				{
+					continue;
+				}
+				BoundingBoxDataMap[SamplePoint].MassValue = 1.0f;
+				StabilitySortedPointsXY.Add(FStabilityPointData(BoundingBoxDataMap[SamplePoint].StabilityValue, FIntPoint(SampleX, SampleY)));
+			}
+		}
+		StabilitySortedPointsXY.Sort();
+
+		for (const FStabilityPointData& SampleStabilityPointXY : StabilitySortedPointsXY) // For each point in XY plane, we will distribute its mass to neighbors
+		{
+			const FIntVector& SamplePoint = FIntVector(SampleStabilityPointXY.PointXY.X, SampleStabilityPointXY.PointXY.Y, SampleZ);
+
+			TArray<FIntVector> AttachmentNeighbors3D;
+			float SampleTotalStability = GetAttachmentNeighbors(SamplePoint, AttachmentNeighbors3D);
+
+			for (const FIntVector& SampleAttachmentNeighbor3D : AttachmentNeighbors3D)
+			{
+				float SampleMassFraction = BoundingBoxDataMap[SampleAttachmentNeighbor3D].StabilityValue / SampleTotalStability;
+				BoundingBoxDataMap[SampleAttachmentNeighbor3D].MassValue += BoundingBoxDataMap[SamplePoint].MassValue * SampleMassFraction;
+			}
+		}
+		for (const FStabilityPointData& SampleStabilityPointXY : StabilitySortedPointsXY)
+		{
+			const FIntVector& SamplePoint = FIntVector(SampleStabilityPointXY.PointXY.X, SampleStabilityPointXY.PointXY.Y, SampleZ);
+
+			float AvalancheThresholdMul = 1.0f;
+
+			if (SamplePoint.Z == BoundingBoxMin.Z || BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 0, -1))) // Supported voxels
+			{
+				if (BoundingBoxDataMap.Contains(SamplePoint + FIntVector(-1, 0, 0)) &&
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(1, 0, 0)) &&
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 1, 0)) &&
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, -1, 0))) // Fully supported voxels
+				{
+					AvalancheThresholdMul = 100.0f;
+				}
+				else // Partially supported voxels
+				{
+					AvalancheThresholdMul = 30.0f;
+				}
+			}
+			else // Loose voxels
+			{
+				if (BoundingBoxDataMap.Contains(SamplePoint + FIntVector(-1, 0, -1)) ||
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(1, 0, -1)) ||
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 1, -1)) ||
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, -1, -1))) // Somehow supported voxels
+				{
+					AvalancheThresholdMul = 2.0f;
+				}
+			}
+			BoundingBoxDataMap[SamplePoint].AvalancheValue = BoundingBoxDataMap[SamplePoint].MassValue / (AvalancheMassThreshold * AvalancheThresholdMul);
+		}
 	}
 	bPendingPostWork = true;
 }
@@ -147,42 +224,31 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 void UATSimulationTask_StabilityWaves::PostWork_GameThread()
 {
 	ensureReturn(TargetTree);
-
-	for (int32 SampleX = BoundingBoxMin.X; SampleX <= BoundingBoxMax.X; ++SampleX)
+	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !SelectedUpdatePoints.IsEmpty())
 	{
-		for (int32 SampleY = BoundingBoxMin.Y; SampleY <= BoundingBoxMax.Y; ++SampleY)
+		FIntVector SamplePoint = SelectedUpdatePoints.Pop();
+
+		FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false);
+		float PrevStability = SampleData.Stability;
+
+		ensureContinue(BoundingBoxDataMap.Contains(SamplePoint));
+		SampleData.Stability = 1.0f - BoundingBoxDataMap[SamplePoint].AvalancheValue;
+
+		AATVoxelChunk* SampleChunk = TargetTree->GetVoxelChunkAtPoint(SamplePoint);
+		ensureContinue(SampleChunk);
+
+		//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.Stability);
+		SampleChunk->HandleSetVoxelInstanceDataAtPoint(SamplePoint, SampleData);
+
+		if (BoundingBoxDataMap[SamplePoint].AvalancheValue >= 1.0f)
 		{
-			for (int32 SampleZ = BoundingBoxMin.Z; SampleZ <= BoundingBoxMax.Z; ++SampleZ)
-			{
-				FIntVector SamplePoint = FIntVector(SampleX, SampleY, SampleZ);
-				if (!TargetTree->HasVoxelInstanceDataAtPoint(SamplePoint, false))
-				{
-					continue;
-				}
-				FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false);
-				float PrevStability = SampleData.Stability;
-
-				int32 SampleDataIndex = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SamplePoint - BoundingBoxMin, BoundingBoxSize);
-				SampleData.Stability = BoundingBoxStabilityData[SampleDataIndex];
-
-				AATVoxelChunk* SampleChunk = TargetTree->GetVoxelChunkAtPoint(SamplePoint);
-				ensureContinue(SampleChunk);
-
-				//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.Stability);
-				SampleChunk->HandleSetVoxelInstanceDataAtPoint(SamplePoint, SampleData);
-
-				if (SampleData.Stability <= AvalancheStabilityThreshold)
-				{
-					ensureContinue(AvalancheSimulationTask);
-					AvalancheSimulationTask->QueuePoint(SamplePoint, false);
-				}
-			}
+			ensureContinue(AvalancheSimulationTask);
+			AvalancheSimulationTask->QueuePoint(SamplePoint, false);
 		}
 	}
-	SelectedUpdatePoints.Empty();
-
 	if (SelectedUpdatePoints.IsEmpty())
 	{
+		BoundingBoxDataMap.Empty();
 		FinishPostWork_GameThread();
 	}
 }
@@ -198,6 +264,8 @@ bool UATSimulationTask_StabilityWaves::IsPointInBoundingBox(const FIntVector& In
 
 void UATSimulationTask_StabilityWaves::InitDataForPoints(const TArray<FIntVector>& InPoints)
 {
+	ensureReturn(TargetTree);
+
 	// Bounding box
 	{
 		ensureReturn(!InPoints.IsEmpty());
@@ -210,7 +278,6 @@ void UATSimulationTask_StabilityWaves::InitDataForPoints(const TArray<FIntVector
 			NewMin = FScWMath::MinIntVector(NewMin, SamplePoint);
 			NewMax = FScWMath::MaxIntVector(NewMax, SamplePoint);
 		}
-		ensureReturn(TargetTree);
 		const FIntVector& TreeBoundsMax = TargetTree->GetBoundsSize() - FIntVector(1, 1, 1);
 
 		BoundingBoxMin = FScWMath::ClampIntVector(NewMin - FIntVector(BoundingBoxAdditionalExtent), FIntVector::ZeroValue, TreeBoundsMax);
@@ -224,35 +291,31 @@ void UATSimulationTask_StabilityWaves::InitDataForPoints(const TArray<FIntVector
 		int32 NewDataArraySize = BoundingBoxSize.X * BoundingBoxSize.Y * BoundingBoxSize.Z;
 		ensureReturn(NewDataArraySize > 0);
 
-		BoundingBoxColorData.SetNum(NewDataArraySize);
-		BoundingBoxStabilityData.SetNum(NewDataArraySize);
+		ensure(BoundingBoxDataMap.IsEmpty());
 
-		ParallelFor(BoundingBoxSize.X, [&](int32 SampleLocalX)
+		//ParallelFor(BoundingBoxSize.X, [&](int32 SampleLocalX)
+		for (int32 SampleX = BoundingBoxMin.X; SampleX <= BoundingBoxMax.X; ++SampleX)
 		{
-			for (int32 SampleLocalY = 0; SampleLocalY < BoundingBoxSize.Y; ++SampleLocalY)
+			for (int32 SampleY = BoundingBoxMin.Y; SampleY <= BoundingBoxMax.Y; ++SampleY)
 			{
-				for (int32 SampleLocalZ = 0; SampleLocalZ < BoundingBoxSize.Z; ++SampleLocalZ)
+				for (int32 SampleZ = BoundingBoxMin.Z; SampleZ <= BoundingBoxMax.Z; ++SampleZ)
 				{
-					FIntVector SampleLocalPoint = FIntVector(SampleLocalX, SampleLocalY, SampleLocalZ);
-					int32 SampleDataIndex = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SampleLocalPoint, BoundingBoxSize);
+					FIntVector SamplePoint = FIntVector(SampleX, SampleY, SampleZ);
+					//const FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
 
-					if (TargetTree->HasVoxelInstanceDataAtPoint(BoundingBoxMin + SampleLocalPoint, true))
+					//if (SampleData.Stability > 0.0f)
+					if (TargetTree->HasVoxelInstanceDataAtPoint(SamplePoint, true))
 					{
-						BoundingBoxColorData[SampleDataIndex] = DirtyColorValue;
+						BoundingBoxDataMap.Add(SamplePoint, FBoundingBoxData(DirtyColorValue, 0.0f, 1.0f, 0.0f));
 					}
-					else
-					{
-						BoundingBoxColorData[SampleDataIndex] = EmptyColorValue;
-					}
-					BoundingBoxStabilityData[SampleDataIndex] = 0.0f;
 				}
 			}
 			//}, EParallelForFlags::ForceSingleThread);
-		});
+		}//);
 	}
 }
 
-void UATSimulationTask_StabilityWaves::GetDirtyNeighbors(const FIntVector& InPoint, TArray<FIntVector>& OutDirtyNeighbors)
+void UATSimulationTask_StabilityWaves::GetDirtyNeighbors(const FIntVector& InPoint, TArray<FIntVector>& OutDirtyNeighbors) const
 {
 	ensureReturn(OutDirtyNeighbors.IsEmpty());
 
@@ -265,15 +328,40 @@ void UATSimulationTask_StabilityWaves::GetDirtyNeighbors(const FIntVector& InPoi
 	{
 		const FIntVector SampleNeighborPoint = InPoint + SampleOffset;
 
-		if (IsPointInBoundingBox(SampleNeighborPoint))
+		if (BoundingBoxDataMap.Contains(SampleNeighborPoint))
 		{
-			const int32 SampleNeighborDataIndex = UATWorldFunctionLibrary::Point3D_To_ArrayIndex3D(SampleNeighborPoint - BoundingBoxMin, BoundingBoxSize);
-
-			if (BoundingBoxColorData[SampleNeighborDataIndex] == DirtyColorValue)
+			if (BoundingBoxDataMap[SampleNeighborPoint].ColorValue == DirtyColorValue)
 			{
 				OutDirtyNeighbors.Add(SampleNeighborPoint);
 			}
 		}
 	}
+}
+
+float UATSimulationTask_StabilityWaves::GetAttachmentNeighbors(const FIntVector& InPoint, TArray<FIntVector>& OutAttachmentNeighbors) const
+{
+	ensureReturn(OutAttachmentNeighbors.IsEmpty(), 0.0f);
+
+	static const TArray<FIntVector> NeighborsOffsets = {
+		FIntVector(1, 0, 0), FIntVector(-1, 0, 0),
+		FIntVector(0, 1, 0), FIntVector(0, -1, 0),
+		FIntVector(0, 0, -1)
+	};
+
+	float OutTotalStability = 0.0f;
+	for (const FIntVector& SampleOffset : NeighborsOffsets)
+	{
+		const FIntVector SampleNeighborPoint = InPoint + SampleOffset;
+
+		if (BoundingBoxDataMap.Contains(SampleNeighborPoint))
+		{
+			if (BoundingBoxDataMap[SampleNeighborPoint].StabilityValue > BoundingBoxDataMap[InPoint].StabilityValue)
+			{
+				OutAttachmentNeighbors.Add(SampleNeighborPoint);
+				OutTotalStability += BoundingBoxDataMap[SampleNeighborPoint].StabilityValue;
+			}
+		}
+	}
+	return OutTotalStability;
 }
 //~ End Utils
