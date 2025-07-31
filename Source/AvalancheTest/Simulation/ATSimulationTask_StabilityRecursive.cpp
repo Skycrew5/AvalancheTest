@@ -130,6 +130,16 @@ void UATSimulationTask_StabilityRecursive::ApplyFeedbackPoints()
 //~ End Queue
 
 //~ Begin Task
+void UATSimulationTask_StabilityRecursive::OnSelectedUpdatePointAdded(const FIntVector& InPoint) // UATSimulationTask
+{
+	PointsCache.Add(InPoint);
+
+	/*ensureReturn(TargetTree);
+	ensureReturn(TargetTree->HasVoxelInstanceDataAtPoint(InPoint, true));
+	FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(InPoint, false, true);
+	SampleData.Stability = 0.0f;*/
+}
+
 void UATSimulationTask_StabilityRecursive::DoWork_SubThread() // UATSimulationTask
 {
 	UpdatedSelectedPointsStabilities.SetNum(SelectedUpdatePoints.Num());
@@ -147,27 +157,37 @@ void UATSimulationTask_StabilityRecursive::DoWork_SubThread() // UATSimulationTa
 			FRecursivePointCache NewCache = FRecursivePointCache(false, 0.0f);
 			float NewStability = 0.0f;
 
-			for (uint8 SampleOrderIndex = 0; SampleOrderIndex < UsedDirectionsOrders.Num(); ++SampleOrderIndex)
+			const FIntVector& BottomPoint = SamplePoint + FIntVector(0, 0, -1);
+			FVoxelInstanceData& BottomData = TargetTree->GetVoxelInstanceDataAtPoint(BottomPoint, false, true);
+
+			if (false && (BottomData.Stability > AvalancheStabilityThreshold))
 			{
-				DEV_HANDLE_ASYNC_PENDING_STOP();
-
-				if (NewStability < 1.0f)
+				NewStability = BottomData.Stability;
+			}
+			else
+			{
+				for (uint8 SampleOrderIndex = 0; SampleOrderIndex < UsedDirectionsOrders.Num(); ++SampleOrderIndex)
 				{
-					FRecursiveThreadData ThreadData = FRecursiveThreadData(*UsedDirectionsOrders[SampleOrderIndex]);
-					float OrderStability = DoWork_SubThread_GetStabilityFromAllNeighbors(SamplePoint, ThreadData);
+					DEV_HANDLE_ASYNC_PENDING_STOP();
 
-					if (OrderStability > NewStability)
+					if (NewStability < 1.0f)
 					{
-						if (bEnablePointsCache)
+						FRecursiveThreadData ThreadData = FRecursiveThreadData(*UsedDirectionsOrders[SampleOrderIndex]);
+						float OrderStability = DoWork_SubThread_GetStabilityFromAllNeighbors(SamplePoint, ThreadData);
+
+						if (OrderStability > NewStability)
 						{
-							NewCache = FRecursivePointCache(false, OrderStability, ThreadData.ThisOrderUpdatedPoints);
+							if (bEnablePointsCache)
+							{
+								NewCache = FRecursivePointCache(false, OrderStability, ThreadData.ThisOrderUpdatedPoints);
+							}
+							NewStability = OrderStability;
 						}
-						NewStability = OrderStability;
 					}
-				}
-				else
-				{
-					break;
+					else
+					{
+						break;
+					}
 				}
 			}
 			if (bEnablePointsCache)

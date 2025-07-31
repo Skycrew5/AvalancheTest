@@ -42,12 +42,13 @@ protected:
 //~ End Queue
 
 //~ Begin Task
+protected:
+	virtual void OnSelectedUpdatePointAdded(const FIntVector& InPoint) override; // UATSimulationTask
+	virtual void OnQueuedPointAdded(const FIntVector& InPoint) override { PointsCache.Remove(InPoint); } // UATSimulationTask
 public:
 	virtual void DoWork_SubThread() override; // UATSimulationTask
 	virtual void PostWork_GameThread() override; // UATSimulationTask
 protected:
-	virtual void OnSelectedUpdatePointAdded(const FIntVector& InPoint) override { PointsCache.Add(InPoint); } // UATSimulationTask
-	virtual void OnQueuedPointAdded(const FIntVector& InPoint) override { PointsCache.Remove(InPoint); } // UATSimulationTask
 
 	struct FRecursiveThreadData
 	{

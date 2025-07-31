@@ -37,7 +37,7 @@ void UATProceduralGeneratorComponent::BeginPlay() // UActorComponent
 {
 	Super::BeginPlay();
 
-	UATSaveGame_VoxelTree::LoadSlot(OwnerTree, VoxelTreeDataSaveSlot);
+	//UATSaveGame_VoxelTree::LoadSlot(OwnerTree, VoxelTreeDataSaveSlot);
 
 	for (int32 SampleIndex = 0; SampleIndex < TaskArray.Num(); ++SampleIndex)
 	{

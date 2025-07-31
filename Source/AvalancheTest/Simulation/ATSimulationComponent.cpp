@@ -4,7 +4,8 @@
 
 #include "Simulation/ATSimulationTask.h"
 #include "Simulation/ATSimulationTask_Avalanche.h"
-#include "Simulation/ATSimulationTask_StabilityRecursive.h"
+#include "Simulation/ATSimulationTask_StabilityWaves.h"
+//#include "Simulation/ATSimulationTask_StabilityRecursive.h"
 
 #include "World/ATVoxelTree.h"
 
@@ -14,7 +15,8 @@ UATSimulationComponent::UATSimulationComponent()
 	PrimaryComponentTick.TickInterval = 0.5f;
 
 	TaskArray = {
-		CreateDefaultSubobject<UATSimulationTask_StabilityRecursive>(TEXT("SimulationTask_StabilityRecursive")),
+		CreateDefaultSubobject<UATSimulationTask_StabilityWaves>(TEXT("SimulationTask_StabilityWaves")),
+		//CreateDefaultSubobject<UATSimulationTask_StabilityRecursive>(TEXT("SimulationTask_StabilityRecursive")),
 		CreateDefaultSubobject<UATSimulationTask_Avalanche>(TEXT("SimulationTask_Avalanche"))
 	};
 	bEnableSimulationTasks = true;
