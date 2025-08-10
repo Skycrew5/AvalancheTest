@@ -4,10 +4,10 @@
 
 #include "Framework/ScWPlayerController.h"
 
-#include "World/ATVoxelISMC.h"
 #include "World/ATVoxelTree.h"
 #include "World/ATVoxelTypeData.h"
 #include "World/ATWorldFunctionLibrary.h"
+#include "World/ATVoxelPMC.h"
 
 #include "FastNoise2/FastNoise2Generators.h"
 
@@ -18,8 +18,6 @@
 AATVoxelChunk::AATVoxelChunk(const FObjectInitializer& InObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = false;
-
-	VoxelComponentClass = UATVoxelISMC::StaticClass();
 }
 
 //~ Begin Initialize
@@ -51,7 +49,7 @@ void AATVoxelChunk::BeginPlay() // AActor
 {
 	Super::BeginPlay();
 
-	
+	VoxelComponentClass = UATVoxelPMC::StaticClass();
 }
 
 void AATVoxelChunk::EndPlay(const EEndPlayReason::Type InReason) // AActor
@@ -121,7 +119,7 @@ bool AATVoxelChunk::IsChunkOnTreeSide(const bool bInIgnoreBottom) const
 //~ End Voxel Tree
 
 //~ Begin Voxel Components
-UATVoxelISMC* AATVoxelChunk::GetVoxelComponentAtPoint(const FIntVector& InPoint) const
+UATVoxelPMC* AATVoxelChunk::GetVoxelComponentAtPoint(const FIntVector& InPoint) const
 {
 	ensureReturn(OwnerTree, nullptr);
 
@@ -145,7 +143,7 @@ UATVoxelISMC* AATVoxelChunk::GetVoxelComponentAtPoint(const FIntVector& InPoint)
 	return nullptr;
 }
 
-UATVoxelISMC* AATVoxelChunk::GetOrInitVoxelComponentForType(const UATVoxelTypeData* InTypeData)
+UATVoxelPMC* AATVoxelChunk::GetOrInitVoxelComponentForType(const UATVoxelTypeData* InTypeData)
 {
 	ensureReturn(InTypeData, nullptr);
 
@@ -153,7 +151,7 @@ UATVoxelISMC* AATVoxelChunk::GetOrInitVoxelComponentForType(const UATVoxelTypeDa
 	{
 		return PerTypeVoxelComponentMap[InTypeData];
 	}
-	UATVoxelISMC* NewVoxelComponent = NewObject<UATVoxelISMC>(this, VoxelComponentClass, FName(TEXT("VoxelComponent_") + InTypeData->GetName()));
+	UATVoxelPMC* NewVoxelComponent = NewObject<UATVoxelPMC>(this, VoxelComponentClass, FName(TEXT("VoxelComponent_") + InTypeData->GetName()));
 	ensureReturn(NewVoxelComponent, nullptr);
 
 	NewVoxelComponent->BP_InitComponent(this, InTypeData);
@@ -196,14 +194,14 @@ void AATVoxelChunk::HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint,
 {
 	if (InVoxelInstanceData.IsTypeDataValid())
 	{
-		if (UATVoxelISMC* TargetComponent = GetOrInitVoxelComponentForType(InVoxelInstanceData.TypeData))
+		if (UATVoxelPMC* TargetComponent = GetOrInitVoxelComponentForType(InVoxelInstanceData.TypeData))
 		{
 			TargetComponent->HandleSetVoxelInstanceDataAtPoint(InPoint, InVoxelInstanceData);
 		}
 	}
 	else
 	{
-		if (UATVoxelISMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
+		if (UATVoxelPMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
 		{
 			TargetComponent->HandleSetVoxelInstanceDataAtPoint(InPoint, InVoxelInstanceData);
 		}
@@ -212,7 +210,7 @@ void AATVoxelChunk::HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint,
 
 void AATVoxelChunk::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const FVoxelBreakData& InBreakData)
 {
-	if (UATVoxelISMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
+	if (UATVoxelPMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
 	{
 		TargetComponent->HandleBreakVoxelAtPoint(InPoint, InBreakData);
 	}
@@ -222,7 +220,7 @@ void AATVoxelChunk::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const FVo
 {
 	if (bDebugInstancesStabilityValues)
 	{
-		if (UATVoxelISMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
+		if (UATVoxelPMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
 		{
 			TargetComponent->Debug_UpdateStabilityValueAtPoint(InPoint, InNewStability);
 		}
@@ -233,7 +231,7 @@ void AATVoxelChunk::HandleSetVoxelHealthAtPoint(const FIntVector& InPoint, float
 {
 	if (bDebugInstancesHealthValues)
 	{
-		if (UATVoxelISMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
+		if (UATVoxelPMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
 		{
 			TargetComponent->Debug_UpdateHealthValueAtPoint(InPoint, InNewHealth);
 		}
@@ -327,47 +325,47 @@ void AATVoxelChunk::HandleUpdates()
 //~ Begin Debug
 void AATVoxelChunk::BP_CollectDataForGameplayDebugger_Implementation(APlayerController* ForPlayerController, FVoxelChunkDebugData& InOutData) const
 {
-	ensureReturn(OwnerTree);
+	//ensureReturn(OwnerTree);
 
-	// Common
-	InOutData.ChunkHighlightTransform = FTransform(FRotator::ZeroRotator, GetChunkCenterWorldLocation(), FVector((float)GetChunkSize() * GetVoxelSize() * 0.5f));
+	//// Common
+	//InOutData.ChunkHighlightTransform = FTransform(FRotator::ZeroRotator, GetChunkCenterWorldLocation(), FVector((float)GetChunkSize() * GetVoxelSize() * 0.5f));
 
-	InOutData.Label = GetActorNameOrLabel();
-	InOutData.LabelColor = FColor::MakeRandomSeededColor(GetChunkSeed());
+	//InOutData.Label = GetActorNameOrLabel();
+	//InOutData.LabelColor = FColor::MakeRandomSeededColor(GetChunkSeed());
 
-	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Chunk Size"), GetChunkSize()));
-	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Voxel Base Size"), GetVoxelSize()));
-	//InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Max Updates per Second"), MaxUpdatesPerSecond));
+	//InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Chunk Size"), GetChunkSize()));
+	//InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Voxel Base Size"), GetVoxelSize()));
+	////InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Max Updates per Second"), MaxUpdatesPerSecond));
 
-	// Stability
-	//InOutData.StabilityEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Pending Updates Num"), StabilityUpdates.GetPendingPointsConstArray().Num()));
-	//InOutData.StabilityEntries.Add(FVoxelChunkDebugData_Entry(TEXT("This Tick Updates Num"), StabilityUpdates.GetThisTickSelectedPointsConstArray().Num()));
+	//// Stability
+	////InOutData.StabilityEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Pending Updates Num"), StabilityUpdates.GetPendingPointsConstArray().Num()));
+	////InOutData.StabilityEntries.Add(FVoxelChunkDebugData_Entry(TEXT("This Tick Updates Num"), StabilityUpdates.GetThisTickSelectedPointsConstArray().Num()));
 
-	// Instance under cursor
-	AScWPlayerController* ScWPlayerController = Cast<AScWPlayerController>(ForPlayerController);
+	//// Instance under cursor
+	//AScWPlayerController* ScWPlayerController = Cast<AScWPlayerController>(ForPlayerController);
 
-	FHitResult ScreenCenterHitResult;
-	ScWPlayerController->GetHitResultUnderScreenCenter(TraceTypeQuery_Visibility, false, ScreenCenterHitResult);
+	//FHitResult ScreenCenterHitResult;
+	//ScWPlayerController->GetHitResultUnderScreenCenter(TraceTypeQuery_Visibility, false, ScreenCenterHitResult);
 
-	UATVoxelISMC* TargetComponent = Cast<UATVoxelISMC>(ScreenCenterHitResult.GetComponent());
-	if (auto TargetTypeDataPtr = PerTypeVoxelComponentMap.FindKey(TargetComponent))
-	{
-		InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Voxel Component's Instances Num"), TargetComponent->GetVoxelInstancesNum()));
+	//UATVoxelPMC* TargetComponent = Cast<UATVoxelPMC>(ScreenCenterHitResult.GetComponent());
+	//if (auto TargetTypeDataPtr = PerTypeVoxelComponentMap.FindKey(TargetComponent))
+	//{
+	//	InOutData.CommonEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Voxel Component's Instances Num"), TargetComponent->GetVoxelInstancesNum()));
 
-		int32 TargetInstanceIndex = ScreenCenterHitResult.Item;
-		const FIntVector& TargetPoint = TargetComponent->GetPointOfMeshIndex(TargetInstanceIndex);
-		InOutData.InstanceLabel = FString::Printf(TEXT("Looking at Voxel at %s, instance index %d"), *TargetPoint.ToString(), TargetInstanceIndex);
-		
-		const FVoxelInstanceData& TargetData = OwnerTree->GetVoxelInstanceDataAtPoint(TargetPoint, false);
-		if (TargetData.IsTypeDataValid())
-		{
-			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Type Data"), TargetTypeDataPtr->GetName()));
-			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Health"), TargetData.Health));
-			InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Stability"), TargetData.Stability));
-			//InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Attachment Directions"), FATVoxelUtils::CreateStringFromAttachmentDirections(TargetData.AttachmentDirections)));
-		}
-		InOutData.InstanceHighlightTransform = FTransform(FRotator::ZeroRotator, UATWorldFunctionLibrary::GetVoxelCenterWorldLocation(TargetPoint, GetVoxelSize()), FVector(GetVoxelSize() * 0.5f));
-	}
+	//	int32 TargetInstanceIndex = ScreenCenterHitResult.Item;
+	//	const FIntVector& TargetPoint = TargetComponent->GetPointOfMeshIndex(TargetInstanceIndex);
+	//	InOutData.InstanceLabel = FString::Printf(TEXT("Looking at Voxel at %s, instance index %d"), *TargetPoint.ToString(), TargetInstanceIndex);
+	//	
+	//	const FVoxelInstanceData& TargetData = OwnerTree->GetVoxelInstanceDataAtPoint(TargetPoint, false);
+	//	if (TargetData.IsTypeDataValid())
+	//	{
+	//		InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Type Data"), TargetTypeDataPtr->GetName()));
+	//		InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Health"), TargetData.Health));
+	//		InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Stability"), TargetData.Stability));
+	//		//InOutData.InstanceEntries.Add(FVoxelChunkDebugData_Entry(TEXT("Attachment Directions"), FATVoxelUtils::CreateStringFromAttachmentDirections(TargetData.AttachmentDirections)));
+	//	}
+	//	InOutData.InstanceHighlightTransform = FTransform(FRotator::ZeroRotator, UATWorldFunctionLibrary::GetVoxelCenterWorldLocation(TargetPoint, GetVoxelSize()), FVector(GetVoxelSize() * 0.5f));
+	//}
 }
 //~ End Debug
 

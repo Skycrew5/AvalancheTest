@@ -2,7 +2,6 @@
 
 #include "World/ATTypes_World.h"
 
-#include "World/ATVoxelISMC.h"
 #include "World/ATVoxelTree.h"
 #include "World/ATVoxelChunk.h"
 #include "World/ATWorldFunctionLibrary.h"

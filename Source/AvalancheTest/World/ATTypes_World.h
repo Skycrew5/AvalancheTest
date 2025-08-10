@@ -39,7 +39,7 @@ namespace FATVoxelUtils
 		{ EATAttachmentDirection::Back, EATAttachmentDirection::Front },
 		{ EATAttachmentDirection::Right, EATAttachmentDirection::Left },
 		{ EATAttachmentDirection::Left, EATAttachmentDirection::Right },
-		{ EATAttachmentDirection::Top, EATAttachmentDirection::Back },
+		{ EATAttachmentDirection::Top, EATAttachmentDirection::Bottom },
 		{ EATAttachmentDirection::Bottom, EATAttachmentDirection::Top }
 	};
 	
@@ -102,13 +102,44 @@ namespace FATVoxelUtils
 		return OutString;
 	}
 
-	const TArray<FIntVector> SideOffsets = {
+	/*const TArray<FIntVector> SideOffsets = {
 		FIntVector(1, 0, 0),
 		FIntVector(-1, 0, 0),
 		FIntVector(0, 1, 0),
 		FIntVector(0, -1, 0),
 		FIntVector(0, 0, 1),
 		FIntVector(0, 0, -1)
+	};*/
+
+	const TArray<FIntVector> SideOffsets = {
+		FIntVector(0, -1, 0),
+		FIntVector(0, 1, 0),
+		FIntVector(-1, 0, 0),
+		FIntVector(1, 0, 0),
+		FIntVector(0, 0, 1),
+		FIntVector(0, 0, -1)
+	};
+
+	const TArray<FIntVector> EdgeOffsets = {
+		FIntVector(1, -1, 0),
+		FIntVector(1, 1, 0),
+		FIntVector(-1,-1, 0),
+		FIntVector(-1, 1, 0),
+		FIntVector(0, -1, 1),
+		FIntVector(0, 1, 1),
+		FIntVector(0, -1, 1),
+		FIntVector(0, 1, 1)
+	};
+
+	const TArray<FIntVector> AngleOffsets = {
+		FIntVector(1, -1, 1),
+		FIntVector(1, 1, 1),
+		FIntVector(-1,-1, 1),
+		FIntVector(-1, 1, 1),
+		FIntVector(1, -1, -1),
+		FIntVector(1, 1, -1),
+		FIntVector(-1,-1, -1),
+		FIntVector(-1, 1, 1)
 	};
 }
 

@@ -2,7 +2,7 @@
 
 #include "World/ATWorldFunctionLibrary.h"
 
-#include "World/ATVoxelISMC.h"
+#include "World/ATVoxelPMC.h"
 
 //~ Begin Locations
 FIntVector UATWorldFunctionLibrary::WorldLocation_To_Point3D(const FVector& InWorldLocation, const float InVoxelSize)
@@ -22,13 +22,13 @@ FVector UATWorldFunctionLibrary::Point3D_To_WorldLocation(const FIntVector& InPo
 	return FVector(InPoint3D * InVoxelSize);
 }
 
-FIntVector UATWorldFunctionLibrary::RelativeLocation_To_Point3D(const class UATVoxelISMC* InVoxelComponent, const FVector& InRelativeLocation)
+FIntVector UATWorldFunctionLibrary::RelativeLocation_To_Point3D(const class UATVoxelPMC* InVoxelComponent, const FVector& InRelativeLocation)
 {
 	ensureReturn(InVoxelComponent, FIntVector::ZeroValue);
 	return WorldLocation_To_Point3D(InVoxelComponent->GetComponentTransform().TransformPosition(InRelativeLocation), InVoxelComponent->GetVoxelSize());
 }
 
-FVector UATWorldFunctionLibrary::Point3D_To_RelativeLocation(const class UATVoxelISMC* InVoxelComponent, const FIntVector& InPoint3D)
+FVector UATWorldFunctionLibrary::Point3D_To_RelativeLocation(const class UATVoxelPMC* InVoxelComponent, const FIntVector& InPoint3D)
 {
 	ensureReturn(InVoxelComponent, FVector::ZeroVector);
 	return InVoxelComponent->GetComponentTransform().InverseTransformPosition(Point3D_To_WorldLocation(InPoint3D, InVoxelComponent->GetVoxelSize()));

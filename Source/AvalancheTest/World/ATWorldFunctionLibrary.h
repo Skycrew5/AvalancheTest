@@ -27,10 +27,10 @@ public:
 	static FVector Point3D_To_WorldLocation(const FIntVector& InPoint3D, const float InVoxelSize);
 
 	UFUNCTION(Category = "Locations", BlueprintCallable)
-	static FIntVector RelativeLocation_To_Point3D(const class UATVoxelISMC* InVoxelComponent, const FVector& InRelativeLocation);
+	static FIntVector RelativeLocation_To_Point3D(const class UATVoxelPMC* InVoxelComponent, const FVector& InRelativeLocation);
 
 	UFUNCTION(Category = "Locations", BlueprintCallable)
-	static FVector Point3D_To_RelativeLocation(const class UATVoxelISMC* InVoxelComponent, const FIntVector& InPoint3D);
+	static FVector Point3D_To_RelativeLocation(const class UATVoxelPMC* InVoxelComponent, const FIntVector& InPoint3D);
 
 	UFUNCTION(Category = "Locations", BlueprintCallable)
 	static FVector GetVoxelCenterWorldLocation(const FIntVector& InPoint3D, const float InVoxelSize);

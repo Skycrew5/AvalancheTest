@@ -8,6 +8,8 @@ UATVoxelTypeData::UATVoxelTypeData()
 {
 	DisplayName = FText::FromString(TEXT("Unnamed Voxel Type"));
 
+	SectionsDepth = 0.1f;
+
 	bAddToInventory = false;
 
 	bIsUnbreakable = false;

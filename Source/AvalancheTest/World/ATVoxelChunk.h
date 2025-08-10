@@ -10,7 +10,7 @@
 
 #include "ATVoxelChunk.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FBreakVoxelEventSignature, class UATVoxelISMC*, InVoxelComponent, const FIntVector&, InPoint, const FVoxelBreakData&, InBreakData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FBreakVoxelEventSignature, class UATVoxelPMC*, InVoxelComponent, const FIntVector&, InPoint, const FVoxelBreakData&, InBreakData);
 
 /**
  * 
@@ -73,10 +73,10 @@ protected:
 public:
 
 	UFUNCTION(Category = "Voxel Components", BlueprintCallable, meta = (KeyWords = "GetInstancedStaticMesh, GetVoxelInstancedStaticMesh"))
-	class UATVoxelISMC* GetVoxelComponentAtPoint(const FIntVector& InChunkPoint) const;
+	class UATVoxelPMC* GetVoxelComponentAtPoint(const FIntVector& InChunkPoint) const;
 
 	UFUNCTION(Category = "Voxel Components", BlueprintCallable, meta = (KeyWords = "GetInstancedStaticMesh, GetVoxelInstancedStaticMesh, GetVoxelComponentForType"))
-	class UATVoxelISMC* GetOrInitVoxelComponentForType(const class UATVoxelTypeData* InTypeData);
+	class UATVoxelPMC* GetOrInitVoxelComponentForType(const class UATVoxelTypeData* InTypeData);
 
 	UPROPERTY(Category = "Setters", BlueprintAssignable)
 	FBreakVoxelEventSignature OnBreakVoxelAtPoint;
@@ -84,10 +84,10 @@ public:
 protected:
 
 	UPROPERTY(Category = "Voxel Components", EditAnywhere, BlueprintReadOnly)
-	TSubclassOf<class UATVoxelISMC> VoxelComponentClass;
+	TSubclassOf<class UATVoxelPMC> VoxelComponentClass;
 
 	UPROPERTY(Transient)
-	TMap<TObjectPtr<const class UATVoxelTypeData>, TObjectPtr<class UATVoxelISMC>> PerTypeVoxelComponentMap;
+	TMap<TObjectPtr<const class UATVoxelTypeData>, TObjectPtr<class UATVoxelPMC>> PerTypeVoxelComponentMap;
 //~ End Voxel Components
 
 //~ Begin Voxel Getters

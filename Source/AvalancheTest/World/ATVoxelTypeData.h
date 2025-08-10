@@ -46,10 +46,13 @@ public:
 public:
 
 	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
-	TObjectPtr<UStaticMesh> StaticMesh;
+	float SectionsDepth;
 
 	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
-	TMap<int32, TObjectPtr<UMaterialInterface>> StaticMeshOverrideMaterials;
+	TObjectPtr<UMaterialInterface> SidesMeshOverrideMaterial;
+
+	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<UMaterialInterface> SectionsMeshOverrideMaterial;
 //~ End Mesh
 	
 //~ Begin Inventory
