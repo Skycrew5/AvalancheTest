@@ -63,7 +63,7 @@ protected:
 	struct FRecursivePointCache
 	{
 		bool bIsThreadSafe = false;
-		float Stability = 0.0f;
+		float AvalancheValue = 0.0f;
 		TSet<FIntVector> FinalUpdatedPoints = TSet<FIntVector>();
 
 		bool Intersects(const TSet<FIntVector>& InOther) const
@@ -132,7 +132,7 @@ protected:
 protected:
 
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
-	float AvalancheStabilityThreshold;
+	float AvalancheValueThreshold;
 
 	UPROPERTY(Transient)
 	TObjectPtr<class UATSimulationTask_Avalanche> AvalancheSimulationTask;

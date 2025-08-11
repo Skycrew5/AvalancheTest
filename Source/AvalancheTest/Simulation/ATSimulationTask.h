@@ -54,6 +54,7 @@ protected:
 public:
 
 	const TArraySetPair<FIntVector>& GetConstQueuedPoints() const { return QueuedPoints; }
+	bool IsPointQueued(const FIntVector& InPoint) const { return QueuedPoints.Contains(InPoint); }
 	void QueuePoint(const FIntVector& InPoint, const bool bInQueueNeighborsToo);
 protected:
 	virtual bool ShouldSelectQueuedPointForUpdate(const FIntVector& InPoint) const;

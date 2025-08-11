@@ -124,7 +124,7 @@ struct FVoxelInstanceData
 	float Health = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Stability = 1.0f;
+	float AvalancheValue = 1.0f;
 
 	bool IsTypeDataValid() const { return TypeData != nullptr; }
 

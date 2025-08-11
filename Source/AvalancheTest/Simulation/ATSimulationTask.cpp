@@ -91,7 +91,7 @@ void UATSimulationTask::PreWork_GameThread()
 	ensureReturn(AsyncTaskPtr);
 	ensureReturn(AsyncTaskPtr->IsDone());
 
-	ensureReturn(SelectedUpdatePoints.IsEmpty());
+	//ensureReturn(SelectedUpdatePoints.IsEmpty());
 	ensureReturn(TargetTree);
 
 	while (!TargetTree->IsThisTickUpdatesTimeBudgetExceeded() && !QueuedPoints.IsEmpty())
@@ -104,7 +104,7 @@ void UATSimulationTask::PreWork_GameThread()
 			OnSelectedUpdatePointAdded(SamplePoint);
 		}
 	}
-	if (SelectedUpdatePoints.IsEmpty())
+	if (SelectedUpdatePoints.IsEmpty() || !QueuedPoints.IsEmpty())
 	{
 		return;
 	}

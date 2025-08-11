@@ -96,9 +96,6 @@ protected:
 //~ Begin Editor
 public:
 
-	UFUNCTION(Category = "Editor", CallInEditor)
-	void GenerateVoxelTreeData();
-
 	UPROPERTY(Category = "Editor", EditAnywhere, BlueprintReadWrite)
 	FString VoxelTreeDataSaveSlot;
 

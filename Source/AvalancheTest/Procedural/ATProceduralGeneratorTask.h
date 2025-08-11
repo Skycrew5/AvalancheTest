@@ -100,6 +100,7 @@ protected:
 	UPROPERTY(Transient)
 	bool bPendingPostWork;
 
+	//UPROPERTY(Transient)
 	FAsyncTask<class FATProceduralGeneratorTask_AsyncTask>* AsyncTaskPtr;
 //~ End Task
 

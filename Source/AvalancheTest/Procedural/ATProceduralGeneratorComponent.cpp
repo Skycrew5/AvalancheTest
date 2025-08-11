@@ -199,19 +199,6 @@ void UATProceduralGeneratorComponent::IncrementCurrentTaskIndex()
 // End Tasks
 
 //~ Begin Editor
-void UATProceduralGeneratorComponent::GenerateVoxelTreeData()
-{
-	ensureReturn(OwnerTree);
-	const auto& ChunksMap = OwnerTree->GetChunksMap();
-
-	TArray<AATVoxelChunk*> ChunksToQueue;
-	ChunksMap.GenerateValueArray(ChunksToQueue);
-
-	QueueChunksForTaskAtIndex(ChunksToQueue, 0);
-
-	bTickInEditor = true;
-}
-
 void UATProceduralGeneratorComponent::FinishGenerateVoxelTreeData()
 {
 	bTickInEditor = false;

@@ -4,39 +4,50 @@
 
 #include "CoreMinimal.h"
 
-#include "IDetailGroup.h"
-#include "IDetailsView.h"
 #include "Engine/World.h"
-#include "Tools/UEdMode.h"
-#include "PropertyHandle.h"
-#include "EditorStyleSet.h"
-#include "DetailWidgetRow.h"
-#include "ToolBuilderUtil.h"
-#include "SceneManagement.h"
-#include "ToolBuilderUtil.h"
 #include "Engine/Selection.h"
-#include "EditorModeManager.h"
-#include "ObjectEditorUtils.h"
-#include "EditorCategoryUtils.h"
-#include "DetailLayoutBuilder.h"
-#include "Widgets/SUserWidget.h"
-#include "PropertyEditorModule.h"
-#include "CollisionQueryParams.h"
-#include "IDetailCustomization.h"
-#include "DetailCategoryBuilder.h"
 #include "UObject/NoExportTypes.h"
-#include "Modules/ModuleManager.h"
+
+#include "Tools/UEdMode.h"
+#include "EditorModeManager.h"
+
+#include "CollisionQueryParams.h"
+#include "PrimitiveDrawingUtils.h"
+#include "Framework/Commands/Commands.h"
+#include "BaseBehaviors/BehaviorTargetInterfaces.h"
+
+#include "ToolBuilderUtil.h"
+#include "ToolContextInterfaces.h"
 #include "InteractiveToolBuilder.h"
 #include "InteractiveToolManager.h"
-#include "InteractiveToolManager.h"
+
+#include "PropertyHandle.h"
+#include "PropertyEditorModule.h"
+
+#include "EditorStyleSet.h"
+#include "SceneManagement.h"
+#include "ObjectEditorUtils.h"
+#include "EditorCategoryUtils.h"
+
+#include "Styling/AppStyle.h"
+#include "Widgets/SUserWidget.h"
 #include "BaseTools/ClickDragTool.h"
-#include "GameplayDebuggerCategory.h"
 #include "BaseTools/SingleClickTool.h"
-#include "Framework/Commands/Commands.h"
 #include "BaseBehaviors/ClickDragBehavior.h"
 #include "Widgets/DeclarativeSyntaxSupport.h"
 
+#include "IDetailGroup.h"
+#include "IDetailsView.h"
+#include "DetailWidgetRow.h"
+#include "DetailLayoutBuilder.h"
+#include "IDetailCustomization.h"
+#include "DetailCategoryBuilder.h"
+
+#include "GameplayDebuggerCategory.h"
+
 #include "Modules/ModuleManager.h"
+
+#include "UnrealCommons.h"
 
 /** Structure of built-in placement categories. Defined as functions to enable external use without linkage */
 struct FAvalancheToolsPlacementCategories

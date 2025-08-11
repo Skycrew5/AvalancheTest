@@ -44,12 +44,12 @@ FVoxelInstanceData UATVoxelTypeData::BP_InitializeInstanceData_Implementation(AA
 		return FVoxelInstanceData::Invalid;
 	}
 	FVoxelInstanceData OutData = FVoxelInstanceData(this, MaxHealth);
-	OutData.Stability = 1.0f;
+	OutData.AvalancheValue = 1.0f;
 	return OutData;
 }
 //~ End Initialize
 
-//~ Begin Stability
+//~ Begin AvalancheValue
 float UATVoxelTypeData::GetStabilityAttachmentMulForDirection(EATAttachmentDirection InDirection) const
 {
 	return CachedAttachmentStrengthMuls[InDirection];
@@ -66,4 +66,4 @@ void UATVoxelTypeData::InitCachedAttachmentStrengthMuls()
 		CachedAttachmentStrengthMuls.Add(SampleDirection, AdjustedStrengthMul);
 	}
 }
-//~ End Stability
+//~ End AvalancheValue

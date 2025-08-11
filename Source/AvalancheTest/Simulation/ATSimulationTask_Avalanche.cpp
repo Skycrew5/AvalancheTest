@@ -13,7 +13,7 @@ UATSimulationTask_Avalanche::UATSimulationTask_Avalanche()
 
 	AvalancheRequiredCycles = 5;
 
-	InstantAvalancheStabilityThreshold = 0.01f;
+	InstantAvalancheStabilityThreshold = 0.001f;
 	InstantAvalanchePerWorkProbability = 0.001f;
 
 	AvalancheCyclesCountdown = AvalancheRequiredCycles;
@@ -31,7 +31,7 @@ void UATSimulationTask_Avalanche::DoWork_SubThread() // UATSimulationTask
 
 		ensureReturn(PointsAvalancheCounterMap.Contains(SamplePoint));
 
-		if (SampleData.Stability <= InstantAvalancheStabilityThreshold || InstantAvalanchePerWorkProbability >= FMath::FRand())
+		if (SampleData.AvalancheValue <= InstantAvalancheStabilityThreshold || InstantAvalanchePerWorkProbability >= FMath::FRand())
 		{
 			PointsAvalancheCounterMap[SamplePoint] = INT_MAX;
 		}

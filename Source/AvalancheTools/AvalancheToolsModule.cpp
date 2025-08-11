@@ -6,8 +6,11 @@
 #include "IPlacementModeModule.h"
 #include "PropertyEditorModule.h"
 
-#include "VoxelChunkDetails.h"
-#include "GameplayDebuggerCategory_Voxels.h"
+#include "Details/VoxelChunkDetails.h"
+#include "Debug/GameplayDebuggerCategory_Voxels.h"
+
+#include "EditorMode/VoxelToolsEditorMode.h"
+#include "EditorMode/VoxelToolsEditorModeCommands.h"
 
 #include "World/ATVoxelChunk.h"
 
@@ -46,6 +49,7 @@ public:
 			GameplayDebuggerModule.NotifyCategoriesChanged();
 		}
 #endif
+		FVoxelToolsEditorModeCommands::Register();
 	}
 	// This function may be called during shutdown to clean up your module. For modules that support dynamic reloading,
 	// we call this function before unloading the module.
@@ -71,6 +75,7 @@ public:
 			GameplayDebuggerModule.UnregisterCategory("Voxels");
 		}
 #endif
+		FVoxelToolsEditorModeCommands::Unregister();
 	}
 
 	/*void OnPostEngineInit()

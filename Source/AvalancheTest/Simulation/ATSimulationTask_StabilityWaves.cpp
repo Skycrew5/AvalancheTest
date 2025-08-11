@@ -22,8 +22,8 @@ UATSimulationTask_StabilityWaves::UATSimulationTask_StabilityWaves()
 	WaveIterationsHardLimit = 128;
 	BoundingBoxAdditionalExtent = 8;
 
-	AvalancheStabilityThreshold = 0.25f;
 	AvalancheMassThreshold = 4.0f;
+	AvalancheValueThreshold = 0.25f;
 }
 
 //~ Begin Initialize
@@ -91,7 +91,7 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 						else
 						{
 							ensureContinue(TargetTree);
-							//BelowStability = TargetTree->GetVoxelInstanceDataAtPoint(BelowPoint, false, true).Stability;
+							//BelowStability = TargetTree->GetVoxelInstanceDataAtPoint(BelowPoint, false, true).AvalancheValue;
 
 							BoundingBoxDataMap[SamplePoint].ColorValue = SupportedColorValue;
 							BoundingBoxDataMap[SamplePoint].StabilityValue = 1.0f;
@@ -191,7 +191,7 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 
 			float AvalancheThresholdMul = 1.0f;
 
-			if (SamplePoint.Z == BoundingBoxMin.Z || BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 0, -1))) // Supported voxel
+			/*if (SamplePoint.Z == BoundingBoxMin.Z || BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 0, -1))) // Supported voxel
 			{
 				if (BoundingBoxDataMap.Contains(SamplePoint + FIntVector(-1, 0, 0)) &&
 					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(1, 0, 0)) &&
@@ -214,7 +214,7 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 				{
 					AvalancheThresholdMul = 2.0f;
 				}
-			}
+			}*/
 			BoundingBoxDataMap[SamplePoint].AvalancheValue = BoundingBoxDataMap[SamplePoint].MassValue / (AvalancheMassThreshold * AvalancheThresholdMul);
 		}
 	}
@@ -229,18 +229,18 @@ void UATSimulationTask_StabilityWaves::PostWork_GameThread()
 		FIntVector SamplePoint = SelectedUpdatePoints.Pop();
 
 		FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false);
-		float PrevStability = SampleData.Stability;
+		float PrevStability = SampleData.AvalancheValue;
 
 		ensureContinue(BoundingBoxDataMap.Contains(SamplePoint));
-		SampleData.Stability = 1.0f - BoundingBoxDataMap[SamplePoint].AvalancheValue;
+		SampleData.AvalancheValue = BoundingBoxDataMap[SamplePoint].AvalancheValue;
 
 		AATVoxelChunk* SampleChunk = TargetTree->GetVoxelChunkAtPoint(SamplePoint);
 		ensureContinue(SampleChunk);
 
-		//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.Stability);
+		//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.AvalancheValue);
 		SampleChunk->HandleSetVoxelInstanceDataAtPoint(SamplePoint, SampleData);
 
-		if (BoundingBoxDataMap[SamplePoint].AvalancheValue >= 1.0f)
+		if (SampleData.AvalancheValue <= AvalancheValueThreshold)
 		{
 			ensureContinue(AvalancheSimulationTask);
 			AvalancheSimulationTask->QueuePoint(SamplePoint, false);
@@ -303,7 +303,7 @@ void UATSimulationTask_StabilityWaves::InitDataForPoints(const TArray<FIntVector
 					FIntVector SamplePoint = FIntVector(SampleX, SampleY, SampleZ);
 					//const FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
 
-					//if (SampleData.Stability > 0.0f)
+					//if (SampleData.AvalancheValue > 0.0f)
 					if (TargetTree->HasVoxelInstanceDataAtPoint(SamplePoint, true))
 					{
 						BoundingBoxDataMap.Add(SamplePoint, FBoundingBoxData(DirtyColorValue, 0.0f, 1.0f, 0.0f));

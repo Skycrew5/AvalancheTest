@@ -60,22 +60,22 @@ public:
 	bool bAddToInventory;
 //~ End Inventory
 
-//~ Begin Stability
+//~ Begin Avalanche
 public:
 
-	UFUNCTION(Category = "Stability", BlueprintCallable)
+	UFUNCTION(Category = "Avalanche", BlueprintCallable)
 	float GetStabilityAttachmentMulForDirection(EATAttachmentDirection InDirection) const;
 
-	UPROPERTY(Category = "Stability", EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Category = "Avalanche", EditDefaultsOnly, BlueprintReadOnly)
 	bool bIsUnbreakable;
 
-	UPROPERTY(Category = "Stability", EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Category = "Avalanche", EditDefaultsOnly, BlueprintReadOnly)
 	bool bHasInfiniteStability;
 
-	UPROPERTY(Category = "Stability", EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Category = "Avalanche", EditDefaultsOnly, BlueprintReadOnly)
 	float AttachmentStrengthMul;
 
-	UPROPERTY(Category = "Stability", EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Category = "Avalanche", EditDefaultsOnly, BlueprintReadOnly)
 	float MaxHealth;
 
 protected:
@@ -91,7 +91,7 @@ protected:
 		{ EATAttachmentDirection::Top, 0.75 },
 		{ EATAttachmentDirection::Bottom, 1.0f }
 	};
-//~ End Stability
+//~ End Avalanche
 	
 //~ Begin Break
 public:

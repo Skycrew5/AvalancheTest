@@ -77,7 +77,7 @@ UATSimulationTask_StabilityRecursive::UATSimulationTask_StabilityRecursive()
 		&DirectionsOrder6
 	};
 
-	AvalancheStabilityThreshold = 0.25f;
+	AvalancheValueThreshold = 0.25f;
 }
 
 //~ Begin Initialize
@@ -103,17 +103,19 @@ void UATSimulationTask_StabilityRecursive::DeInitialize() // UATSimulationTask
 //~ Begin Queue
 bool UATSimulationTask_StabilityRecursive::ShouldSelectQueuedPointForUpdate(const FIntVector& InPoint) const // UATSimulationTask
 {
-	return FeedbackSelectedPointsSet.Contains(InPoint) || Super::ShouldSelectQueuedPointForUpdate(InPoint);
+	return Super::ShouldSelectQueuedPointForUpdate(InPoint);
 }
 
 void UATSimulationTask_StabilityRecursive::QueuePointsFeedback(const FIntVector& InPoint)
 {
+	ensureReturn(AvalancheSimulationTask);
+
 	TArray<FIntVector> PointsInRadius;
 	TargetTree->GetAllVoxelPointsInRadius(InPoint, QueueFeedbackRadius, PointsInRadius);
 
 	for (const FIntVector& SamplePoint : PointsInRadius)
 	{
-		if (SamplePoint != InPoint)
+		if (!AvalancheSimulationTask->IsPointQueued(SamplePoint))
 		{
 			FeedbackSelectedPointsSet.Add(SamplePoint);
 		}
@@ -122,9 +124,14 @@ void UATSimulationTask_StabilityRecursive::QueuePointsFeedback(const FIntVector&
 
 void UATSimulationTask_StabilityRecursive::ApplyFeedbackPoints()
 {
+	ensureReturn(AvalancheSimulationTask);
+
 	for (const FIntVector& SamplePoint : FeedbackSelectedPointsSet)
 	{
-		QueuePoint(SamplePoint, false);
+		if (!AvalancheSimulationTask->IsPointQueued(SamplePoint))
+		{
+			QueuePoint(SamplePoint, false);
+		}
 	}
 	FeedbackSelectedPointsSet.Empty();
 }
@@ -138,7 +145,7 @@ void UATSimulationTask_StabilityRecursive::OnSelectedUpdatePointAdded(const FInt
 	/*ensureReturn(TargetTree);
 	ensureReturn(TargetTree->HasVoxelInstanceDataAtPoint(InPoint, true));
 	FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(InPoint, false, true);
-	SampleData.Stability = 0.0f;*/
+	SampleData.AvalancheValue = 0.0f;*/
 }
 
 void UATSimulationTask_StabilityRecursive::DoWork_SubThread() // UATSimulationTask
@@ -210,7 +217,7 @@ bool UATSimulationTask_StabilityRecursive::DoWork_SubThread_PointEarlySkip(const
 		return false;
 	}
 	const FVoxelInstanceData& TargetData = TargetTree->GetVoxelInstanceDataAtPoint(InTargetPoint, false, true);
-	float CompoundStability = TargetData.Stability;
+	float CompoundStability = TargetData.AvalancheValue;
 
 	for (int32 SampleDepthZ = 0; SampleDepthZ < EarlySkipCheckDepth; ++SampleDepthZ)
 	{
@@ -227,9 +234,9 @@ bool UATSimulationTask_StabilityRecursive::DoWork_SubThread_PointEarlySkip(const
 				}
 				else
 				{
-					CompoundStability *= SampleData.Stability * SampleData.TypeData->GetStabilityAttachmentMulForDirection(EATAttachmentDirection::Bottom);
+					CompoundStability *= SampleData.AvalancheValue * SampleData.TypeData->GetStabilityAttachmentMulForDirection(EATAttachmentDirection::Bottom);
 
-					if (CompoundStability <= AvalancheStabilityThreshold)
+					if (CompoundStability <= AvalancheValueThreshold)
 					{
 						return false;
 					}
@@ -263,7 +270,7 @@ float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAll
 			const FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
 			ensureReturn(SampleData.IsTypeDataValid(), 0.0f);
 
-			return PointCachePtr->Stability * SampleData.TypeData->GetStabilityAttachmentMulForDirection(InNeighborDirection);
+			return PointCachePtr->AvalancheValue * SampleData.TypeData->GetStabilityAttachmentMulForDirection(InNeighborDirection);
 		}
 	}
 	if (InThreadData.ThisOrderUpdatedPoints.Contains(SamplePoint))
@@ -316,21 +323,21 @@ void UATSimulationTask_StabilityRecursive::PostWork_GameThread()
 		FIntVector SamplePoint = SelectedUpdatePoints.Pop();
 		FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false);
 
-		float PrevStability = SampleData.Stability;
-		SampleData.Stability = UpdatedSelectedPointsStabilities.Pop();
+		float PrevAvalancheValue = SampleData.AvalancheValue;
+		SampleData.AvalancheValue = UpdatedSelectedPointsStabilities.Pop();
 
 		AATVoxelChunk* SampleChunk = TargetTree->GetVoxelChunkAtPoint(SamplePoint);
 		ensureContinue(SampleChunk);
 
-		//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.Stability);
+		//SampleChunk->HandleSetVoxelStabilityAtPoint(SamplePoint, SampleData.AvalancheValue);
 		SampleChunk->HandleSetVoxelInstanceDataAtPoint(SamplePoint, SampleData);
 
-		if (SampleData.Stability <= AvalancheStabilityThreshold)
+		if (SampleData.AvalancheValue <= AvalancheValueThreshold)
 		{
 			ensureContinue(AvalancheSimulationTask);
 			AvalancheSimulationTask->QueuePoint(SamplePoint, false);
 
-			if (PrevStability > AvalancheStabilityThreshold)
+			if (PrevAvalancheValue > AvalancheValueThreshold)
 			{
 				QueuePointsFeedback(SamplePoint);
 			}

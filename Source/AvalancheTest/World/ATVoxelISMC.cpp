@@ -328,7 +328,7 @@ void UATVoxelISMC::Debug_UpdateStabilityValueAtPoint(const FIntVector& InPoint)
 	if (bDebugStabilityValues && HasMeshAtPoint(InPoint))
 	{
 		const FVoxelInstanceData& VoxeInstanceData = GetVoxelInstanceDataAtPoint(InPoint, false);
-		SetCustomDataValue(GetMeshIndexAtPoint(InPoint), DebugVoxelCustomData_Stability, VoxeInstanceData.Stability, true);
+		SetCustomDataValue(GetMeshIndexAtPoint(InPoint), DebugVoxelCustomData_Stability, VoxeInstanceData.AvalancheValue, true);
 	}
 }
 

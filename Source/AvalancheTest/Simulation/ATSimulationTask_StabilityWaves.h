@@ -86,10 +86,10 @@ protected:
 protected:
 
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
-	float AvalancheStabilityThreshold;
+	float AvalancheMassThreshold;
 
 	UPROPERTY(Category = "Avalanche", EditAnywhere, BlueprintReadWrite)
-	float AvalancheMassThreshold;
+	float AvalancheValueThreshold;
 
 	UPROPERTY(Transient)
 	TObjectPtr<class UATSimulationTask_Avalanche> AvalancheSimulationTask;

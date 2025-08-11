@@ -1,6 +1,6 @@
 // Scientific Ways
 
-#include "VoxelChunkDetails.h"
+#include "Details/VoxelChunkDetails.h"
 
 #define LOCTEXT_NAMESPACE "VoxelChunkDetails"
 

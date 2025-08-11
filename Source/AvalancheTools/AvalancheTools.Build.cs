@@ -9,9 +9,9 @@ public class AvalancheTools : ModuleRules
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
 		PublicIncludePaths.AddRange(new string[]
-		{
-			
-		});
+        {
+            "AvalancheTools",
+        });
 		
 		PrivateIncludePaths.AddRange(new string[]
 		{
@@ -27,17 +27,22 @@ public class AvalancheTools : ModuleRules
 		{
 			"CoreUObject",
 			"Engine",
+
 			"Slate",
 			"SlateCore",
 			"InputCore",
-			"EditorFramework",
+
 			"EditorStyle",
-			"UnrealEd",
+			"EditorSubsystem",
+            "EditorFramework",
+
+            "UnrealEd",
 			"LevelEditor",
-			"InteractiveToolsFramework",
+            "PropertyEditor",
+            "PlacementMode",
+
+            "InteractiveToolsFramework",
 			"EditorInteractiveToolsFramework",
-			"PropertyEditor",
-			"PlacementMode",
 			"GameplayDebugger",
 
             "UnrealCommons",
