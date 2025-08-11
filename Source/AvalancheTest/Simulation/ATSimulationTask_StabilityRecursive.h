@@ -82,10 +82,14 @@ protected:
 		}
 	};
 
+	bool DoWork_SubThread_PointEarlySkip(const FIntVector& InTargetPoint);
 	float DoWork_SubThread_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection = EATAttachmentDirection::None, uint8 InCurrentRecursionLevel = 0u);
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadWrite)
 	bool bEnablePointsCache;
+
+	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadWrite)
+	int32 EarlySkipCheckDepth;
 
 	UPROPERTY(Category = "Task", EditAnywhere, BlueprintReadWrite)
 	uint8 MaxRecursionLevel;

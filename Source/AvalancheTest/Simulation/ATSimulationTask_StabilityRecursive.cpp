@@ -12,6 +12,7 @@
 UATSimulationTask_StabilityRecursive::UATSimulationTask_StabilityRecursive()
 {
 	bEnablePointsCache = false;
+	EarlySkipCheckDepth = 32u;
 	MaxRecursionLevel = 48u;
 
 	QueueFeedbackRadius = 2;
@@ -160,9 +161,9 @@ void UATSimulationTask_StabilityRecursive::DoWork_SubThread() // UATSimulationTa
 			const FIntVector& BottomPoint = SamplePoint + FIntVector(0, 0, -1);
 			FVoxelInstanceData& BottomData = TargetTree->GetVoxelInstanceDataAtPoint(BottomPoint, false, true);
 
-			if (false && (BottomData.Stability > AvalancheStabilityThreshold))
+			if (DoWork_SubThread_PointEarlySkip(SamplePoint))
 			{
-				NewStability = BottomData.Stability;
+				NewStability = 1.0f;
 			}
 			else
 			{
@@ -200,6 +201,47 @@ void UATSimulationTask_StabilityRecursive::DoWork_SubThread() // UATSimulationTa
 	});
 	
 	bPendingPostWork = true;
+}
+
+bool UATSimulationTask_StabilityRecursive::DoWork_SubThread_PointEarlySkip(const FIntVector& InTargetPoint)
+{
+	if (EarlySkipCheckDepth < 1)
+	{
+		return false;
+	}
+	const FVoxelInstanceData& TargetData = TargetTree->GetVoxelInstanceDataAtPoint(InTargetPoint, false, true);
+	float CompoundStability = TargetData.Stability;
+
+	for (int32 SampleDepthZ = 0; SampleDepthZ < EarlySkipCheckDepth; ++SampleDepthZ)
+	{
+		FIntVector SamplePoint = InTargetPoint + FIntVector(0, 0, -SampleDepthZ);
+
+		if (TargetTree->HasVoxelInstanceDataAtPoint(SamplePoint, true))
+		{
+			const FVoxelInstanceData& SampleData = TargetTree->GetVoxelInstanceDataAtPoint(SamplePoint, false, true);
+			if (SampleData.IsTypeDataValid())
+			{
+				if (SampleData.TypeData->bHasInfiniteStability)
+				{
+					return true;
+				}
+				else
+				{
+					CompoundStability *= SampleData.Stability * SampleData.TypeData->GetStabilityAttachmentMulForDirection(EATAttachmentDirection::Bottom);
+
+					if (CompoundStability <= AvalancheStabilityThreshold)
+					{
+						return false;
+					}
+				}
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
+	return true;
 }
 
 float UATSimulationTask_StabilityRecursive::DoWork_SubThread_GetStabilityFromAllNeighbors(const FIntVector& InTargetPoint, FRecursiveThreadData& InThreadData, EATAttachmentDirection InNeighborDirection, uint8 InCurrentRecursionLevel)

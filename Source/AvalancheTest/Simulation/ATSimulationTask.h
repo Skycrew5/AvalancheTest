@@ -29,7 +29,7 @@ enum class EATSimulationTaskPhase : uint8
 /**
  *
  */
-UCLASS(Abstract, DefaultToInstanced, ClassGroup = ("Simulations"), meta = (DisplayName = "[AT] Simulation Task", BlueprintSpawnableComponent))
+UCLASS(Abstract, BlueprintType, EditInlineNew, DefaultToInstanced, ClassGroup = ("Simulations"), meta = (DisplayName = "[AT] Simulation Task"))
 class AVALANCHETEST_API UATSimulationTask : public UObject
 {
 	GENERATED_BODY()

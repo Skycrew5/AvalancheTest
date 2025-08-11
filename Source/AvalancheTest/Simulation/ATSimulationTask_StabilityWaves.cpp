@@ -191,26 +191,26 @@ void UATSimulationTask_StabilityWaves::DoWork_SubThread() // UATSimulationTask
 
 			float AvalancheThresholdMul = 1.0f;
 
-			if (SamplePoint.Z == BoundingBoxMin.Z || BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 0, -1))) // Supported voxels
+			if (SamplePoint.Z == BoundingBoxMin.Z || BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 0, -1))) // Supported voxel
 			{
 				if (BoundingBoxDataMap.Contains(SamplePoint + FIntVector(-1, 0, 0)) &&
 					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(1, 0, 0)) &&
-					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 1, 0)) &&
-					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, -1, 0))) // Fully supported voxels
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, -1, 0)) &&
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 1, 0))) // Fully supported voxel
 				{
 					AvalancheThresholdMul = 100.0f;
 				}
-				else // Partially supported voxels
+				else // Partially supported voxel
 				{
 					AvalancheThresholdMul = 30.0f;
 				}
 			}
-			else // Loose voxels
+			else // Loose voxel
 			{
-				if (BoundingBoxDataMap.Contains(SamplePoint + FIntVector(-1, 0, -1)) ||
-					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(1, 0, -1)) ||
-					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 1, -1)) ||
-					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, -1, -1))) // Somehow supported voxels
+				if (BoundingBoxDataMap.Contains(SamplePoint + FIntVector(-1, 0, 0)) ||
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(1, 0, 0)) ||
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, -1, 0)) ||
+					BoundingBoxDataMap.Contains(SamplePoint + FIntVector(0, 1, 0))) // Somehow supported voxel
 				{
 					AvalancheThresholdMul = 2.0f;
 				}
