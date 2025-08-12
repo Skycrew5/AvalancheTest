@@ -39,8 +39,38 @@ protected:
 	virtual void OnConstruction(const FTransform& InTransform) override; // AActor
 	virtual void BeginPlay() override; // AActor
 	virtual void Tick(float InDeltaSeconds) override; // AActor
+	virtual bool ShouldTickIfViewportsOnly() const override { return GetWorld()->IsEditorWorld(); } // AActor
 	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // AActor
 //~ End Actor
+
+//~ Begin Tick Updates
+public:
+
+	UFUNCTION(Category = "Tick Updates", BlueprintCallable)
+	bool IsThisTickUpdatesTimeBudgetExceeded() const;
+
+	UFUNCTION(Category = "Tick Updates", BlueprintCallable)
+	void SetThisTickUpdatesTimeBudget(double InTimeMs);
+
+	UFUNCTION(Category = "Tick Updates", BlueprintCallable)
+	void ForceTickUpdateNextFrame();
+
+protected:
+	void HandleTickUpdate_FromForceTickUpdate();
+	void HandleTickUpdate(float InDeltaSeconds);
+
+	UPROPERTY(Category = "Tick Updates", EditAnywhere, BlueprintReadOnly)
+	double TickUpdatesTimeBudgetMs;
+
+	UPROPERTY(Category = "Tick Updates", EditAnywhere, BlueprintReadOnly)
+	double TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive;
+
+	UPROPERTY(Category = "Tick Updates", EditAnywhere, BlueprintReadOnly)
+	double TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive;
+
+	UPROPERTY(Transient)
+	uint64 ThisTickUpdatesTimeBudget_CyclesThreshold;
+//~ End Tick Updates
 
 //~ Begin Voxel Chunks
 public:
@@ -83,9 +113,10 @@ public:
 
 	const TArray<const AActor*>& GetChunksUpdateReferenceActors() const { return ChunksUpdateReferenceActors; }
 protected:
+	void UpdateBoundsSize() { BoundsSize = TreeSizeInChunks * ChunkSize; }
 	void HandleChunkUpdates();
 	void UpdateSortedChunkArray();
-	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY, TArray<AATVoxelChunk*>& OutNewChunks);
+	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY, TArray<AATVoxelChunk*>& OutNewChunks, const bool bInReplacePrevChunks = false);
 
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class AATVoxelChunk> ChunkClass;
@@ -123,6 +154,9 @@ public:
 
 	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
 	int32 GetTreeSeed() const { return TreeSeed; }
+
+	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
+	void HandleGenerate(bool bInAsync, int32 InTreeSeed);
 
 protected:
 
@@ -195,32 +229,17 @@ protected:
 public:
 
 	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
-	bool IsThisTickUpdatesTimeBudgetExceeded() const;
+	void SaveData(const FString& InSaveSlot);
 
 	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
-	void SetThisTickUpdatesTimeBudget(double InTimeMs);
+	void LoadData(const FString& InSaveSlot);
 
 	UFUNCTION(Category = "Voxel Data", BlueprintCallable)
-	void ForceTickUpdateNextFrame();
+	void ResetData();
 
 	void ApplyQueued_Point_To_VoxelInstanceData_Map();
 protected:
 	void HandleQueuedVoxelInstanceData(const FIntVector& InPoint);
-
-	void HandleTickUpdate_FromForceTickUpdate();
-	void HandleTickUpdate(float InDeltaSeconds);
-
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	double TickUpdatesTimeBudgetMs;
-
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	double TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive;
-
-	UPROPERTY(Category = "Voxel Data", EditAnywhere, BlueprintReadOnly)
-	double TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive;
-
-	UPROPERTY(Transient)
-	uint64 ThisTickUpdatesTimeBudget_CyclesThreshold;
 
 	UPROPERTY(Transient)
 	TMap<FIntVector, FVoxelInstanceData> Queued_Point_To_VoxelInstanceData_Map;

@@ -14,8 +14,7 @@ public:
 public:
 	virtual void RegisterCommands() override; // TCommands<>
 
-	TSharedPtr<FUICommandInfo> RegenerateWorldTool;
-	TSharedPtr<FUICommandInfo> SaveWorldTool;
+	TSharedPtr<FUICommandInfo> ManageWorldTool;
 //~ End Initialize
 
 //~ Begin Getters

@@ -10,8 +10,7 @@
 // AddYourTool Step 1 - include the header file for your Tools here	//////
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
-#include "EditorMode/Tools/SaveWorldTool.h"
-#include "EditorMode/Tools/RegenerateWorldTool.h"
+#include "EditorMode/Tools/ManageWorldTool.h"
 
 // step 2: register a ToolBuilder in FVoxelToolsEditorMode::Enter()
 
@@ -45,14 +44,11 @@ void UVoxelToolsEditorMode::Enter() // UEdMode
 	////////////////////////////////////////////////////////////////////////// 
 	const auto& VoxelToolCommands = FVoxelToolsEditorModeCommands::Get();
 
-	auto RegenerateWorldToolBuilder = NewObject<URegenerateWorldToolBuilder>(this);
-	RegisterTool(VoxelToolCommands.RegenerateWorldTool, URegenerateWorldTool::Identifier, RegenerateWorldToolBuilder);
-
-	auto SaveWorldToolBuilder = NewObject<USaveWorldToolBuilder>(this);
-	RegisterTool(VoxelToolCommands.SaveWorldTool, USaveWorldTool::Identifier, SaveWorldToolBuilder);
+	auto ManageWorldToolBuilder = NewObject<UManageWorldToolBuilder>(this);
+	RegisterTool(VoxelToolCommands.ManageWorldTool, UManageWorldTool::Identifier, ManageWorldToolBuilder);
 
 	// active tool type is not relevant here, we just set to default
-	GetToolManager()->SelectActiveToolType(EToolSide::Left, USaveWorldTool::Identifier);
+	GetToolManager()->SelectActiveToolType(EToolSide::Left, UManageWorldTool::Identifier);
 }
 
 void UVoxelToolsEditorMode::CreateToolkit() // UEdMode

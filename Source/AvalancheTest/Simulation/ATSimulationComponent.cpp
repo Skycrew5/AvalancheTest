@@ -28,18 +28,32 @@ void UATSimulationComponent::OnRegister() // UActorComponent
 {
 	Super::OnRegister();
 
+	PrimaryComponentTick.SetTickFunctionEnable(!GetWorld()->IsEditorWorld());
+
 	OwnerTree = GetOwner<AATVoxelTree>();
 	ensure(OwnerTree);
+
+	for (UATSimulationTask* SampleTask : TaskArray)
+	{
+		SampleTask->Initialize(OwnerTree);
+	}
+}
+
+void UATSimulationComponent::OnUnregister() // UActorComponent
+{
+	Super::OnUnregister();
+
+	for (UATSimulationTask* SampleTask : TaskArray)
+	{
+		SampleTask->DeInitialize();
+	}
 }
 
 void UATSimulationComponent::BeginPlay() // UActorComponent
 {
 	Super::BeginPlay();
 
-	for (UATSimulationTask* SampleTask : TaskArray)
-	{
-		SampleTask->Initialize(OwnerTree);
-	}
+	
 }
 
 void UATSimulationComponent::TickComponent(float InDeltaSeconds, enum ELevelTick InTickType, FActorComponentTickFunction* InThisTickFunction) // UActorComponent
@@ -63,10 +77,7 @@ void UATSimulationComponent::EndPlay(const EEndPlayReason::Type InReason) // UAc
 {
 	Super::EndPlay(InReason);
 
-	for (UATSimulationTask* SampleTask : TaskArray)
-	{
-		SampleTask->DeInitialize();
-	}
+	
 }
 //~ End ActorComponent
 

@@ -25,6 +25,8 @@ void UATProceduralGeneratorTask::Initialize(UATProceduralGeneratorComponent* InO
 	AsyncTaskPtr = new FAsyncTask<FATProceduralGeneratorTask_AsyncTask>();
 	AsyncTaskPtr->GetTask().TargetTask = this;
 
+	bDoWorkGlobalOnceCompleted = false;
+
 	int32 NextTaskIndex = InTaskIndex + 1;
 	if (OwnerComponent->HasTaskAtIndex(NextTaskIndex))
 	{
@@ -87,9 +89,9 @@ void UATProceduralGeneratorTask::PreWork_GameThread()
 	ensureReturn(AsyncTaskPtr->IsDone());
 
 	ensureReturn(SelectedChunks.IsEmpty());
-	ensureReturn(OwnerTree);
+	ensureReturn(OwnerComponent);
 
-	while (!OwnerTree->IsThisTickUpdatesTimeBudgetExceeded() && !QueuedChunksData.DataArray.IsEmpty())
+	while (!OwnerComponent->IsThisTickUpdatesTimeBudgetExceeded() && !QueuedChunksData.DataArray.IsEmpty())
 	{
 		TObjectPtr<class AATVoxelChunk> SampleChunk = QueuedChunksData.DataArray.Pop();
 

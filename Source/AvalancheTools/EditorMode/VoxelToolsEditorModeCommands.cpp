@@ -6,7 +6,7 @@
 
 FVoxelToolsEditorModeCommands::FVoxelToolsEditorModeCommands()
 	: TCommands<FVoxelToolsEditorModeCommands>("VoxelToolsEditorMode",
-		NSLOCTEXT("VoxelToolsEditorMode", "VoxelToolsEditorModeCommands", "Sample Tools Editor Mode"),
+		NSLOCTEXT("VoxelToolsEditorMode", "VoxelToolsEditorModeCommands", "Voxel Tools Editor Mode"),
 		NAME_None,
 		FAppStyle::GetAppStyleSetName())
 {
@@ -16,13 +16,10 @@ FVoxelToolsEditorModeCommands::FVoxelToolsEditorModeCommands()
 //~ Begin Initialize
 void FVoxelToolsEditorModeCommands::RegisterCommands() // TCommands<>
 {
-	TArray <TSharedPtr<FUICommandInfo>>& ToolCommands = Commands.FindOrAdd(NAME_Default);
+	TArray<TSharedPtr<FUICommandInfo>>& ToolCommands = Commands.FindOrAdd(NAME_Default);
 
-	UI_COMMAND(RegenerateWorldTool, "Regenerate World", "Procedural Regenerate World", EUserInterfaceActionType::Button, FInputChord());
-	ToolCommands.Add(RegenerateWorldTool);
-
-	UI_COMMAND(SaveWorldTool, "Save World", "Save World to Disk", EUserInterfaceActionType::Button, FInputChord());
-	ToolCommands.Add(SaveWorldTool);
+	UI_COMMAND(ManageWorldTool, "Manage World", "Manage Global World Data", EUserInterfaceActionType::Button, FInputChord());
+	ToolCommands.Add(ManageWorldTool);
 }
 //~ End Initialize
 

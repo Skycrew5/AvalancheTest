@@ -15,13 +15,13 @@ UATProceduralGeneratorComponent::UATProceduralGeneratorComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickInterval = 0.5f;
 
+	TickUpdatesTimeBudgetMs = 10.0;
+
 	TaskArray = {
 		CreateDefaultSubobject<UATProceduralGeneratorTask_Landscape>(TEXT("ProceduralGeneratorTask_Landscape")),
 		CreateDefaultSubobject<UATProceduralGeneratorTask_PlayerStart>(TEXT("ProceduralGeneratorTask_PlayerStart")),
 	};
 	bEnableProceduralTasks = true;
-
-	VoxelTreeDataSaveSlot = TEXT("VoxelTreeData/DefaultSlot");
 }
 
 //~ Begin ActorComponent
@@ -31,13 +31,6 @@ void UATProceduralGeneratorComponent::OnRegister() // UActorComponent
 
 	OwnerTree = GetOwner<AATVoxelTree>();
 	ensure(OwnerTree);
-}
-
-void UATProceduralGeneratorComponent::BeginPlay() // UActorComponent
-{
-	Super::BeginPlay();
-
-	//UATSaveGame_VoxelTree::LoadSlot(OwnerTree, VoxelTreeDataSaveSlot);
 
 	for (int32 SampleIndex = 0; SampleIndex < TaskArray.Num(); ++SampleIndex)
 	{
@@ -46,6 +39,23 @@ void UATProceduralGeneratorComponent::BeginPlay() // UActorComponent
 		ensureContinue(SampleTask);
 		SampleTask->Initialize(this, SampleIndex);
 	}
+}
+
+void UATProceduralGeneratorComponent::OnUnregister() // UActorComponent
+{
+	Super::OnUnregister();
+
+	for (UATProceduralGeneratorTask* SampleTask : TaskArray)
+	{
+		SampleTask->DeInitialize();
+	}
+}
+
+void UATProceduralGeneratorComponent::BeginPlay() // UActorComponent
+{
+	Super::BeginPlay();
+
+	
 }
 
 void UATProceduralGeneratorComponent::TickComponent(float InDeltaSeconds, enum ELevelTick InTickType, FActorComponentTickFunction* InThisTickFunction) // UActorComponent
@@ -59,14 +69,21 @@ void UATProceduralGeneratorComponent::EndPlay(const EEndPlayReason::Type InReaso
 {
 	Super::EndPlay(InReason);
 
-	for (UATProceduralGeneratorTask* SampleTask : TaskArray)
-	{
-		SampleTask->DeInitialize();
-	}
+	
 }
 //~ End ActorComponent
 
-//~ Begin Update
+//~ Begin Tick Updates
+bool UATProceduralGeneratorComponent::IsThisTickUpdatesTimeBudgetExceeded() const
+{
+	return (FPlatformTime::Cycles64() > ThisTickUpdatesTimeBudget_CyclesThreshold);
+}
+
+void UATProceduralGeneratorComponent::SetThisTickUpdatesTimeBudget(double InTimeMs)
+{
+	ThisTickUpdatesTimeBudget_CyclesThreshold = FPlatformTime::Cycles64() + FPlatformTime::SecondsToCycles64(InTimeMs * 0.001);
+}
+
 void UATProceduralGeneratorComponent::ForceTickUpdateNextFrame()
 {
 	UWorld* World = GetWorld();
@@ -94,9 +111,10 @@ void UATProceduralGeneratorComponent::HandleTickUpdate_FromForceTickUpdate()
 
 void UATProceduralGeneratorComponent::HandleTickUpdate(float InDeltaSeconds)
 {
+	SetThisTickUpdatesTimeBudget(TickUpdatesTimeBudgetMs);
 	HandleProceduralTasks();
 }
-//~ End Update
+//~ End Tick Updates
 
 //~ Begin Queue
 int32 UATProceduralGeneratorComponent::GetTotalQueuedChunksNum() const
@@ -178,13 +196,6 @@ void UATProceduralGeneratorComponent::HandleProceduralTasks()
 			break;
 		}
 	}
-	if (bPendingSaveGeneratedData)
-	{
-		if (CurrentTaskIndex == (TaskArray.Num() - 1) && bMoveToNextTask) // Just finished the last task
-		{
-			FinishGenerateVoxelTreeData();
-		}
-	}
 	if (bMoveToNextTask)
 	{
 		IncrementCurrentTaskIndex();
@@ -197,13 +208,3 @@ void UATProceduralGeneratorComponent::IncrementCurrentTaskIndex()
 	CurrentTaskIndex = (CurrentTaskIndex + 1) % TaskArray.Num();
 }
 // End Tasks
-
-//~ Begin Editor
-void UATProceduralGeneratorComponent::FinishGenerateVoxelTreeData()
-{
-	bTickInEditor = false;
-	bPendingSaveGeneratedData = false;
-
-	UATSaveGame_VoxelTree::SaveSlot(OwnerTree, VoxelTreeDataSaveSlot);
-}
-//~ End Editor

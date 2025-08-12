@@ -8,6 +8,7 @@
 void UATSaveGame_VoxelTree::SaveSlot(AATVoxelTree* InTargetTree, const FString& InSaveSlot)
 {
 	ensureReturn(InTargetTree);
+	ensureReturn(InTargetTree->Queued_Point_To_VoxelInstanceData_Map.IsEmpty()); // Ensure no pending changes
 
 	ThisClass* SaveData = Cast<ThisClass>(UGameplayStatics::CreateSaveGameObject(ThisClass::StaticClass()));
 
@@ -29,11 +30,17 @@ void UATSaveGame_VoxelTree::LoadSlot(class AATVoxelTree* InTargetTree, const FSt
 	ensureReturn(LoadedData);
 
 	ensureReturn(InTargetTree);
+	ensureReturn(InTargetTree->Point_To_VoxelInstanceData_Map.IsEmpty());
+
 	InTargetTree->ChunkClass = LoadedData->ChunkClass;
 	InTargetTree->TreeSizeInChunks = LoadedData->TreeSizeInChunks;
 	InTargetTree->ChunkSize = LoadedData->ChunkSize;
 	InTargetTree->VoxelSize = LoadedData->VoxelSize;
 	InTargetTree->ChunksUpdateMaxSquareExtent = LoadedData->ChunksUpdateMaxSquareExtent;
-	InTargetTree->Point_To_VoxelInstanceData_Map = LoadedData->Point_To_VoxelInstanceData_Map;
+
+	for (const auto& Pair : LoadedData->Point_To_VoxelInstanceData_Map)
+	{
+		InTargetTree->SetVoxelAtPoint(Pair.Key, Pair.Value.TypeData, true);
+	}
 }
 //~ End Load

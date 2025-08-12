@@ -21,10 +21,37 @@ public:
 //~ Begin ActorComponent
 protected:
 	virtual void OnRegister() override; // UActorComponent
+	virtual void OnUnregister() override; // UActorComponent
 	virtual void BeginPlay() override; // UActorComponent
 	virtual void TickComponent(float InDeltaSeconds, enum ELevelTick InTickType, FActorComponentTickFunction* InThisTickFunction) override; // UActorComponent
 	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // UActorComponent
 //~ End ActorComponent
+	
+//~ Begin Tick Updates
+public:
+
+	UFUNCTION(Category = "Tick Updates", BlueprintCallable)
+	bool IsThisTickUpdatesTimeBudgetExceeded() const;
+
+	UFUNCTION(Category = "Tick Updates", BlueprintCallable)
+	void SetThisTickUpdatesTimeBudget(double InTimeMs);
+
+	UFUNCTION(Category = "Tick Updates", BlueprintCallable)
+	void ForceTickUpdateNextFrame();
+
+protected:
+	void HandleTickUpdate_FromForceTickUpdate();
+	void HandleTickUpdate(float InDeltaSeconds);
+
+	UPROPERTY(Category = "Tick Updates", EditAnywhere, BlueprintReadOnly)
+	double TickUpdatesTimeBudgetMs;
+
+	UPROPERTY(Transient)
+	uint64 ThisTickUpdatesTimeBudget_CyclesThreshold;
+
+	UPROPERTY(Transient)
+	FTimerHandle ForceTickUpdateNextFrameTimerHandle;
+//~ End Tick Updates
 
 //~ Begin Owner
 public:
@@ -38,20 +65,6 @@ protected:
 	TObjectPtr<class AATVoxelTree> OwnerTree;
 //~ End Owner
 
-//~ Begin Update
-public:
-
-	UFUNCTION(Category = "Update", BlueprintCallable)
-	void ForceTickUpdateNextFrame();
-
-protected:
-	void HandleTickUpdate_FromForceTickUpdate();
-	void HandleTickUpdate(float InDeltaSeconds);
-
-	UPROPERTY(Transient)
-	FTimerHandle ForceTickUpdateNextFrameTimerHandle;
-//~ End Update
-	
 //~ Begin Queue
 public:
 
@@ -92,17 +105,4 @@ protected:
 	UPROPERTY(Category = "Tasks", BlueprintReadOnly)
 	int32 CurrentTaskIndex;
 //~ End Tasks
-
-//~ Begin Editor
-public:
-
-	UPROPERTY(Category = "Editor", EditAnywhere, BlueprintReadWrite)
-	FString VoxelTreeDataSaveSlot;
-
-	UPROPERTY(Category = "Editor", BlueprintReadWrite)
-	bool bPendingSaveGeneratedData;
-
-protected:
-	void FinishGenerateVoxelTreeData();
-//~ End Editor
 };

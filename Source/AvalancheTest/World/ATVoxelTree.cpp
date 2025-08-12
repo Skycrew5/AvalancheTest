@@ -3,6 +3,7 @@
 #include "World/ATVoxelTree.h"
 
 #include "Framework/ATGameState.h"
+#include "Framework/ATSaveGame_VoxelTree.h"
 
 #include "Procedural/ATProceduralGeneratorComponent.h"
 
@@ -25,6 +26,10 @@ AATVoxelTree::AATVoxelTree(const FObjectInitializer& InObjectInitializer)
 	SimulationComponent = CreateDefaultSubobject<UATSimulationComponent>(TEXT("SimulationComponent"));
 	ProceduralGeneratorComponent = CreateDefaultSubobject<UATProceduralGeneratorComponent>(TEXT("ProceduralGeneratorComponent"));
 
+	TickUpdatesTimeBudgetMs = 10.0;
+	TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive = 0.0;
+	TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive = 0.001;
+
 	ChunkClass = AATVoxelChunk::StaticClass();
 	TreeSizeInChunks = FIntVector(4, 4, 2);
 	ChunkSize = 16;
@@ -32,10 +37,6 @@ AATVoxelTree::AATVoxelTree(const FObjectInitializer& InObjectInitializer)
 	ChunksUpdateMaxSquareExtent = 4;
 
 	TreeSeed = 1337;
-
-	TickUpdatesTimeBudgetMs = 10.000;
-	TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive = 0.0;
-	TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive = 0.001;
 }
 
 //~ Begin Actor
@@ -43,14 +44,14 @@ void AATVoxelTree::PostInitializeComponents() // AActor
 {
 	Super::PostInitializeComponents();
 
-	BoundsSize = TreeSizeInChunks * ChunkSize;
+	UpdateBoundsSize();
 }
 
 void AATVoxelTree::OnConstruction(const FTransform& InTransform) // AActor
 {
 	Super::OnConstruction(InTransform);
 
-
+	UpdateBoundsSize();
 }
 
 void AATVoxelTree::BeginPlay() // AActor
@@ -84,6 +85,58 @@ void AATVoxelTree::EndPlay(const EEndPlayReason::Type InReason) // AActor
 
 }
 //~ End Actor
+
+//~ Begin Tick Updates
+bool AATVoxelTree::IsThisTickUpdatesTimeBudgetExceeded() const
+{
+	return (FPlatformTime::Cycles64() > ThisTickUpdatesTimeBudget_CyclesThreshold);
+}
+
+void AATVoxelTree::SetThisTickUpdatesTimeBudget(double InTimeMs)
+{
+	ThisTickUpdatesTimeBudget_CyclesThreshold = (FPlatformTime::Cycles64() + FPlatformTime::SecondsToCycles64(InTimeMs * 0.001));
+}
+
+void AATVoxelTree::ForceTickUpdateNextFrame()
+{
+	FTimerManager& TimerManager = GetWorldTimerManager();
+
+	if (TimerManager.IsTimerActive(ForceTickUpdateNextFrameTimerHandle))
+	{
+
+	}
+	else
+	{
+		ForceTickUpdateNextFrameTimerHandle = TimerManager.SetTimerForNextTick(this, &AATVoxelTree::HandleTickUpdate_FromForceTickUpdate);
+	}
+}
+
+void AATVoxelTree::HandleTickUpdate_FromForceTickUpdate()
+{
+	UWorld* World = GetWorld();
+	ensureReturn(World);
+
+	HandleTickUpdate(World->GetDeltaSeconds());
+}
+
+void AATVoxelTree::HandleTickUpdate(float InDeltaSeconds)
+{
+	ensureReturn(ProceduralGeneratorComponent);
+
+	double ThisTickUpdatesTimeBudgetMs = TickUpdatesTimeBudgetMs;
+	ThisTickUpdatesTimeBudgetMs += (double)ProceduralGeneratorComponent->GetTotalQueuedChunksNum() * TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive;
+	ThisTickUpdatesTimeBudgetMs += (double)Queued_PointsSkipSimulationQueue_Set.Num() * TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive;
+
+	if (CVarVoxelTree_ForceSyncUpdates.GetValueOnGameThread() > 0)
+	{
+		ThisTickUpdatesTimeBudgetMs = 10000.0; // Help synchronous updates with 10 seconds budget
+	}
+	SetThisTickUpdatesTimeBudget(ThisTickUpdatesTimeBudgetMs);
+
+	HandleBrokenVoxelsUpdates();
+	HandleChunkUpdates();
+}
+//~ End Tick Updates
 
 int32 FloorDiv(int32 A, int32 B)
 {
@@ -126,7 +179,13 @@ void AATVoxelTree::UnRegisterChunksUpdateReferenceActor(const AActor* InActor)
 void AATVoxelTree::HandleChunkUpdates()
 {
 	ensureReturn(SimulationComponent);
-	if (!SimulationComponent->IsCurrentTaskActive())
+	ensureReturn(GetWorld());
+
+	if (GetWorld()->IsEditorWorld())
+	{
+
+	}
+	else if (!SimulationComponent->IsCurrentTaskActive())
 	{
 		TArray<AATVoxelChunk*> NewChunks;
 
@@ -175,7 +234,7 @@ void AATVoxelTree::UpdateSortedChunkArray()
 	SortedChunksData.UpdateDistancesAndSort(this, false);
 }
 
-void AATVoxelTree::InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY, TArray<AATVoxelChunk*>& OutNewChunks)
+void AATVoxelTree::InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY, TArray<AATVoxelChunk*>& OutNewChunks, const bool bInReplacePrevChunks)
 {
 	if (InSquareExtentXY < 1)
 	{
@@ -203,17 +262,31 @@ void AATVoxelTree::InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, co
 
 				if (ChunksMap.Contains(SamplePoint))
 				{
-					continue;
+					if (bInReplacePrevChunks)
+					{
+						if (AATVoxelChunk* SampleChunk = ChunksMap[SamplePoint])
+						{
+							SampleChunk->Destroy();
+						}
+						ChunksMap.Remove(SamplePoint);
+					}
+					else
+					{
+						continue; // Skip already existing chunk
+					}
 				}
 				FTransform SampleTransform = FTransform(FVector(SamplePoint * ChunkSize) * VoxelSize);
-				AATVoxelChunk* SampleChunk = World->SpawnActorDeferred<AATVoxelChunk>(
-					ChunkClass,
-					SampleTransform,
-					this,
-					nullptr,
-					ESpawnActorCollisionHandlingMethod::AlwaysSpawn,
-					ESpawnActorScaleMethod::MultiplyWithRoot
-				);
+
+				FActorSpawnParameters SpawnInfo;
+				SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+				SpawnInfo.TransformScaleMethod = ESpawnActorScaleMethod::MultiplyWithRoot;
+				SpawnInfo.Owner = this;
+				SpawnInfo.Instigator = nullptr;
+				SpawnInfo.ObjectFlags = RF_Transient | RF_DuplicateTransient;
+				SpawnInfo.bHideFromSceneOutliner = true;
+				SpawnInfo.bDeferConstruction = true;
+
+				AATVoxelChunk* SampleChunk = World->SpawnActor<AATVoxelChunk>(ChunkClass, SampleTransform, SpawnInfo);
 				ensureContinue(SampleChunk);
 
 				ensureContinue(!ChunksMap.Contains(SamplePoint));
@@ -222,9 +295,14 @@ void AATVoxelTree::InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, co
 
 				SampleChunk->BP_InitChunk(this, SamplePoint);
 
-				SampleChunk->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 				SampleChunk->FinishSpawning(SampleTransform);
+				SampleChunk->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 
+				if (SampleChunk)
+				{
+					SampleChunk->SetFlags(RF_Transient);
+					SampleChunk->Modify(false); // Prevent transaction tracking
+				}
 				OutNewChunks.Add(SampleChunk);
 
 				if (IsThisTickUpdatesTimeBudgetExceeded())
@@ -238,6 +316,28 @@ LeaveLoop:
 	return;
 }
 //~ End Voxel Chunks
+
+void AATVoxelTree::HandleGenerate(bool bInAsync, int32 InTreeSeed)
+{
+	ResetData();
+
+	TreeSeed = InTreeSeed;
+
+	if (!bInAsync)
+	{
+		CVarVoxelTree_ForceSyncUpdates->Set(1);
+	}
+	FIntPoint TreeSizeInChunksXY = FIntPoint(TreeSizeInChunks.X, TreeSizeInChunks.Y);
+
+	SetThisTickUpdatesTimeBudget(1000000.0);
+
+	TArray<AATVoxelChunk*> NewChunks;
+	InitVoxelChunksInSquare(TreeSizeInChunksXY / 2, TreeSizeInChunksXY.GetMax() / 2 + 1, NewChunks, true);
+
+	SetThisTickUpdatesTimeBudget(0.0);
+
+	ProceduralGeneratorComponent->QueueChunksForTaskAtIndex(NewChunks, 0);
+}
 
 //~ Begin Voxel Getters
 bool AATVoxelTree::HasVoxelInstanceDataAtPoint(const FIntVector& InPoint, const bool bInIgnoreQueued) const
@@ -485,54 +585,26 @@ void AATVoxelTree::HandleBrokenVoxelsUpdates()
 //~ End Voxel Setters
 
 //~ Begin Voxel Data
-bool AATVoxelTree::IsThisTickUpdatesTimeBudgetExceeded() const
+void AATVoxelTree::SaveData(const FString& InSaveSlot)
 {
-	return FPlatformTime::Cycles64() > ThisTickUpdatesTimeBudget_CyclesThreshold;
+	SetThisTickUpdatesTimeBudget(1000000.0);
+	ApplyQueued_Point_To_VoxelInstanceData_Map();
+	SetThisTickUpdatesTimeBudget(0.0);
+
+	UATSaveGame_VoxelTree::SaveSlot(this, TEXT("VoxelTree/") + InSaveSlot);
 }
 
-void AATVoxelTree::SetThisTickUpdatesTimeBudget(double InTimeMs)
+void AATVoxelTree::LoadData(const FString& InSaveSlot)
 {
-	ThisTickUpdatesTimeBudget_CyclesThreshold = FPlatformTime::Cycles64() + FPlatformTime::SecondsToCycles64(InTimeMs * 0.001);
+	ResetData();
+
+	UATSaveGame_VoxelTree::LoadSlot(this, TEXT("VoxelTree/") + InSaveSlot);
 }
 
-void AATVoxelTree::ForceTickUpdateNextFrame()
+void AATVoxelTree::ResetData()
 {
-	FTimerManager& TimerManager = GetWorldTimerManager();
-
-	if (TimerManager.IsTimerActive(ForceTickUpdateNextFrameTimerHandle))
-	{
-
-	}
-	else
-	{
-		ForceTickUpdateNextFrameTimerHandle = TimerManager.SetTimerForNextTick(this, &AATVoxelTree::HandleTickUpdate_FromForceTickUpdate);
-	}
-}
-
-void AATVoxelTree::HandleTickUpdate_FromForceTickUpdate()
-{
-	UWorld* World = GetWorld();
-	ensureReturn(World);
-
-	HandleTickUpdate(World->GetDeltaSeconds());
-}
-
-void AATVoxelTree::HandleTickUpdate(float InDeltaSeconds)
-{
-	ensureReturn(ProceduralGeneratorComponent);
-
-	double ThisTickUpdatesTimeBudgetMs = TickUpdatesTimeBudgetMs;
-	ThisTickUpdatesTimeBudgetMs += (double)ProceduralGeneratorComponent->GetTotalQueuedChunksNum() * TickUpdatesTimeBudgetMs_PerQueuedChunkAdditive;
-	ThisTickUpdatesTimeBudgetMs += (double)Queued_PointsSkipSimulationQueue_Set.Num() * TickUpdatesTimeBudgetMs_PerSkipSimulationPointQueueAdditive;
-
-	if (CVarVoxelTree_ForceSyncUpdates.GetValueOnGameThread() > 0)
-	{
-		ThisTickUpdatesTimeBudgetMs = 10000.0; // Help synchronous updates with 10 seconds budget
-	}
-	SetThisTickUpdatesTimeBudget(ThisTickUpdatesTimeBudgetMs);
-
-	HandleBrokenVoxelsUpdates();
-	HandleChunkUpdates();
+	Queued_Point_To_VoxelInstanceData_Map.Empty();
+	Point_To_VoxelInstanceData_Map.Empty();
 }
 
 void AATVoxelTree::ApplyQueued_Point_To_VoxelInstanceData_Map()

@@ -34,7 +34,7 @@ void UATProceduralGeneratorTask_Landscape::Initialize(class UATProceduralGenerat
 {
 	Super::Initialize(InOwnerComponent, InTaskIndex);
 
-	ensureReturn(PerlinGenerator == nullptr);
+	//ensureReturn(PerlinGenerator == nullptr);
 	PerlinGenerator = UFastNoise2BlueprintLibrary::MakePerlinGenerator();
 
 	//ensureReturn(CellularDistanceGenerator == nullptr);
@@ -63,6 +63,7 @@ void UATProceduralGeneratorTask_Landscape::DoWorkGlobalOnce_SubThread() // UATPr
 	FIntVector TreeBoundsSize = OwnerTree->GetBoundsSize();
 
 	HillsBoundsSize2D = FIntPoint(TreeBoundsSize.X, TreeBoundsSize.Y);
+	ensureReturn(HillsBoundsSize2D.X > 0 && HillsBoundsSize2D.Y > 0);
 
 	ensure(HillsValues2D.IsEmpty());
 	PerlinGenerator->GenUniformGrid2D(HillsValues2D, FIntPoint::ZeroValue, HillsBoundsSize2D, HillsNoiseFrequency, TreeSeed);
@@ -218,7 +219,6 @@ void UATProceduralGeneratorTask_Landscape::DoWorkForSelectedChunk_SubThread(cons
 			}
 		}
 	}
-	bPendingPostWork = true;
 }
 
 void UATProceduralGeneratorTask_Landscape::PostWork_GameThread()

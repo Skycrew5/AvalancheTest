@@ -20,6 +20,7 @@ public:
 //~ Begin ActorComponent
 protected:
 	virtual void OnRegister() override; // UActorComponent
+	virtual void OnUnregister() override; // UActorComponent
 	virtual void BeginPlay() override; // UActorComponent
 	virtual void TickComponent(float InDeltaSeconds, enum ELevelTick InTickType, FActorComponentTickFunction* InThisTickFunction) override; // UActorComponent
 	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // UActorComponent

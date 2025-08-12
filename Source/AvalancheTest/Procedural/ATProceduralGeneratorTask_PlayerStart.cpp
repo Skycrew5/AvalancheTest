@@ -107,7 +107,6 @@ void UATProceduralGeneratorTask_PlayerStart::DoWorkForSelectedChunk_SubThread(co
 			}
 		}
 	}
-	bPendingPostWork = true;
 }
 
 void UATProceduralGeneratorTask_PlayerStart::PostWork_GameThread()

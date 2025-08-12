@@ -120,10 +120,10 @@ struct FVoxelInstanceData
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TObjectPtr<const class UATVoxelTypeData> TypeData = nullptr;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient)
 	float Health = 1.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Transient)
 	float AvalancheValue = 1.0f;
 
 	bool IsTypeDataValid() const { return TypeData != nullptr; }

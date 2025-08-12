@@ -78,6 +78,8 @@ public:
 	virtual void DoWorkGlobalOnce_SubThread() { }
 	void MarkDoWorkGlobalOnceAsCompleted() { bDoWorkGlobalOnceCompleted = true; }
 
+	void MarkPendingPostWork() { bPendingPostWork = true; }
+
 	virtual void DoWorkForSelectedChunk_SubThread(const class AATVoxelChunk* InTargetChunk) { ensure(false); }
 	virtual void PostWork_GameThread() { ensure(false); }
 protected:
@@ -131,6 +133,7 @@ public:
 			ensureReturn(SelectedChunks.IsValidIndex(InIndex));
 			TargetTask->DoWorkForSelectedChunk_SubThread(SelectedChunks[InIndex]);
 		});
+		TargetTask->MarkPendingPostWork();
 	}
 
 	FORCEINLINE TStatId GetStatId() const
