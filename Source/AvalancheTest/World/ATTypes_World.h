@@ -121,25 +121,29 @@ namespace FATVoxelUtils
 	};
 
 	const TArray<FIntVector> EdgeOffsets = {
-		FIntVector(1, -1, 0),
-		FIntVector(1, 1, 0),
-		FIntVector(-1,-1, 0),
-		FIntVector(-1, 1, 0),
 		FIntVector(0, -1, 1),
+		FIntVector(0, 1, -1),
+		FIntVector(0, -1, -1),
 		FIntVector(0, 1, 1),
-		FIntVector(0, -1, 1),
-		FIntVector(0, 1, 1)
+		FIntVector(-1, 0, 1),
+		FIntVector(1, 0, -1),
+		FIntVector(-1, 0, -1),
+		FIntVector(1, 0, 1),
+		FIntVector(-1, -1, 0),
+		FIntVector(1, 1, 0),
+		FIntVector(1, -1, 0),
+		FIntVector(-1, 1, 0)
 	};
 
 	const TArray<FIntVector> AngleOffsets = {
-		FIntVector(1, -1, 1),
-		FIntVector(1, 1, 1),
-		FIntVector(-1,-1, 1),
+		FIntVector(-1, -1, 1),
 		FIntVector(-1, 1, 1),
-		FIntVector(1, -1, -1),
+		FIntVector(1, 1, 1),
+		FIntVector(1, -1, 1),
+		FIntVector(-1, -1, -1),
+		FIntVector(-1, 1, -1),
 		FIntVector(1, 1, -1),
-		FIntVector(-1,-1, -1),
-		FIntVector(-1, 1, 1)
+		FIntVector(1, -1, -1)
 	};
 }
 

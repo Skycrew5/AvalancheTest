@@ -31,25 +31,6 @@ UATVoxelPMC::UATVoxelPMC(const FObjectInitializer& ObjectInitializer) : Super(Ob
 	DebugVoxelCustomData_Health = 3;
 }
 
-void UATVoxelPMC::GenerateCombinations(const TArray<int32>& Elements, int32 StartIndex, int32 CurrentLength, int32 MaxLength, TArray<int32>& CurrentCombination)
-{
-	if (CurrentCombination.Num() == MaxLength)
-	{
-		GenerateVoxelMeshPrototypeByUnattachedSideIndexes(CurrentCombination);
-
-		return;
-	}
-
-	for (int32 i = StartIndex; i < Elements.Num(); ++i)
-	{
-		CurrentCombination.Add(Elements[i]);
-
-		GenerateCombinations(Elements, i + 1, CurrentLength + 1, MaxLength, CurrentCombination);
-
-		CurrentCombination.Pop(); 
-	}
-}
-
 //~ Begin Initialize
 void UATVoxelPMC::OnRegister() // UActorComponent
 {
@@ -86,30 +67,39 @@ void UATVoxelPMC::BeginPlay() // UActorComponent
 	EdgeSectionPlaneDataArray.Add(FPlaneData(1, -1, 0, VoxelSize * (1 - 2 * VoxelTypeData->SectionsDepth)));
 	EdgeSectionPlaneDataArray.Add(FPlaneData(1, -1, 0, -VoxelSize * (1 - 2 * VoxelTypeData->SectionsDepth)));
 
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(0, 2), 8); 
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(2, 0), 8);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(0, 3), 10); 
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(3, 0), 10);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(0, 4), 0);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(4, 0), 0);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(0, 5), 2);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(5, 0), 2);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(1, 2), 11);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(2, 1), 11);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(1, 3), 9);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(3, 1), 9);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(1, 4), 3);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(4, 1), 3);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(1, 5), 1);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(5, 1), 1);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(2, 4), 4);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(4, 2), 4);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(2, 5), 6);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(5, 2), 6);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(3, 4), 7);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(4, 3), 7);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(3, 5), 5);
-	UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Add(FIntPoint(5, 3), 5);
+	AngleSectionPlaneDataArray.Add(FPlaneData(1, 1, -1, -VoxelSize * (1 - VoxelTypeData->SectionsDepth    * 2)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(1, -1, -1, -VoxelSize * (2 - VoxelTypeData->SectionsDepth   * 2)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(-1, -1, -1, -VoxelSize * (3 - VoxelTypeData->SectionsDepth   * 2)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(-1, 1, -1, -VoxelSize * (2 - VoxelTypeData->SectionsDepth    * 2)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(-1, - 1, -1, -VoxelSize * VoxelTypeData->SectionsDepth    * 2));
+	AngleSectionPlaneDataArray.Add(FPlaneData(-1, 1, -1, VoxelSize * (1 - VoxelTypeData->SectionsDepth    * 2)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(1, 1, -1, VoxelSize * (2 - VoxelTypeData->SectionsDepth    * 2)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(1, -1, -1, VoxelSize * (1 - VoxelTypeData->SectionsDepth    * 2)));
+
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(0, 2), 8); 
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(2, 0), 8);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(0, 3), 10); 
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(3, 0), 10);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(0, 4), 0);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(4, 0), 0);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(0, 5), 2);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(5, 0), 2);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(1, 2), 11);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(2, 1), 11);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(1, 3), 9);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(3, 1), 9);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(1, 4), 3);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(4, 1), 3);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(1, 5), 1);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(5, 1), 1);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(2, 4), 4);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(4, 2), 4);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(2, 5), 6);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(5, 2), 6);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(3, 4), 7);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(4, 3), 7);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(3, 5), 5);
+	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(5, 3), 5);
 
 	UnattachedSideIndexesPairsArray.Add(FIntPoint(0, 2));
 	UnattachedSideIndexesPairsArray.Add(FIntPoint(0, 3));
@@ -124,130 +114,207 @@ void UATVoxelPMC::BeginPlay() // UActorComponent
 	UnattachedSideIndexesPairsArray.Add(FIntPoint(3, 4));
 	UnattachedSideIndexesPairsArray.Add(FIntPoint(3, 5));
 
-	SidePlaneDataIndex_to_IntersectableSidePlaneDataIndexesArray_Map.Add(0, { 2, 4, 3, 5 });
-	SidePlaneDataIndex_to_IntersectableSidePlaneDataIndexesArray_Map.Add(1, { 2, 5, 3, 4 });
-	SidePlaneDataIndex_to_IntersectableSidePlaneDataIndexesArray_Map.Add(2, { 0, 5, 1, 4 });
-	SidePlaneDataIndex_to_IntersectableSidePlaneDataIndexesArray_Map.Add(3, { 1, 5, 0, 4 });
-	SidePlaneDataIndex_to_IntersectableSidePlaneDataIndexesArray_Map.Add(4, { 0, 2, 1, 3 });
-	SidePlaneDataIndex_to_IntersectableSidePlaneDataIndexesArray_Map.Add(5, { 0, 3, 1, 2 });
+	SideIndex_to_IntersectableSideIndexesArray_Map.Add(0, { 2, 4, 3, 5 });
+	SideIndex_to_IntersectableSideIndexesArray_Map.Add(1, { 2, 5, 3, 4 });
+	SideIndex_to_IntersectableSideIndexesArray_Map.Add(2, { 0, 5, 1, 4 });
+	SideIndex_to_IntersectableSideIndexesArray_Map.Add(3, { 1, 5, 0, 4 });
+	SideIndex_to_IntersectableSideIndexesArray_Map.Add(4, { 0, 2, 1, 3 });
+	SideIndex_to_IntersectableSideIndexesArray_Map.Add(5, { 0, 3, 1, 2 });
+
+	SideIndex_to_AngleIndexesArray_Map.Add(0, { 0, 3, 7, 4 });
+	SideIndex_to_AngleIndexesArray_Map.Add(1, { 1, 5, 6, 2 });
+	SideIndex_to_AngleIndexesArray_Map.Add(2, { 0, 4, 5, 1 });
+	SideIndex_to_AngleIndexesArray_Map.Add(3, { 2, 6, 7, 3 });
+	SideIndex_to_AngleIndexesArray_Map.Add(4, { 0, 1, 2, 3 });
+	SideIndex_to_AngleIndexesArray_Map.Add(5, { 4, 7, 6, 5 });
+
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(0, 0), 0);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(0, 3), 10);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(0, 7), 2);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(0, 4), 8);
+
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(1, 1), 11);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(1, 5), 1);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(1, 6), 9);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(1, 2), 3);
+
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(2, 0), 8);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(2, 4), 6);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(2, 5), 11);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(2, 1), 4);
+
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(3, 2), 9);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(3, 6), 5);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(3, 7), 10);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(3, 3), 7);
+
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(4, 0), 4);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(4, 1), 3);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(4, 2), 7);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(4, 3), 0);
+
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(5, 4), 2);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(5, 5), 5);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(5, 6), 1);
+	SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Add(FIntPoint(5, 7), 6);
+
+
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(0, 0), 8);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(0, 3), 0);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(0, 7), 10);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(0, 4), 2);
+
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(1, 1), 3);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(1, 5), 11);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(1, 6), 1);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(1, 2), 9);
+
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(2, 0), 4);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(2, 4), 8);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(2, 5), 6);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(2, 1), 11);
+
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(3, 2), 7);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(3, 6), 9);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(3, 7), 5);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(3, 3), 10);
+
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(4, 0), 0);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(4, 1), 4);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(4, 2), 3);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(4, 3), 7);
+
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(5, 4), 6);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(5, 5), 2);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(5, 6), 5);
+	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(5, 7), 1);
 
 	if (VoxelTypeData->SectionsDepth <= 0.5) // To make less intersections to find vertices
 	{
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(0, { 0, 2, 4, 3 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(1, { 2, 5, 3, 1 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(2, { 0, 2, 5, 3 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(3, { 2, 1, 3, 4 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(4, { 0, 2, 1, 4 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(5, { 0, 3, 1, 5 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(6, { 0, 2, 1, 5 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(7, { 0, 4, 1, 3 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(8, { 0, 4, 2, 5 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(9, { 4, 1, 5, 3 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(10, { 0, 4, 3, 5 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(11, { 2, 4, 1, 5 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(0, { 0, 2, 4, 3 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(1, { 1, 2, 5, 3 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(2, { 0, 3, 5, 2 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(3, { 4, 2, 1, 3 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(4, { 2, 1, 4, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(5, { 3, 1, 5, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(6, { 2, 0, 5, 1 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(7, { 4, 1, 3, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(8, { 0, 5, 2, 4 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(9, { 1, 5, 3, 4 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(10, { 0, 4, 3, 5 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(11, { 2, 5, 1, 4 });
 	}
 	else
 	{
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(0, { 1, 3, 5, 2 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(1, { 3, 4, 2, 0 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(2, { 4, 3, 1, 2 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(3, { 3, 5, 2, 0 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(4, { 5, 1, 3, 0 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(5, { 4, 1, 2, 0 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(6, { 3, 1, 4, 0 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(7, { 5, 1, 2, 0 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(8, { 3, 5, 1, 4 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(9, { 5, 2, 4, 0 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(10, { 5, 1, 4, 2 });
-		EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map.Add(11, { 5, 3, 4, 0 });
+		/*EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(0, { 1, 3, 5, 2 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(1, { 3, 4, 2, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(2, { 4, 3, 1, 2 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(3, { 3, 5, 2, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(4, { 5, 1, 3, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(5, { 4, 1, 2, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(6, { 3, 1, 4, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(7, { 5, 1, 2, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(8, { 3, 5, 1, 4 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(9, { 5, 2, 4, 0 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(10, { 5, 1, 4, 2 });
+		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(11, { 5, 3, 4, 0 });*/
 	}
 
 	if (VoxelTypeData->SectionsDepth <= 0.25)
 	{
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(0, { 4, 7, 8, 10 });
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(1, { 5, 6, 9, 11 });
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(2, { 5, 6, 8, 10 });
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(3, { 4, 7, 9, 11 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(0, { 4, 7, 8, 10 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(1, { 5, 6, 9, 11 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(2, { 5, 6, 8, 10 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(3, { 4, 7, 9, 11 });
 
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(4, { 0, 3, 8, 11 });
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(5, { 1, 2, 9, 10 });
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(6, { 1, 2, 8, 11 });
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(7, { 0, 3, 9, 10 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(4, { 0, 3, 8, 11 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(5, { 1, 2, 9, 10 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(6, { 1, 2, 8, 11 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(7, { 0, 3, 9, 10 });
 
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(8, { 0, 2, 4, 6 });
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(9, { 1, 3, 5, 7 });
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(10, { 0, 2, 5, 7 });
-		EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Add(11, { 1, 3, 4, 6 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(8, { 0, 2, 4, 6 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(9, { 1, 3, 5, 7 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(10, { 0, 2, 5, 7 });
+		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(11, { 1, 3, 4, 6 });
 	}
 	else
 	{
 		// Each edge section plane intersected by each other except parallel and by itself
 	}
 
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(0, 4), 0);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(4, 0), 0);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(0, 8), 0);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(8, 0), 0);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(4, 8), 0);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(8, 4), 0);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(0, 4), 0);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(4, 0), 0);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(0, 8), 0);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(8, 0), 0);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(4, 8), 0);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(8, 4), 0);
 
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(3, 4), 1);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(4, 3), 1);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(3, 11), 1);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(11, 3), 1);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(4, 11), 1);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(11, 4), 1);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(3, 4), 1);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(4, 3), 1);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(3, 11), 1);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(11, 3), 1);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(4, 11), 1);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(11, 4), 1);
 
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(3, 7), 2);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(7, 3), 2);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(3, 9), 2);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(9, 3), 2);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(7, 9), 2);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(9, 7), 2);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(3, 7), 2);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(7, 3), 2);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(3, 9), 2);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(9, 3), 2);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(7, 9), 2);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(9, 7), 2);
 
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(0, 7), 3);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(7, 0), 3);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(0, 10), 3);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(10, 0), 3);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(7, 10), 3);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(10, 7), 3);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(0, 7), 3);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(7, 0), 3);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(0, 10), 3);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(10, 0), 3);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(7, 10), 3);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(10, 7), 3);
 
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(2, 6), 4);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(6, 2), 4);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(2, 8), 4);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(8, 2), 4);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(6, 8), 4);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(8, 6), 4);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(2, 6), 4);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(6, 2), 4);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(2, 8), 4);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(8, 2), 4);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(6, 8), 4);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(8, 6), 4);
 
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(1, 6), 5);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(6, 1), 5);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(1, 11), 5);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(11, 1), 5);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(6 ,11), 5);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(11, 6), 5);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(1, 6), 5);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(6, 1), 5);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(1, 11), 5);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(11, 1), 5);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(6 ,11), 5);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(11, 6), 5);
 
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(1, 5), 6);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(5, 1), 6);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(1, 9), 6);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(9, 1), 6);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(5, 9), 6);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(9, 5), 6);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(1, 5), 6);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(5, 1), 6);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(1, 9), 6);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(9, 1), 6);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(5, 9), 6);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(9, 5), 6);
 
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(2, 5), 7);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(5, 2), 7);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(2, 10), 7);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(10, 2), 7);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(5, 10), 7);
-	EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Add(FIntPoint(10, 5), 7);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(2, 5), 7);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(5, 2), 7);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(2, 10), 7);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(10, 2), 7);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(5, 10), 7);
+	EdgeIndexesPair_to_AngleIndex_Map.Add(FIntPoint(10, 5), 7);
 
-	AngleSectionIndex_to_SideIndexes_Map.Add(0, { 0, 2, 4 });
-	AngleSectionIndex_to_SideIndexes_Map.Add(1, { 1, 4, 2 });
-	AngleSectionIndex_to_SideIndexes_Map.Add(2, { 1, 3, 4 });
-	AngleSectionIndex_to_SideIndexes_Map.Add(3, { 0, 4, 3 });
-	AngleSectionIndex_to_SideIndexes_Map.Add(4, { 0, 5, 2 });
-	AngleSectionIndex_to_SideIndexes_Map.Add(5, { 2, 5, 1 });
-	AngleSectionIndex_to_SideIndexes_Map.Add(6, { 1, 5, 3 });
-	AngleSectionIndex_to_SideIndexes_Map.Add(7, { 0, 3, 5 });
+	AngleIndex_to_SideIndexes_Map.Add(0, { 0, 2, 4 });
+	AngleIndex_to_SideIndexes_Map.Add(1, { 1, 4, 2 });
+	AngleIndex_to_SideIndexes_Map.Add(2, { 1, 3, 4 });
+	AngleIndex_to_SideIndexes_Map.Add(3, { 0, 4, 3 });
+	AngleIndex_to_SideIndexes_Map.Add(4, { 0, 5, 2 });
+	AngleIndex_to_SideIndexes_Map.Add(5, { 2, 5, 1 });
+	AngleIndex_to_SideIndexes_Map.Add(6, { 1, 5, 3 });
+	AngleIndex_to_SideIndexes_Map.Add(7, { 0, 3, 5 });
+
+	AngleIndex_to_EdgeIndexes_Map.Add(0, { 0, 8, 4 });
+	AngleIndex_to_EdgeIndexes_Map.Add(1, { 4, 11, 3 });
+	AngleIndex_to_EdgeIndexes_Map.Add(2, { 3, 9, 7 });
+	AngleIndex_to_EdgeIndexes_Map.Add(3, { 7, 10, 0 });
+	AngleIndex_to_EdgeIndexes_Map.Add(4, { 8, 2, 6 });
+	AngleIndex_to_EdgeIndexes_Map.Add(5, { 11, 6, 1 });
+	AngleIndex_to_EdgeIndexes_Map.Add(6, { 9, 1, 5 });
+	AngleIndex_to_EdgeIndexes_Map.Add(7, { 10, 5, 2 });
 
 	SideIndex_to_MeshNormal_Map.Add(0, FVector(0, -1, 0));
 	SideIndex_to_MeshNormal_Map.Add(1, FVector(0, 1, 0));
@@ -256,38 +323,48 @@ void UATVoxelPMC::BeginPlay() // UActorComponent
 	SideIndex_to_MeshNormal_Map.Add(4, FVector(0, 0, 1));
 	SideIndex_to_MeshNormal_Map.Add(5, FVector(0, 0, -1));
 
-	EdgeSectionIndex_to_MeshNormal_Map.Add(0, FVector(0, -1, 1));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(1, FVector(0, 1, -1));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(2, FVector(0, -1, -1));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(3, FVector(0, 1, 1));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(4, FVector(-1, 0, 1));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(5, FVector(1, 0, -1));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(6, FVector(-1, 0, -1));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(7, FVector(1, 0, 1));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(8, FVector(-1, -1, 0));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(9, FVector(1, 1, 0));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(10, FVector(1, -1, 0));
-	EdgeSectionIndex_to_MeshNormal_Map.Add(11, FVector(-1, 1, 0));
+	EdgeIndex_to_MeshNormal_Map.Add(0, FVector(0, -1, 1));
+	EdgeIndex_to_MeshNormal_Map.Add(1, FVector(0, 1, -1));
+	EdgeIndex_to_MeshNormal_Map.Add(2, FVector(0, -1, -1));
+	EdgeIndex_to_MeshNormal_Map.Add(3, FVector(0, 1, 1));
+	EdgeIndex_to_MeshNormal_Map.Add(4, FVector(-1, 0, 1));
+	EdgeIndex_to_MeshNormal_Map.Add(5, FVector(1, 0, -1));
+	EdgeIndex_to_MeshNormal_Map.Add(6, FVector(-1, 0, -1));
+	EdgeIndex_to_MeshNormal_Map.Add(7, FVector(1, 0, 1));
+	EdgeIndex_to_MeshNormal_Map.Add(8, FVector(-1, -1, 0));
+	EdgeIndex_to_MeshNormal_Map.Add(9, FVector(1, 1, 0));
+	EdgeIndex_to_MeshNormal_Map.Add(10, FVector(1, -1, 0));
+	EdgeIndex_to_MeshNormal_Map.Add(11, FVector(-1, 1, 0));
 
-	AngleSectionIndex_to_MeshNormal_Map.Add(0, FVector(-1, -1, 1));
-	AngleSectionIndex_to_MeshNormal_Map.Add(1, FVector(-1, 1, 1));
-	AngleSectionIndex_to_MeshNormal_Map.Add(2, FVector(1, 1, 1));
-	AngleSectionIndex_to_MeshNormal_Map.Add(3, FVector(1, -1, 1));
-	AngleSectionIndex_to_MeshNormal_Map.Add(4, FVector(-1, -1, -1));
-	AngleSectionIndex_to_MeshNormal_Map.Add(5, FVector(-1, 1, -1));
-	AngleSectionIndex_to_MeshNormal_Map.Add(6, FVector(1, 1, -1));
-	AngleSectionIndex_to_MeshNormal_Map.Add(7, FVector(1, -1, -1));
+	AngleIndex_to_MeshNormal_Map.Add(0, FVector(-1, -1, 1));
+	AngleIndex_to_MeshNormal_Map.Add(1, FVector(-1, 1, 1));
+	AngleIndex_to_MeshNormal_Map.Add(2, FVector(1, 1, 1));
+	AngleIndex_to_MeshNormal_Map.Add(3, FVector(1, -1, 1));
+	AngleIndex_to_MeshNormal_Map.Add(4, FVector(-1, -1, -1));
+	AngleIndex_to_MeshNormal_Map.Add(5, FVector(-1, 1, -1));
+	AngleIndex_to_MeshNormal_Map.Add(6, FVector(1, 1, -1));
+	AngleIndex_to_MeshNormal_Map.Add(7, FVector(1, -1, -1));
 
-	TArray<int32> UnattachedSideIndexesArray;
+	/*TArray<TArray<int32>> UnattachedSideIndexesCombinationsArray;
+	TArray<TArray<int32>> UnattachedEdgeIndexesCombinationsArray;
 
-	TArray<int32> Numbers = { 0, 1, 2, 3, 4, 5 };
+	GenerateUnattachedSideIndexesCombinations(UnattachedSideIndexesCombinationsArray);
+	GenerateUnattachedEdgeIndexesCombinations(UnattachedEdgeIndexesCombinationsArray);
 
-	for (int32 k = 1; k <= 6; ++k)
+	int32 UnattachedSideIndexesCombinationIndex = 0;
+
+	int32 UnattachedEdgeIndexesCombinationIndex = 0;
+
+	for (TArray<int32>& UnattachedSideIndexesCombination : UnattachedSideIndexesCombinationsArray)
 	{
-		TArray<int32> TempCombination;
+		for (TArray<int32>& UnattachedEdgeIndexesCombination : UnattachedEdgeIndexesCombinationsArray)
+		{
+			CreateVoxelMeshTemplate(UnattachedSideIndexesCombination, UnattachedEdgeIndexesCombination);
 
-		GenerateCombinations(Numbers, 0, 0, k, TempCombination);
-	}
+			UnattachedEdgeIndexesCombinationIndex++;
+		}
+		UnattachedSideIndexesCombinationIndex++;
+	}*/
 }
 
 void UATVoxelPMC::EndPlay(const EEndPlayReason::Type InReason) // UActorComponent
@@ -311,6 +388,7 @@ void UATVoxelPMC::BP_InitComponent_Implementation(AATVoxelChunk* InOwnerChunk, c
 	SetMaterial(0, InTypeData->SidesMeshOverrideMaterial);
 	SetMaterial(1, InTypeData->SectionsMeshOverrideMaterial);
 	SetMaterial(2, InTypeData->SectionsMeshOverrideMaterial);
+	SetMaterial(3, InTypeData->SectionsMeshOverrideMaterial);
 
 	//SetNumCustomDataFloats(bDebugHealthValues ? 2 : (bDebugStabilityValues ? 1 : 0));
 }
@@ -358,10 +436,21 @@ bool UATVoxelPMC::IsVoxelSidesClosed(const FIntVector& InPoint) const
 	for (const FIntVector& SampleOffset : FATVoxelUtils::SideOffsets)
 	{
 		FIntVector SamplePoint = InPoint + SampleOffset;
-		if (OwnerChunk->IsPointInsideTree(SamplePoint) && !HasVoxelOfAnyTypeAtPoint(SamplePoint))
-		{
-			return false;
-		}
+
+		if (OwnerChunk->IsPointInsideTree(SamplePoint) && !HasVoxelOfAnyTypeAtPoint(SamplePoint)) return false;
+	}
+	return true;
+}
+
+bool UATVoxelPMC::IsVoxelEdgesClosed(const FIntVector& InPoint) const
+{
+	ensureReturn(OwnerChunk, false);
+
+	for (const FIntVector& SampleOffset : FATVoxelUtils::EdgeOffsets)
+	{
+		FIntVector SamplePoint = InPoint + SampleOffset;
+
+		if (OwnerChunk->IsPointInsideTree(SamplePoint) && !HasVoxelOfAnyTypeAtPoint(SamplePoint)) return false;
 	}
 	return true;
 }
@@ -376,14 +465,10 @@ float UATVoxelPMC::GetVoxelSize() const
 //~ Begin Setters
 void UATVoxelPMC::HandleSetVoxelInstanceDataAtPoint(const FIntVector& InPoint, const FVoxelInstanceData& InVoxelInstanceData)
 {
-	if (InVoxelInstanceData.IsTypeDataValid())
-	{
-		PossibleMeshPointsSet.Add(InPoint);
-	}
-	else
-	{
-		PossibleMeshPointsSet.Remove(InPoint);
-	}
+	if (InVoxelInstanceData.IsTypeDataValid()) PossibleMeshPointsSet.Add(InPoint);
+
+	else PossibleMeshPointsSet.Remove(InPoint);
+
 	QueuePointForVisibilityUpdate(InPoint);
 	TryQueuePointForDebugUpdate(InPoint);
 }
@@ -459,7 +544,7 @@ void UATVoxelPMC::UpdateVoxelsVisibilityState(const bool bInIgnoreTimeBugdet)
 		{
 			//if (MeshedPointsSet.Contains(SamplePoint)) // Has mesh...
 			//{
-				if (IsVoxelSidesClosed(SamplePoint)) // ...but doesn't need anymore
+				if (IsVoxelSidesClosed(SamplePoint) && IsVoxelEdgesClosed(SamplePoint)) // ...but doesn't need anymore
 				{
 					//MeshInstancesToRemove.Add(*SampleIndexPtr);
 					//PointsToRemove.Add(SamplePoint);
@@ -549,16 +634,70 @@ void UATVoxelPMC::HandleInstanceIndicesUpdates(const TArrayView<const FInstanced
 	//}
 }
 
-
-void UATVoxelPMC::GenerateVoxelMeshPrototypeByUnattachedSideIndexes(TArray<int32>& InUnattachedSideIndexesArray)
+void UATVoxelPMC::GenerateUnattachedSideIndexesCombinations(TArray<TArray<int32>>& OutCombinationsArray)
 {
-	TMap<int32, TArray<FVector>>& VoxelSidePlaneDataIndex_to_BelongVertexesArray_Map = UnattachedSideIndexes_to_VoxelSidePlaneDataIndexToBelongVertexesMap_Map.Add(InUnattachedSideIndexesArray, TMap<int32, TArray<FVector>>());
+	TArray<int32> AllSideIndexesArray = { 0, 1, 2, 3, 4, 5 };
 
-	TMap<int32, TArray<FVector>>& EdgeSectionPlaneDataIndex_to_BelongVertexesArray_Map = UnattachedSideIndexes_to_EdgeSectionPlaneDataIndexToBelongVertexesMap_Map.Add(InUnattachedSideIndexesArray, TMap<int32, TArray<FVector>>());
+	TArray<int32> TempCombination;
 
-	TArray<TPair<int32, TArray<FVector>>>* AngleSectionIndexToVerticesPairsArray = nullptr;
+	for (int32 i = 1; i <= 6; ++i)
+	{
+		TempCombination.Reset();
 
-	if (InUnattachedSideIndexesArray.Num() > 2) AngleSectionIndexToVerticesPairsArray = &UnattachedSideIndexes_to_AngleSectionIndexToVerticesPairsArray_Map.Add(InUnattachedSideIndexesArray, TArray<TPair<int32, TArray<FVector>>>());
+		GenerateCombinations(AllSideIndexesArray, 0, 0, i, TempCombination, OutCombinationsArray);
+	}
+}
+
+void UATVoxelPMC::GenerateUnattachedEdgeIndexesCombinations(TArray<TArray<int32>>& OutCombinationsArray)
+{
+	TArray<int32> AllEdgeIndexesArray = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 };
+
+	TArray<int32> TempCombination;
+
+	for (int32 i = 1; i <= 12; ++i)
+	{
+		TempCombination.Reset();
+
+		GenerateCombinations(AllEdgeIndexesArray, 0, 0, i, TempCombination, OutCombinationsArray);
+	}
+}
+
+void UATVoxelPMC::GenerateCombinations(const TArray<int32>& InElements, int32 InStartIndex, int32 InCurrentLength, int32 InMaxLength, TArray<int32>& InCurrentCombination, TArray<TArray<int32>>& OutCombinationsArray)
+{
+	if (InCurrentCombination.Num() == InMaxLength)
+	{
+		OutCombinationsArray.Add(InCurrentCombination);
+
+		//GenerateVoxelMeshTemplate(InCurrentCombination);
+
+		return;
+	}
+
+	for (int32 i = InStartIndex; i < InElements.Num(); ++i)
+	{
+		InCurrentCombination.Add(InElements[i]);
+
+		GenerateCombinations(InElements, i + 1, InCurrentLength + 1, InMaxLength, InCurrentCombination, OutCombinationsArray);
+
+		InCurrentCombination.Pop();
+	}
+}
+
+void UATVoxelPMC::CreateVoxelMeshTemplate(TArray<int32>& InUnattachedSideIndexesArray, TArray<int32>& InUnattachedEdgeIndexesArray)
+{
+	TArray<TArray<int32>> UnattachedSideAndEdgeIndexesArraysArray = { InUnattachedSideIndexesArray, InUnattachedEdgeIndexesArray };
+
+	if (UnattachedSideAndEdgeIndexes_to_VoxelSideIndexToBelongVerticesMap_Map.Contains(UnattachedSideAndEdgeIndexesArraysArray)) return;
+
+	TMap<int32, TArray<FVector>>& VoxelSideIndex_to_BelongVerticesArray_Map = UnattachedSideAndEdgeIndexes_to_VoxelSideIndexToBelongVerticesMap_Map.Add(UnattachedSideAndEdgeIndexesArraysArray, TMap<int32, TArray<FVector>>());
+
+	TMap<int32, TArray<FVector>>& EdgeIndex_to_BelongVerticesArray_Map = UnattachedSideAndEdgeIndexes_to_VoxelEdgeIndexToBelongVerticesMap_Map.Add(UnattachedSideAndEdgeIndexesArraysArray, TMap<int32, TArray<FVector>>());
+
+	TMap<int32, TArray<FVector>>& AngleIndex_to_BelongVerticesArray_Map = UnattachedSideAndEdgeIndexes_to_AngleIndexToBelongVerticesMap_Map.Add(UnattachedSideAndEdgeIndexesArraysArray, TMap<int32, TArray<FVector>>());
+
+	TArray<TPair<int32, TArray<FVector>>>* AngleIndexToVerticesPairsArray = nullptr;
+
+	if (InUnattachedSideIndexesArray.Num() > 2) AngleIndexToVerticesPairsArray = &UnattachedSideAndEdgeIndexes_to_AngleIndexToVerticesPairsArray_Map.Add(UnattachedSideAndEdgeIndexesArraysArray, TArray<TPair<int32, TArray<FVector>>>());
 
 	FVector CurrentIntersectionPoint = FVector::ZeroVector;
 
@@ -566,117 +705,266 @@ void UATVoxelPMC::GenerateVoxelMeshPrototypeByUnattachedSideIndexes(TArray<int32
 	
 	EVoxelPlaneType FirstAdjacentPlaneType;
 
-	int32* FirstAdjacentPlaneDataIndex = nullptr;
+	int32 FirstAdjacentPlaneDataIndex = -1;
 
 	EVoxelPlaneType SecondAdjacentPlaneType;
 
-	int32* SecondAdjacentPlaneDataIndex = nullptr;
+	int32 SecondAdjacentPlaneDataIndex = -1;
 
-	int32 FirstPreviousEdgeSectionIndex = -1;
+	int32 FirstPreviousEdgeIndex = -1;
 
-	int32 SecondPreviousEdgeSectionIndex = -1;
+	int32 SecondPreviousEdgeIndex = -1;
+
+	int32 CurrentAngleIndex = NULL;
+
+	int32 CurrentAngleAttachedSidesNum = NULL;
+
+	bool bCurrentSideAngleVerticesAdded = false;
+
+	if (InUnattachedSideIndexesArray.Num() == 3 && InUnattachedSideIndexesArray[0] == 1 && InUnattachedSideIndexesArray[1] == 3 && InUnattachedSideIndexesArray[2] == 4)
+	{
+		bCurrentSideAngleVerticesAdded = false;
+	}
 
 	for (int32& UnattachedSideIndex : InUnattachedSideIndexesArray)
 	{
-		if (TArray<int32>* IntersectableSidePlaneDataIndexesArray = SidePlaneDataIndex_to_IntersectableSidePlaneDataIndexesArray_Map.Find(UnattachedSideIndex))
+		TArray<FVector>& UnattachedSideVerticesArray = VoxelSideIndex_to_BelongVerticesArray_Map.Add(UnattachedSideIndex, TArray<FVector>());
+
+		if (TArray<int32>* IntersectableSideIndexesArray = SideIndex_to_IntersectableSideIndexesArray_Map.Find(UnattachedSideIndex))
 		{
-			for (int32 SideAngleIndex = 0; SideAngleIndex < 4; SideAngleIndex++)
+			for (int32 SideAngleOrderIndex = 0; SideAngleOrderIndex < 4; SideAngleOrderIndex++)
 			{
-				FirstAdjacentPlaneDataIndex = nullptr;
+				FirstAdjacentPlaneDataIndex = -1;
 
-				SecondAdjacentPlaneDataIndex = nullptr;
+				SecondAdjacentPlaneDataIndex = -1;
 
-				if (InUnattachedSideIndexesArray.Contains((*IntersectableSidePlaneDataIndexesArray)[SideAngleIndex]))
+				FirstAdjacentPlaneType = EVoxelPlaneType::EdgeSection;
+
+				SecondAdjacentPlaneType = EVoxelPlaneType::EdgeSection;
+
+				CurrentAngleIndex = (*SideIndex_to_AngleIndexesArray_Map.Find(UnattachedSideIndex))[SideAngleOrderIndex];
+
+				if (int32* FirstAdjacentEdgeIndex = SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map.Find(FIntPoint(UnattachedSideIndex, CurrentAngleIndex)))
 				{
-					FirstAdjacentPlaneDataIndex = UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Find(FIntPoint(UnattachedSideIndex, (*IntersectableSidePlaneDataIndexesArray)[SideAngleIndex]));
+					if (TArray<int32>* EdgeIntersectablelSideIndexesArray = EdgeIndex_to_IntersectableSideIndexesArray_Map.Find(*FirstAdjacentEdgeIndex))
+					{
+						if ((*EdgeIntersectablelSideIndexesArray)[0] != UnattachedSideIndex && InUnattachedSideIndexesArray.Contains((*EdgeIntersectablelSideIndexesArray)[0])) FirstAdjacentPlaneDataIndex = *FirstAdjacentEdgeIndex;
+
+						else if ((*EdgeIntersectablelSideIndexesArray)[2] != UnattachedSideIndex && InUnattachedSideIndexesArray.Contains((*EdgeIntersectablelSideIndexesArray)[2])) FirstAdjacentPlaneDataIndex = *FirstAdjacentEdgeIndex;
+
+						else
+						{
+							FirstAdjacentPlaneType = EVoxelPlaneType::Side;
+
+							if ((*EdgeIntersectablelSideIndexesArray)[0] != UnattachedSideIndex) FirstAdjacentPlaneDataIndex = (*EdgeIntersectablelSideIndexesArray)[0];
+
+							else FirstAdjacentPlaneDataIndex = (*EdgeIntersectablelSideIndexesArray)[2];
+						}
+					}
+				}
+				
+				if (int32* SecondAdjacentEdgeIndex = SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Find(FIntPoint(UnattachedSideIndex, CurrentAngleIndex)))
+				{
+					if (TArray<int32>* EdgeIntersectablelSideIndexesArray = EdgeIndex_to_IntersectableSideIndexesArray_Map.Find(*SecondAdjacentEdgeIndex))
+					{
+						if ((*EdgeIntersectablelSideIndexesArray)[0] != UnattachedSideIndex && InUnattachedSideIndexesArray.Contains((*EdgeIntersectablelSideIndexesArray)[0])) SecondAdjacentPlaneDataIndex = *SecondAdjacentEdgeIndex;
+
+						else if ((*EdgeIntersectablelSideIndexesArray)[2] != UnattachedSideIndex && InUnattachedSideIndexesArray.Contains((*EdgeIntersectablelSideIndexesArray)[2])) SecondAdjacentPlaneDataIndex = *SecondAdjacentEdgeIndex;
+
+						else
+						{
+							SecondAdjacentPlaneType = EVoxelPlaneType::Side;
+
+							if ((*EdgeIntersectablelSideIndexesArray)[0] != UnattachedSideIndex) SecondAdjacentPlaneDataIndex = (*EdgeIntersectablelSideIndexesArray)[0];
+
+							else SecondAdjacentPlaneDataIndex = (*EdgeIntersectablelSideIndexesArray)[2];
+						}
+					}
 				}
 
-				if (FirstAdjacentPlaneDataIndex) FirstAdjacentPlaneType = EVoxelPlaneType::EdgeSection;
+				bCurrentSideAngleVerticesAdded = false;
 
-				else
+				if (FirstAdjacentPlaneType == EVoxelPlaneType::Side && SecondAdjacentPlaneType == EVoxelPlaneType::Side)
 				{
-					FirstAdjacentPlaneType = EVoxelPlaneType::Side;
+					if (TArray<int32>* CurrentAngleEdgeIndexesArray = AngleIndex_to_EdgeIndexes_Map.Find(CurrentAngleIndex))
+					{
+						if (std::all_of(CurrentAngleEdgeIndexesArray->begin(), CurrentAngleEdgeIndexesArray->end(), [&InUnattachedEdgeIndexesArray](int32& EdgeIndex) { return InUnattachedEdgeIndexesArray.Contains(EdgeIndex); }))
+						{
+							if (TArray<int32>* AngleSideIndexesArray = AngleIndex_to_SideIndexes_Map.Find(CurrentAngleIndex))
+							{
+								for (int32 i = 0; i < 3; i++)
+								{
+									if (TryIntersectThreePlanes(AngleSectionPlaneDataArray[CurrentAngleIndex],
+										VoxelSidePlaneDataArray[(*AngleSideIndexesArray)[i]],
+										VoxelSidePlaneDataArray[(*AngleSideIndexesArray)[i == 2 ? 0 : i + 1]],
+										CurrentIntersectionPoint))
+									{
+										if ((*AngleSideIndexesArray)[i] == UnattachedSideIndex || (*AngleSideIndexesArray)[i == 2 ? 0 : i + 1] == UnattachedSideIndex)
+										{
+											UnattachedSideVerticesArray.Add(CurrentIntersectionPoint);
 
-					FirstAdjacentPlaneDataIndex = &(*IntersectableSidePlaneDataIndexesArray)[SideAngleIndex];
+											bCurrentSideAngleVerticesAdded = true;
+										}
+
+										if (TArray<FVector>* AngleVerticesArray = AngleIndex_to_BelongVerticesArray_Map.Find(CurrentAngleIndex))
+										{
+											AngleVerticesArray->Add(CurrentIntersectionPoint);
+										}
+										else AngleIndex_to_BelongVerticesArray_Map.Add(CurrentAngleIndex, { CurrentIntersectionPoint });
+									}
+								}
+
+								UnattachedSideVerticesArray.SwapMemory(UnattachedSideVerticesArray.Num() - 2, UnattachedSideVerticesArray.Num() - 1);
+							}
+						}
+					}
 				}
-
-				if (InUnattachedSideIndexesArray.Contains((*IntersectableSidePlaneDataIndexesArray)[SideAngleIndex == 3 ? 0 : SideAngleIndex + 1]))
-				{
-					SecondAdjacentPlaneDataIndex = UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Find(FIntPoint(UnattachedSideIndex, (*IntersectableSidePlaneDataIndexesArray)[SideAngleIndex == 3 ? 0 : SideAngleIndex + 1]));
-				}
-
-				if (SecondAdjacentPlaneDataIndex) SecondAdjacentPlaneType = EVoxelPlaneType::EdgeSection; 
-
-				else
-				{
-					SecondAdjacentPlaneType = EVoxelPlaneType::Side;
-
-					SecondAdjacentPlaneDataIndex = &(*IntersectableSidePlaneDataIndexesArray)[SideAngleIndex == 3 ? 0 : SideAngleIndex + 1];
-				}
-
-				if (TryIntersectThreePlanes(VoxelSidePlaneDataArray[UnattachedSideIndex],
-					FirstAdjacentPlaneType == EVoxelPlaneType::Side ? VoxelSidePlaneDataArray[*FirstAdjacentPlaneDataIndex] : EdgeSectionPlaneDataArray[*FirstAdjacentPlaneDataIndex],
-					SecondAdjacentPlaneType == EVoxelPlaneType::Side ? VoxelSidePlaneDataArray[*SecondAdjacentPlaneDataIndex] : EdgeSectionPlaneDataArray[*SecondAdjacentPlaneDataIndex],
+				
+				if (!bCurrentSideAngleVerticesAdded 
+				&& TryIntersectThreePlanes(VoxelSidePlaneDataArray[UnattachedSideIndex],
+					FirstAdjacentPlaneType == EVoxelPlaneType::Side ? VoxelSidePlaneDataArray[FirstAdjacentPlaneDataIndex] : EdgeSectionPlaneDataArray[FirstAdjacentPlaneDataIndex],
+					SecondAdjacentPlaneType == EVoxelPlaneType::Side ? VoxelSidePlaneDataArray[SecondAdjacentPlaneDataIndex] : EdgeSectionPlaneDataArray[SecondAdjacentPlaneDataIndex],
 					CurrentIntersectionPoint))
 				{
-					if (TArray<FVector>* UnattachedSideVertexesArray = VoxelSidePlaneDataIndex_to_BelongVertexesArray_Map.Find(UnattachedSideIndex)) UnattachedSideVertexesArray->Add(CurrentIntersectionPoint);
+					UnattachedSideVerticesArray.Add(CurrentIntersectionPoint);
 
-					else VoxelSidePlaneDataIndex_to_BelongVertexesArray_Map.Add(UnattachedSideIndex, { CurrentIntersectionPoint });
-
-					if (FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
+					/*if (FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
 					{
-						if (TArray<FVector>* EdgeSectionPlaneBelongVertexesArray = EdgeSectionPlaneDataIndex_to_BelongVertexesArray_Map.Find(*FirstAdjacentPlaneDataIndex))
+						if (TArray<FVector>* EdgeSectionPlaneBelongVerticesArray = EdgeIndex_to_BelongVerticesArray_Map.Find(FirstAdjacentPlaneDataIndex))
 						{
-							if (EdgeSectionPlaneBelongVertexesArray->Num() % 2 != 0 && *FirstAdjacentPlaneDataIndex != SecondPreviousEdgeSectionIndex)
+							if (EdgeSectionPlaneBelongVerticesArray->Num() % 2 != 0 && FirstAdjacentPlaneDataIndex != SecondPreviousEdgeIndex)
 							{
-								EdgeSectionPlaneBelongVertexesArray->Insert(CurrentIntersectionPoint, EdgeSectionPlaneBelongVertexesArray->Num() == 3 ? 2 : 0);
+								EdgeSectionPlaneBelongVerticesArray->Insert(CurrentIntersectionPoint, EdgeSectionPlaneBelongVerticesArray->Num() == 3 ? 2 : 0);
 							}
-							else EdgeSectionPlaneBelongVertexesArray->Add(CurrentIntersectionPoint);
+							else EdgeSectionPlaneBelongVerticesArray->Add(CurrentIntersectionPoint);
 						} 
-						else EdgeSectionPlaneDataIndex_to_BelongVertexesArray_Map.Add(*FirstAdjacentPlaneDataIndex, { CurrentIntersectionPoint });
+						else EdgeIndex_to_BelongVerticesArray_Map.Add(FirstAdjacentPlaneDataIndex, { CurrentIntersectionPoint });
 
-						FirstPreviousEdgeSectionIndex = *FirstAdjacentPlaneDataIndex;
+						FirstPreviousEdgeIndex = FirstAdjacentPlaneDataIndex;
 					}
-					else if (FirstPreviousEdgeSectionIndex != -1) FirstPreviousEdgeSectionIndex = -1;
+					else if (FirstPreviousEdgeIndex != -1) FirstPreviousEdgeIndex = -1;
 
 					if (SecondAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
 					{
-						if (TArray<FVector>* EdgeSectionPlaneBelongVertexesArray = EdgeSectionPlaneDataIndex_to_BelongVertexesArray_Map.Find(*SecondAdjacentPlaneDataIndex))
+						if (TArray<FVector>* EdgeSectionPlaneBelongVerticesArray = EdgeIndex_to_BelongVerticesArray_Map.Find(SecondAdjacentPlaneDataIndex))
 						{
-							if (EdgeSectionPlaneBelongVertexesArray->Num() % 2 != 0 && *SecondAdjacentPlaneDataIndex != FirstPreviousEdgeSectionIndex)
+							if (EdgeSectionPlaneBelongVerticesArray->Num() % 2 != 0 && SecondAdjacentPlaneDataIndex != FirstPreviousEdgeIndex)
 							{
-								EdgeSectionPlaneBelongVertexesArray->Insert(CurrentIntersectionPoint, EdgeSectionPlaneBelongVertexesArray->Num() == 3 ? 2 : 0);
+								EdgeSectionPlaneBelongVerticesArray->Insert(CurrentIntersectionPoint, EdgeSectionPlaneBelongVerticesArray->Num() == 3 ? 2 : 0);
 							}
-							else EdgeSectionPlaneBelongVertexesArray->Add(CurrentIntersectionPoint);
+							else EdgeSectionPlaneBelongVerticesArray->Add(CurrentIntersectionPoint);
 						}
-						else EdgeSectionPlaneDataIndex_to_BelongVertexesArray_Map.Add(*SecondAdjacentPlaneDataIndex, { CurrentIntersectionPoint });
+						else EdgeIndex_to_BelongVerticesArray_Map.Add(SecondAdjacentPlaneDataIndex, { CurrentIntersectionPoint });
 
-						SecondPreviousEdgeSectionIndex = *SecondAdjacentPlaneDataIndex;
+						SecondPreviousEdgeIndex = SecondAdjacentPlaneDataIndex;
 					}
-					else if (SecondPreviousEdgeSectionIndex != -1) SecondPreviousEdgeSectionIndex = -1;
+					else if (SecondPreviousEdgeIndex != -1) SecondPreviousEdgeIndex = -1;*/
 
-					if (AngleSectionIndexToVerticesPairsArray && FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection && SecondAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
+
+
+
+					if (FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
 					{
-						if (int32* AngleSectionIndex = EdgeSectionIndexesPair_to_AngleSectionIndex_Map.Find(FIntPoint(*FirstAdjacentPlaneDataIndex, *SecondAdjacentPlaneDataIndex)))
+						if (TArray<FVector>* EdgeSectionPlaneBelongVerticesArray = EdgeIndex_to_BelongVerticesArray_Map.Find(FirstAdjacentPlaneDataIndex))
 						{
-							if (TPair<int32, TArray<FVector>>* AngleSectionIndexToVerticesPair = AngleSectionIndexToVerticesPairsArray->FindByPredicate([AngleSectionIndex](TPair<int32, TArray<FVector>>& InAngleSectionIndexToVerticesPair) { return InAngleSectionIndexToVerticesPair.Key == *AngleSectionIndex; }))
+							if (EdgeSectionPlaneBelongVerticesArray->Num() % 2 != 0 && FirstAdjacentPlaneDataIndex != SecondPreviousEdgeIndex)
 							{
-								if (TArray<int32>* AngleSectionAdjacentSideIndexesArray = AngleSectionIndex_to_SideIndexes_Map.Find(*AngleSectionIndex))
+								EdgeSectionPlaneBelongVerticesArray->Insert(CurrentIntersectionPoint, EdgeSectionPlaneBelongVerticesArray->Num() == 3 ? 2 : 0);
+							}
+							else EdgeSectionPlaneBelongVerticesArray->Add(CurrentIntersectionPoint);
+						}
+						else EdgeIndex_to_BelongVerticesArray_Map.Add(FirstAdjacentPlaneDataIndex, { CurrentIntersectionPoint });
+					}
+
+					if (SecondAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
+					{
+						if (TArray<FVector>* EdgeSectionPlaneBelongVerticesArray = EdgeIndex_to_BelongVerticesArray_Map.Find(SecondAdjacentPlaneDataIndex))
+						{
+							if (EdgeSectionPlaneBelongVerticesArray->Num() % 2 != 0 && SecondAdjacentPlaneDataIndex != FirstPreviousEdgeIndex)
+							{
+								EdgeSectionPlaneBelongVerticesArray->Insert(CurrentIntersectionPoint, EdgeSectionPlaneBelongVerticesArray->Num() == 3 ? 2 : 0);
+							}
+							else EdgeSectionPlaneBelongVerticesArray->Add(CurrentIntersectionPoint);
+						}
+						else EdgeIndex_to_BelongVerticesArray_Map.Add(SecondAdjacentPlaneDataIndex, { CurrentIntersectionPoint });
+					}
+
+					if (FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection) FirstPreviousEdgeIndex = FirstAdjacentPlaneDataIndex;
+
+					else if (FirstPreviousEdgeIndex != -1) FirstPreviousEdgeIndex = -1;
+
+					if (FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection) SecondPreviousEdgeIndex = SecondAdjacentPlaneDataIndex;
+
+					else if (SecondPreviousEdgeIndex != -1) SecondPreviousEdgeIndex = -1;
+
+
+
+
+
+
+					if (AngleIndexToVerticesPairsArray && FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection && SecondAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
+					{
+						if (int32* AngleIndex = EdgeIndexesPair_to_AngleIndex_Map.Find(FIntPoint(FirstAdjacentPlaneDataIndex, SecondAdjacentPlaneDataIndex)))
+						{
+							if (TPair<int32, TArray<FVector>>* AngleIndexToVerticesPair = AngleIndexToVerticesPairsArray->FindByPredicate([AngleIndex](TPair<int32, TArray<FVector>>& InAngleIndexToVerticesPair) { return InAngleIndexToVerticesPair.Key == *AngleIndex; }))
+							{
+								if (TArray<int32>* AngleSectionAdjacentSideIndexesArray = AngleIndex_to_SideIndexes_Map.Find(*AngleIndex))
 								{
-									AngleSectionIndexToVerticesPair->Value[AngleSectionAdjacentSideIndexesArray->IndexOfByKey(UnattachedSideIndex)] = CurrentIntersectionPoint;
+									AngleIndexToVerticesPair->Value[AngleSectionAdjacentSideIndexesArray->IndexOfByKey(UnattachedSideIndex)] = CurrentIntersectionPoint;
 								}
 							}
 							else
 							{
-								AngleSectionIndexToVerticesPair = &(*AngleSectionIndexToVerticesPairsArray)[AngleSectionIndexToVerticesPairsArray->AddDefaulted()];
+								AngleIndexToVerticesPair = &(*AngleIndexToVerticesPairsArray)[AngleIndexToVerticesPairsArray->AddDefaulted()];
 
-								AngleSectionIndexToVerticesPair->Key = *AngleSectionIndex;
+								AngleIndexToVerticesPair->Key = *AngleIndex;
 
-								AngleSectionIndexToVerticesPair->Value.Init(FVector::ZeroVector, 3);
+								AngleIndexToVerticesPair->Value.Init(FVector::ZeroVector, 3);
 
-								if (TArray<int32>* AngleSectionAdjacentSideIndexesArray = AngleSectionIndex_to_SideIndexes_Map.Find(*AngleSectionIndex))
+								if (TArray<int32>* AngleSectionAdjacentSideIndexesArray = AngleIndex_to_SideIndexes_Map.Find(*AngleIndex))
 								{
-									AngleSectionIndexToVerticesPair->Value[AngleSectionAdjacentSideIndexesArray->IndexOfByKey(UnattachedSideIndex)] = CurrentIntersectionPoint;
+									AngleIndexToVerticesPair->Value[AngleSectionAdjacentSideIndexesArray->IndexOfByKey(UnattachedSideIndex)] = CurrentIntersectionPoint;
+								}
+							}
+						}
+					}
+				}
+
+				CurrentAngleAttachedSidesNum = 0;
+
+				TArray<FVector>* AngleVerticesArray = AngleIndex_to_BelongVerticesArray_Map.Find(CurrentAngleIndex);
+
+				if (!AngleVerticesArray)
+				{
+					if (TArray<int32>* CurrentAngleEdgeIndexesArray = AngleIndex_to_EdgeIndexes_Map.Find(CurrentAngleIndex))
+					{
+						if (std::all_of(CurrentAngleEdgeIndexesArray->begin(), CurrentAngleEdgeIndexesArray->end(), [&InUnattachedEdgeIndexesArray](int32& EdgeIndex) { return InUnattachedEdgeIndexesArray.Contains(EdgeIndex); }))
+						{
+							if (TArray<int32>* AngleSideIndexesArray = AngleIndex_to_SideIndexes_Map.Find(CurrentAngleIndex))
+							{
+								for (int32 i = 0; i < 3; i++)
+								{
+									if (!InUnattachedSideIndexesArray.Contains((*AngleSideIndexesArray)[i]))
+									{
+										CurrentAngleAttachedSidesNum++;
+
+										if (CurrentAngleAttachedSidesNum > 1)
+										{
+											AngleIndex_to_BelongVerticesArray_Map.Add(CurrentAngleIndex, TArray<FVector>());
+
+											for (int32 IntersectableSideIndex = 0; IntersectableSideIndex < 3; IntersectableSideIndex++)
+											{
+												if (TryIntersectThreePlanes(AngleSectionPlaneDataArray[CurrentAngleIndex],
+													VoxelSidePlaneDataArray[(*AngleSideIndexesArray)[IntersectableSideIndex]],
+													VoxelSidePlaneDataArray[(*AngleSideIndexesArray)[IntersectableSideIndex == 2 ? 0 : IntersectableSideIndex + 1]],
+													CurrentIntersectionPoint))
+												{
+													AngleVerticesArray->Add(CurrentIntersectionPoint);
+												}
+											}
+											break;
+										}
+									}
 								}
 							}
 						}
@@ -694,21 +982,29 @@ void UATVoxelPMC::CreateMesh(TArray<FIntVector>& InVisibleVoxelPointsArray)
 	FVector VoxelRelativeLocation = FVector::ZeroVector;
 
 	TArray<int32> UnattachedSideIndexesArray;
+	TArray<int32> UnattachedEdgeIndexesArray;
+
+	TArray<TArray<int32>> UnattachedSideAndEdgeIndexesArraysArray;
+	UnattachedSideAndEdgeIndexesArraysArray.AddDefaulted(2);
 
 	TArray<FVector> SidesMeshVerticesArray;
 	TArray<FVector> EdgeSectionPlanesMeshVerticesArray;
+	TArray<FVector> UnintentionalAngleSectionsMeshVerticesArray;
 	TArray<FVector> AngleSectionsMeshVerticesArray;
 	
 	TArray<int32> SidesMeshTriangleVertexIndexesArray;
 	TArray<int32> EdgeSectionPlanesMeshTriangleVertexIndexesArray;
+	TArray<int32> UnintentionalAngleSectionsMeshTriangleVertexIndexesArray;
 	TArray<int32> AngleSectionsMeshTriangleVertexIndexesArray;
 
 	TArray<FVector> SidesMeshNormalsArray;
 	TArray<FVector> EdgeSectionsMeshNormalsArray;
+	TArray<FVector> UnintentionalAngleSectionsMeshNormalsArray;
 	TArray<FVector> AngleSectionsMeshNormalsArray;
 
 	TArray<FVector2D> SidesMeshUVPointsArray;
 	TArray<FVector2D> EdgeSectionsMeshUVPointsArray;
+	TArray<FVector2D> UnintentionalAngleSectionsMeshUVPointsArray;
 	TArray<FVector2D> AngleSectionsMeshUVPointsArray;
 
 	TArray<FVector2D> DefaultUVPointsArray = {
@@ -727,67 +1023,76 @@ void UATVoxelPMC::CreateMesh(TArray<FIntVector>& InVisibleVoxelPointsArray)
 
 	TArray<FProcMeshTangent> SidesMeshTangentsArray;
 	TArray<FProcMeshTangent> EdgeSectionsMeshTangentsArray;
+	TArray<FProcMeshTangent> UnintentionalAngleSectionsMeshTangentsArray;
 	TArray<FProcMeshTangent> AngleSectionsMeshTangentsArray;
 
 	int32 AddedSidesNum = 0;
 
 	int32 AddedEdgeSectionsNum = 0;
 
-	int32 CurrentFaceStartVertexIndex = NULL;
+	int32 CurrentVoxelSideStartVertexIndex = 0;
+
+	int32 CurrentVoxelFaceStartVertexIndex = 0;
 
 	int32 CurrentEdgeSectionVertexIndex = 0;
+
+	//bool bIsFirst
 
 	for (FIntVector& VisibleVoxelPoint : InVisibleVoxelPointsArray)
 	{
 		VoxelRelativeLocation = UATWorldFunctionLibrary::Point3D_To_RelativeLocation(this, VisibleVoxelPoint);
 
 		GetUnattachedSideIndexes(VisibleVoxelPoint, UnattachedSideIndexesArray);
+		GetUnattachedEdgeIndexes(VisibleVoxelPoint, UnattachedEdgeIndexesArray);
 
 		UnattachedSideIndexesArray.Sort();
+		UnattachedEdgeIndexesArray.Sort();
 
-		if (TMap<int32, TArray<FVector>>* VoxelSidePlaneDataIndex_to_BelongVertexesArray_Map = UnattachedSideIndexes_to_VoxelSidePlaneDataIndexToBelongVertexesMap_Map.Find(UnattachedSideIndexesArray))
+		UnattachedSideAndEdgeIndexesArraysArray[0] = UnattachedSideIndexesArray;
+		UnattachedSideAndEdgeIndexesArraysArray[1] = UnattachedEdgeIndexesArray;
+
+		CreateVoxelMeshTemplate(UnattachedSideIndexesArray, UnattachedEdgeIndexesArray);
+
+		if (TMap<int32, TArray<FVector>>* VoxelSideIndex_to_BelongVerticesArray_Map = UnattachedSideAndEdgeIndexes_to_VoxelSideIndexToBelongVerticesMap_Map.Find(UnattachedSideAndEdgeIndexesArraysArray))
 		{
 			for (int32& UnattachedSideIndex : UnattachedSideIndexesArray)
 			{
-				if (TArray<FVector>* VoxelSidePlaneVertexesArray = VoxelSidePlaneDataIndex_to_BelongVertexesArray_Map->Find(UnattachedSideIndex))
+				if (TArray<FVector>* VoxelSideVerticesArray = VoxelSideIndex_to_BelongVerticesArray_Map->Find(UnattachedSideIndex))
 				{
-					for (int32 SideVertexIndex = 0; SideVertexIndex < 4; SideVertexIndex++)
+					for (int32 SideVertexOrderIndex = 0; SideVertexOrderIndex < VoxelSideVerticesArray->Num(); SideVertexOrderIndex++)
 					{
-						SidesMeshVerticesArray.Add((*VoxelSidePlaneVertexesArray)[SideVertexIndex] + VoxelRelativeLocation);
+						SidesMeshVerticesArray.Add((*VoxelSideVerticesArray)[SideVertexOrderIndex] + VoxelRelativeLocation);
 
 						if (FVector* SideMeshNormal = SideIndex_to_MeshNormal_Map.Find(UnattachedSideIndex)) SidesMeshNormalsArray.Add(*SideMeshNormal);
 						
-						SidesMeshUVPointsArray.Add(DefaultUVPointsArray[SideVertexIndex]);
+						//SidesMeshUVPointsArray.Add(DefaultUVPointsArray[SideVertexOrderIndex]);
 
 						SidesMeshTangentsArray.Add(FProcMeshTangent(1, 0, 0));
 					}
+
+					for (int32 i = 1; i < VoxelSideVerticesArray->Num() - 1; i++)
+					{
+						SidesMeshTriangleVertexIndexesArray.Add(CurrentVoxelSideStartVertexIndex);
+						SidesMeshTriangleVertexIndexesArray.Add(CurrentVoxelSideStartVertexIndex + i);
+						SidesMeshTriangleVertexIndexesArray.Add(CurrentVoxelSideStartVertexIndex + i + 1);
+					}
+
+					CurrentVoxelSideStartVertexIndex += VoxelSideVerticesArray->Num();
 				}
-
-				CurrentFaceStartVertexIndex = AddedSidesNum * 4;
-
-				SidesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 0);
-				SidesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 1);
-				SidesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 2);
-
-				SidesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 0);
-				SidesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 2);
-				SidesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 3);
-
-				AddedSidesNum++;
 			}
 		}
 
-		if (TMap<int32, TArray<FVector>>* EdgeSectionPlaneDataIndex_to_BelongVertexes_Map = UnattachedSideIndexes_to_EdgeSectionPlaneDataIndexToBelongVertexesMap_Map.Find(UnattachedSideIndexesArray))
+		if (TMap<int32, TArray<FVector>>* EdgeIndex_to_BelongVertices_Map = UnattachedSideAndEdgeIndexes_to_VoxelEdgeIndexToBelongVerticesMap_Map.Find(UnattachedSideAndEdgeIndexesArraysArray))
 		{
 			for (int32 i = 0; i < UnattachedSideIndexesPairsArray.Num(); i++)
 			{
 				if (UnattachedSideIndexesArray.Contains(UnattachedSideIndexesPairsArray[i].X) && UnattachedSideIndexesArray.Contains(UnattachedSideIndexesPairsArray[i].Y))
 				{
-					if (int32* EdgeSectionPlaneDataIndex = UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map.Find(UnattachedSideIndexesPairsArray[i]))
+					if (int32* EdgeIndex = SideIndexesPair_to_EdgeIndex_Map.Find(UnattachedSideIndexesPairsArray[i]))
 					{
-						if (TArray<FVector>* EdgeSectionPlaneVertexesArray = EdgeSectionPlaneDataIndex_to_BelongVertexes_Map->Find(*EdgeSectionPlaneDataIndex)) // EdgeSectionPlaneVertexesArray - Contains vertexes in clock-wize allocation
+						if (TArray<FVector>* EdgeSectionPlaneVerticesArray = EdgeIndex_to_BelongVertices_Map->Find(*EdgeIndex)) // EdgeSectionPlaneVerticesArray - Contains Vertices in clock-wize allocation
 						{
-							EdgeSectionPlanesMeshVerticesArray += *EdgeSectionPlaneVertexesArray;
+							EdgeSectionPlanesMeshVerticesArray += *EdgeSectionPlaneVerticesArray;
 
 							CurrentEdgeSectionVertexIndex = 0;
 
@@ -795,9 +1100,9 @@ void UATVoxelPMC::CreateMesh(TArray<FIntVector>& InVisibleVoxelPointsArray)
 							{
 								EdgeSectionPlanesMeshVerticesArray[j] += VoxelRelativeLocation;
 
-								if (FVector* EdgeSectionMeshNormal = EdgeSectionIndex_to_MeshNormal_Map.Find(*EdgeSectionPlaneDataIndex)) EdgeSectionsMeshNormalsArray.Add(*EdgeSectionMeshNormal);
+								if (FVector* EdgeSectionMeshNormal = EdgeIndex_to_MeshNormal_Map.Find(*EdgeIndex)) EdgeSectionsMeshNormalsArray.Add(*EdgeSectionMeshNormal);
 
-								EdgeSectionsMeshUVPointsArray.Add(ClockwiseDefaultUVPointsArray[CurrentEdgeSectionVertexIndex]);
+								//EdgeSectionsMeshUVPointsArray.Add(ClockwiseDefaultUVPointsArray[CurrentEdgeSectionVertexIndex]);
 
 								EdgeSectionsMeshTangentsArray.Add(FProcMeshTangent(1, 0, 0));
 
@@ -805,41 +1110,79 @@ void UATVoxelPMC::CreateMesh(TArray<FIntVector>& InVisibleVoxelPointsArray)
 							}
 						}
 					}
+
+					CurrentVoxelFaceStartVertexIndex = AddedEdgeSectionsNum * 4;
+
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 1);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 0);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
+
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 0);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 3);
+
+					/*EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 1);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 0);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
+
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 1);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 3);*/
+
+					/*EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 1);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 0);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
+
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 1);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
+					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 3);*/
+
+					AddedEdgeSectionsNum++;
 				}
-				CurrentFaceStartVertexIndex = AddedEdgeSectionsNum * 4;
-
-				EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 1);
-				EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 0);
-				EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 2);
-
-				EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 2);
-				EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 0);
-				EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentFaceStartVertexIndex + 3);
-
-				AddedEdgeSectionsNum++;
 			}
 		}
 
-		if (TArray<TPair<int32, TArray<FVector>>>* AngleSectionIndexToVerticesPairsArray = UnattachedSideIndexes_to_AngleSectionIndexToVerticesPairsArray_Map.Find(UnattachedSideIndexesArray))
+		if (TArray<TPair<int32, TArray<FVector>>>* AngleIndexToVerticesPairsArray = UnattachedSideAndEdgeIndexes_to_AngleIndexToVerticesPairsArray_Map.Find(UnattachedSideAndEdgeIndexesArraysArray))
 		{
-			for (TPair<int32, TArray<FVector>>& AngleSectionIndexToVerticesPair : *AngleSectionIndexToVerticesPairsArray)
+			for (TPair<int32, TArray<FVector>>& UnintentionalAngleIndexToVerticesPair : *AngleIndexToVerticesPairsArray)
 			{
-				if (!AngleSectionIndexToVerticesPair.Value.IsEmpty())
+				if (!UnintentionalAngleIndexToVerticesPair.Value.IsEmpty())
 				{
-					AngleSectionsMeshVerticesArray += AngleSectionIndexToVerticesPair.Value;
+					UnintentionalAngleSectionsMeshVerticesArray += UnintentionalAngleIndexToVerticesPair.Value;
 
 					for (int32 i = 0; i < 3; i++)
 					{
-						AngleSectionsMeshVerticesArray[AngleSectionsMeshTriangleVertexIndexesArray.Num()] += VoxelRelativeLocation;
+						UnintentionalAngleSectionsMeshVerticesArray[UnintentionalAngleSectionsMeshTriangleVertexIndexesArray.Num()] += VoxelRelativeLocation;
 
-						AngleSectionsMeshTriangleVertexIndexesArray.Add(AngleSectionsMeshTriangleVertexIndexesArray.Num());
+						UnintentionalAngleSectionsMeshTriangleVertexIndexesArray.Add(UnintentionalAngleSectionsMeshTriangleVertexIndexesArray.Num());
 
-						if (FVector* AngleSectionMeshNormal = AngleSectionIndex_to_MeshNormal_Map.Find(AngleSectionIndexToVerticesPair.Key)) AngleSectionsMeshNormalsArray.Add(*AngleSectionMeshNormal);
+						if (FVector* UnintentionalAngleSectionMeshNormal = AngleIndex_to_MeshNormal_Map.Find(UnintentionalAngleIndexToVerticesPair.Key)) UnintentionalAngleSectionsMeshNormalsArray.Add(*UnintentionalAngleSectionMeshNormal);
 
-						AngleSectionsMeshUVPointsArray.Add(DefaultUVPointsArray[i]);
+						//UnintentionalAngleSectionsMeshUVPointsArray.Add(DefaultUVPointsArray[i]);
 
-						AngleSectionsMeshTangentsArray.Add(FProcMeshTangent(1, 0, 0));
+						UnintentionalAngleSectionsMeshTangentsArray.Add(FProcMeshTangent(1, 0, 0));
 					}
+				}
+			}
+		}
+	
+		if (TMap<int32, TArray<FVector>>* AngleIndex_to_BelongVertices_Map = UnattachedSideAndEdgeIndexes_to_AngleIndexToBelongVerticesMap_Map.Find(UnattachedSideAndEdgeIndexesArraysArray))
+		{
+			for (TPair<int32, TArray<FVector>>& AngleIndexToVerticesPair : *AngleIndex_to_BelongVertices_Map)
+			{
+				AngleSectionsMeshVerticesArray += AngleIndexToVerticesPair.Value;
+
+				for (int32 i = 0; i < 3; i++)
+				{
+					AngleSectionsMeshVerticesArray[AngleSectionsMeshTriangleVertexIndexesArray.Num()] += VoxelRelativeLocation;
+
+					AngleSectionsMeshTriangleVertexIndexesArray.Add(AngleSectionsMeshTriangleVertexIndexesArray.Num());
+
+					if (FVector* AngleSectionMeshNormal = AngleIndex_to_MeshNormal_Map.Find(AngleIndexToVerticesPair.Key)) AngleSectionsMeshNormalsArray.Add(*AngleSectionMeshNormal);
+
+					//AngleSectionsMeshUVPointsArray.Add(DefaultUVPointsArray[i]);
+
+					AngleSectionsMeshTangentsArray.Add(FProcMeshTangent(1, 0, 0));
 				}
 			}
 		}
@@ -849,7 +1192,9 @@ void UATVoxelPMC::CreateMesh(TArray<FIntVector>& InVisibleVoxelPointsArray)
 
 	CreateMeshSection(1, EdgeSectionPlanesMeshVerticesArray, EdgeSectionPlanesMeshTriangleVertexIndexesArray, EdgeSectionsMeshNormalsArray, EdgeSectionsMeshUVPointsArray, TArray<FColor>(), EdgeSectionsMeshTangentsArray, true);
 
-	CreateMeshSection(2, AngleSectionsMeshVerticesArray, AngleSectionsMeshTriangleVertexIndexesArray, AngleSectionsMeshNormalsArray, AngleSectionsMeshUVPointsArray, TArray<FColor>(), AngleSectionsMeshTangentsArray, true);
+	CreateMeshSection(2, UnintentionalAngleSectionsMeshVerticesArray, UnintentionalAngleSectionsMeshTriangleVertexIndexesArray, UnintentionalAngleSectionsMeshNormalsArray, UnintentionalAngleSectionsMeshUVPointsArray, TArray<FColor>(), UnintentionalAngleSectionsMeshTangentsArray, true);
+
+	CreateMeshSection(3, AngleSectionsMeshVerticesArray, AngleSectionsMeshTriangleVertexIndexesArray, AngleSectionsMeshNormalsArray, AngleSectionsMeshUVPointsArray, TArray<FColor>(), AngleSectionsMeshTangentsArray, true);
 }
 
 void UATVoxelPMC::GetUnattachedSideIndexes(FIntVector& InPoint, TArray<int32>& OutUnattachedSideIndexesArray)
@@ -866,13 +1211,27 @@ void UATVoxelPMC::GetUnattachedSideIndexes(FIntVector& InPoint, TArray<int32>& O
 	}
 }
 
+void UATVoxelPMC::GetUnattachedEdgeIndexes(FIntVector& InPoint, TArray<int32>& OutUnattachedEdgeIndexesArray)
+{
+	OutUnattachedEdgeIndexesArray.Reset();
+
+	ensureReturn(OwnerChunk);
+
+	for (int32 i = 0; i < FATVoxelUtils::EdgeOffsets.Num(); i++)
+	{
+		FIntVector SamplePoint = InPoint + FATVoxelUtils::EdgeOffsets[i];
+
+		if (OwnerChunk->IsPointInsideTree(SamplePoint) && !HasVoxelOfAnyTypeAtPoint(SamplePoint)) OutUnattachedEdgeIndexesArray.Add(i);
+	}
+}
+
 bool UATVoxelPMC::IsEdgeSectionPlanesIntersectable(const int32& InFirstEdgeSectionPlaneIndex, const int32& InSecondEdgeSectionPlaneIndex) const
 {
 	if (VoxelTypeData->SectionsDepth <= 0.25)
 	{
-		const TArray<int32>* IntersectableEdgeSectionPlaneDataIndexesArray = EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map.Find(InFirstEdgeSectionPlaneIndex);
+		const TArray<int32>* IntersectableEdgeIndexesArray = EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Find(InFirstEdgeSectionPlaneIndex);
 		
-		return IntersectableEdgeSectionPlaneDataIndexesArray && IntersectableEdgeSectionPlaneDataIndexesArray->Contains(InSecondEdgeSectionPlaneIndex);
+		return IntersectableEdgeIndexesArray && IntersectableEdgeIndexesArray->Contains(InSecondEdgeSectionPlaneIndex);
 	}
 	else return InFirstEdgeSectionPlaneIndex % 2 == 0 ? InFirstEdgeSectionPlaneIndex + 1 != InSecondEdgeSectionPlaneIndex : InFirstEdgeSectionPlaneIndex - 1 != InSecondEdgeSectionPlaneIndex;
 }

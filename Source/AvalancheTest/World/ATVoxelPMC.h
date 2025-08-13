@@ -146,6 +146,9 @@ public:
 	bool IsVoxelSidesClosed(const FIntVector& InPoint) const;
 
 	UFUNCTION(Category = "Getters", BlueprintCallable)
+	bool IsVoxelEdgesClosed(const FIntVector& InPoint) const;
+
+	UFUNCTION(Category = "Getters", BlueprintCallable)
 	float GetVoxelSize() const;
 	//~ End Getters
 
@@ -208,13 +211,19 @@ protected:
 
 	void HandleInstanceIndicesUpdates(const TArrayView<const FInstancedStaticMeshDelegates::FInstanceIndexUpdateData>& InIndexUpdates);
 
-	void GenerateCombinations(const TArray<int32>& Elements, int32 StartIndex, int32 CurrentLength, int32 MaxLength, TArray<int32>& CurrentCombination);
+	void GenerateUnattachedSideIndexesCombinations(TArray<TArray<int32>>& OutCombinationsArray);
 
-	void GenerateVoxelMeshPrototypeByUnattachedSideIndexes(TArray<int32>& InUnattachedSideIndexesArray);
+	void GenerateUnattachedEdgeIndexesCombinations(TArray<TArray<int32>>& OutCombinationsArray);
+
+	void GenerateCombinations(const TArray<int32>& InElements, int32 InStartIndex, int32 InCurrentLength, int32 InMaxLength, TArray<int32>& InCurrentCombination, TArray<TArray<int32>>& OutCombinationsArray);
+
+	void CreateVoxelMeshTemplate(TArray<int32>& InUnattachedSideIndexesArray, TArray<int32>& InUnattachedEdgeIndexesArray);
 
 	void CreateMesh(TArray<FIntVector>& InVisibleVoxelPointsArray);
 
 	void GetUnattachedSideIndexes(FIntVector& InPoint, TArray<int32>& OutUnattachedSideIndexesArray);
+
+	void GetUnattachedEdgeIndexes(FIntVector& InPoint, TArray<int32>& OutUnattachedEdgeIndexesArray);
 
 	bool IsEdgeSectionPlanesIntersectable(const int32& InFirstEdgeSectionPlaneIndex, const int32& InSecondEdgeSectionPlaneIndex) const;
 
@@ -226,46 +235,76 @@ protected:
 
 	TArray<FPlaneData> EdgeSectionPlaneDataArray;
 
-	TMap<FIntPoint, int32> UnattachedSideIndexesPair_to_EdgeSectionPlaneDataIndex_Map;
+	TArray<FPlaneData> AngleSectionPlaneDataArray;
+
+	TMap<FIntPoint, int32> SideIndexesPair_to_EdgeIndex_Map;
 
 	TArray<FIntPoint> UnattachedSideIndexesPairsArray;
 
-	TMap<int32, TArray<int32>> SidePlaneDataIndex_to_IntersectableSidePlaneDataIndexesArray_Map;
+	TMap<int32, TArray<int32>> SideIndex_to_IntersectableSideIndexesArray_Map;
 
-	TMap<int32, TArray<int32>> EdgeSectionPlaneDataIndex_to_IntersectableVoxelSidePlaneDataIndexesArray_Map;
+	TMap<int32, TArray<int32>> SideIndex_to_AngleIndexesArray_Map;
 
-	TMap<int32, TArray<int32>> EdgeSectionPlaneDataIndex_to_IntersectableEdgeSectionPlaneDataIndexesArray_Map;
+	TMap<FIntPoint, int32> SideAndAngleIndexes_to_FirstAdjacentEdgeIndex_Map;
 
-	//TMap<
-	//	TArray<
-	//	TArray<int32>, // Unattached side indexes array
-	//	TArray<int32>>, // Unattached edge indexes array
-	//	TMap<
-	//	int32, // 
-	//	TArray<FVector>>>
-	//	UnattachedSideAndEdgeIndexes_to_VoxelSidePlaneDataIndexToBelongVertexesMap_Map;
+	TMap<FIntPoint, int32> SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map;
 
-	TMap<TArray<int32>, TMap<int32, TArray<FVector>>> UnattachedSideIndexes_to_VoxelSidePlaneDataIndexToBelongVertexesMap_Map;
+	TMap<int32, TArray<int32>> EdgeIndex_to_IntersectableSideIndexesArray_Map;
 
-	TMap<TArray<int32>, TMap<int32, TArray<FVector>>> UnattachedSideIndexes_to_EdgeSectionPlaneDataIndexToBelongVertexesMap_Map;
+	TMap<int32, TArray<int32>> EdgeIndex_to_IntersectableEdgeIndexesArray_Map;
 
 	TMap<
-		TArray<int32>, // Unattached side indexes array
+		TArray<TArray<int32>>, // [0] - Unattached side indexes array, [1] - Unattached edge indexes array
+		TMap<
+			int32, // Side index
+			TArray<FVector>>> // Side belong vertices array
+	UnattachedSideAndEdgeIndexes_to_VoxelSideIndexToBelongVerticesMap_Map;
+
+	//TMap<TArray<int32>, TMap<int32, TArray<FVector>>> UnattachedSideIndexes_to_VoxelSideIndexToBelongVerticesMap_Map;
+
+	TMap<
+		TArray<TArray<int32>>, // [0] - Unattached side indexes array, [1] - Unattached edge indexes array
+		TMap<
+			int32, // Edge section index
+			TArray<FVector>>> // Edge section belong vertices array
+	UnattachedSideAndEdgeIndexes_to_VoxelEdgeIndexToBelongVerticesMap_Map;
+
+	//TMap<TArray<int32>, TMap<int32, TArray<FVector>>> UnattachedSideIndexes_to_EdgeIndexToBelongVerticesMap_Map;
+
+	TMap<
+		TArray<TArray<int32>>, // [0] - Unattached side indexes array, [1] - Unattached edge indexes array
+		TMap<
+			int32, // Angle section index
+			TArray<FVector>>> // Belong vertices array
+	UnattachedSideAndEdgeIndexes_to_AngleIndexToBelongVerticesMap_Map;
+
+	TMap<
+		TArray<TArray<int32>>, // [0] - Unattached side indexes array, [1] - Unattached edge indexes array
 		TArray<
 			TPair<
 				int32, // Angle section index
-				TArray<FVector>>>> // vertices array
-	UnattachedSideIndexes_to_AngleSectionIndexToVerticesPairsArray_Map;
+				TArray<FVector>>>> // Belong vertices array
+	UnattachedSideAndEdgeIndexes_to_AngleIndexToVerticesPairsArray_Map; // To store unintentionally truncated angle vertices (for angles truncated by edge truncation)
 
-	TMap<FIntPoint, int32> EdgeSectionIndexesPair_to_AngleSectionIndex_Map;
+	//TMap<
+	//	TArray<int32>, // Unattached side indexes array
+	//	TArray<
+	//		TPair<
+	//			int32, // Angle section index
+	//			TArray<FVector>>>> // vertices array
+	//UnattachedSideIndexes_to_AngleIndexToVerticesPairsArray_Map;
 
-	TMap<int32, TArray<int32>> AngleSectionIndex_to_SideIndexes_Map;
+	TMap<FIntPoint, int32> EdgeIndexesPair_to_AngleIndex_Map;
+
+	TMap<int32, TArray<int32>> AngleIndex_to_SideIndexes_Map;
+
+	TMap<int32, TArray<int32>> AngleIndex_to_EdgeIndexes_Map;
 
 	TMap<int32, FVector> SideIndex_to_MeshNormal_Map;
 
-	TMap<int32, FVector> EdgeSectionIndex_to_MeshNormal_Map;
+	TMap<int32, FVector> EdgeIndex_to_MeshNormal_Map;
 
-	TMap<int32, FVector> AngleSectionIndex_to_MeshNormal_Map;
+	TMap<int32, FVector> AngleIndex_to_MeshNormal_Map;
 
 	//static FDelegateHandle InstanceIndexUpdatedDelegateHandle;
 	//~ End Mesh
