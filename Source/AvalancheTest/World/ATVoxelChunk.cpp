@@ -34,10 +34,7 @@ void AATVoxelChunk::OnConstruction(const FTransform& InTransform) // AActor
 {
 	Super::OnConstruction(InTransform);
 
-	UWorld* World = GetWorld();
-	ensureReturn(World);
-	
-	if (World->IsEditorWorld())
+	if (IS_EDITOR_WORLD())
 	{
 		for (const auto& SampleTypeDataAndVoxelComponent : PerTypeVoxelComponentMap)
 		{
@@ -69,24 +66,21 @@ void AATVoxelChunk::BP_InitChunk_Implementation(AATVoxelTree* InOwnerTree, const
 	OwnerTree = InOwnerTree;
 	ChunkCoords = InChunkCoords;
 
-	/*if (World->IsEditorWorld())
+	if (IS_EDITOR_WORLD())
 	{
 
 	}
-	else if (World->IsGameWorld())
+	else
 	{
-
-	}*/
+		
+	}
 }
 //~ End Initialize
 
 //~ Begin Voxel Tree
 int32 AATVoxelChunk::GetChunkSize() const
 {
-	UWorld* World = GetWorld();
-	ensureReturn(World, 16);
-
-	if (World->IsEditorWorld() && !OwnerTree)
+	if (IS_EDITOR_WORLD() && !OwnerTree)
 	{
 		return 16;
 	}
@@ -96,10 +90,7 @@ int32 AATVoxelChunk::GetChunkSize() const
 
 float AATVoxelChunk::GetVoxelSize() const
 {
-	UWorld* World = GetWorld();
-	ensureReturn(World, 16.0f);
-
-	if (World->IsEditorWorld() && !OwnerTree)
+	if (IS_EDITOR_WORLD() && !OwnerTree)
 	{
 		return 16.0f;
 	}
@@ -215,6 +206,39 @@ void AATVoxelChunk::HandleBreakVoxelAtPoint(const FIntVector& InPoint, const FVo
 	if (UATVoxelISMC* TargetComponent = GetVoxelComponentAtPoint(InPoint))
 	{
 		TargetComponent->HandleBreakVoxelAtPoint(InPoint, InBreakData);
+	}
+}
+
+void AATVoxelChunk::HandleUpdateAllVoxelInstanceDataFromTree()
+{
+	FIntVector ChunkBackLeftCornerPoint = GetChunkBackLeftCornerPoint();
+	int32 ChunkSize = GetChunkSize();
+
+	const FVoxelBreakData BreakData = FVoxelBreakData(true, false);
+
+	for (int32 LocalX = 0; LocalX < ChunkSize; ++LocalX)
+	{
+		for (int32 LocalY = 0; LocalY < ChunkSize; ++LocalY)
+		{
+			for (int32 LocalZ = 0; LocalZ < ChunkSize; ++LocalZ)
+			{
+				FIntVector LocalPoint = FIntVector(LocalX, LocalY, LocalZ);
+				FIntVector GlobalPoint = ChunkBackLeftCornerPoint + LocalPoint;
+
+				if (OwnerTree->HasVoxelInstanceDataAtPoint(GlobalPoint))
+				{
+					HandleSetVoxelInstanceDataAtPoint(GlobalPoint, OwnerTree->GetVoxelInstanceDataAtPoint(GlobalPoint, true));
+				}
+				else
+				{
+					HandleBreakVoxelAtPoint(GlobalPoint, BreakData);
+				}
+			}
+		}
+	}
+	if (!IsChunkSimulationReady())
+	{
+		MarkChunkAsSimulationReady();
 	}
 }
 

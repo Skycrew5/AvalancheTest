@@ -39,8 +39,9 @@ protected:
 	virtual void OnConstruction(const FTransform& InTransform) override; // AActor
 	virtual void BeginPlay() override; // AActor
 	virtual void Tick(float InDeltaSeconds) override; // AActor
-	virtual bool ShouldTickIfViewportsOnly() const override { return GetWorld()->IsEditorWorld(); } // AActor
+	virtual bool ShouldTickIfViewportsOnly() const override { return IS_EDITOR_WORLD(); } // AActor
 	virtual void EndPlay(const EEndPlayReason::Type InReason) override; // AActor
+	virtual void Reset() override; // AActor
 //~ End Actor
 
 //~ Begin Tick Updates
@@ -112,7 +113,16 @@ public:
 	void UnRegisterChunksUpdateReferenceActor(const AActor* InActor);
 
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
+	void UpdateChunksForUpdateReferenceActor(const AActor* InActor);
+
+	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	void MarkAllChunksAsSimulationReady();
+
+	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
+	void InitAllChunks();
+
+	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
+	void RemoveAllChunks();
 
 	const TArray<const AActor*>& GetChunksUpdateReferenceActors() const { return ChunksUpdateReferenceActors; }
 protected:
@@ -120,6 +130,7 @@ protected:
 	void HandleChunkUpdates();
 	void UpdateSortedChunkArray();
 	void InitVoxelChunksInSquare(const FIntPoint& InSquareCenterXY, const int32 InSquareExtentXY, TArray<AATVoxelChunk*>& OutNewChunks, const bool bInReplacePrevChunks = false);
+	void RemoveVoxelChunkAtPoint(const FIntVector& InPoint);
 
 	UPROPERTY(Category = "Voxel Chunks", EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<class AATVoxelChunk> ChunkClass;
@@ -157,9 +168,6 @@ public:
 
 	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
 	int32 GetTreeSeed() const { return TreeSeed; }
-
-	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
-	void InitAllChunks();
 
 	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
 	void HandleGenerate(bool bInAsync, int32 InTreeSeed);

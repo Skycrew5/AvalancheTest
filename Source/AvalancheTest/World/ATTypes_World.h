@@ -197,6 +197,8 @@ struct FSortedChunksBySquaredDistance
 	UPROPERTY()
 	TArray<FChunkWithSquaredDistance> DataArray;
 
+	void AddChunk(class AATVoxelChunk* InChunk);
+	void RemoveChunk(class AATVoxelChunk* InChunk);
 	void UpdateDistancesAndSort(const class AATVoxelTree* InTree, const bool bInReverse);
 };
 

@@ -29,7 +29,11 @@ void UATSimulationComponent::OnRegister() // UActorComponent
 {
 	Super::OnRegister();
 
-	if (GetWorld()->IsGameWorld())
+	if (IS_EDITOR_WORLD())
+	{
+		PrimaryComponentTick.SetTickFunctionEnable(false);
+	}
+	else
 	{
 		PrimaryComponentTick.SetTickFunctionEnable(true);
 	}
@@ -63,7 +67,7 @@ void UATSimulationComponent::TickComponent(float InDeltaSeconds, enum ELevelTick
 {
 	Super::TickComponent(InDeltaSeconds, InTickType, InThisTickFunction);
 
-	ensureReturn(!GetWorld()->IsEditorWorld());
+	ensureReturn(!IS_EDITOR_WORLD());
 	HandleTickUpdate(InDeltaSeconds);
 
 	SIZE_T TasksQueuedPointsAllocatedSize = 0;

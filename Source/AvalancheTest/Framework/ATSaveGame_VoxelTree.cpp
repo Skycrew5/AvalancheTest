@@ -16,7 +16,7 @@ void UATSaveGame_VoxelTree::SaveSlot(AATVoxelTree* InTargetTree, const FString& 
 	SaveData->TreeSizeInChunks = InTargetTree->TreeSizeInChunks;
 	SaveData->ChunkSize = InTargetTree->ChunkSize;
 	SaveData->VoxelSize = InTargetTree->VoxelSize;
-	SaveData->ChunksUpdateMaxSquareExtent = InTargetTree->ChunksUpdateMaxSquareExtent;
+	//SaveData->ChunksUpdateMaxSquareExtent = InTargetTree->ChunksUpdateMaxSquareExtent;
 
 	for (const auto& Pair : InTargetTree->Point_To_VoxelInstanceData_Map)
 	{
@@ -39,17 +39,22 @@ void UATSaveGame_VoxelTree::LoadSlot(class AATVoxelTree* InTargetTree, const FSt
 	ensureReturn(LoadedData);
 
 	ensureReturn(InTargetTree);
-	ensureReturn(InTargetTree->Point_To_VoxelInstanceData_Map.IsEmpty());
-
 	InTargetTree->ChunkClass = LoadedData->ChunkClass;
 	InTargetTree->TreeSizeInChunks = LoadedData->TreeSizeInChunks;
 	InTargetTree->ChunkSize = LoadedData->ChunkSize;
 	InTargetTree->VoxelSize = LoadedData->VoxelSize;
-	InTargetTree->ChunksUpdateMaxSquareExtent = LoadedData->ChunksUpdateMaxSquareExtent;
+	//InTargetTree->ChunksUpdateMaxSquareExtent = LoadedData->ChunksUpdateMaxSquareExtent;
 
-	InTargetTree->InitAllChunks();
-	InTargetTree->MarkAllChunksAsSimulationReady();
-
+	if (IS_EDITOR_WORLD(InTargetTree->))
+	{
+		InTargetTree->InitAllChunks();
+		InTargetTree->MarkAllChunksAsSimulationReady();
+	}
+	else
+	{
+		InTargetTree->Reset();
+	}
+	ensureReturn(InTargetTree->Point_To_VoxelInstanceData_Map.IsEmpty());
 	for (const auto& Pair : LoadedData->VoxelTypeData_To_SaveData_Map)
 	{
 		for (const FIntVector& SamplePoint : Pair.Value.Points)

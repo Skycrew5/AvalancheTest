@@ -53,9 +53,6 @@ public:
 	float VoxelSize;
 
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
-	int32 ChunksUpdateMaxSquareExtent;
-
-	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
 	TMap<TObjectPtr<const class UATVoxelTypeData>, FATVoxelTypeSaveData> VoxelTypeData_To_SaveData_Map;
 //~ End Data
 };

@@ -44,6 +44,19 @@ void FSortedChunksBySquaredDistance::UpdateDistancesAndSort(const AATVoxelTree* 
 	});
 }
 
+void FSortedChunksBySquaredDistance::AddChunk(AATVoxelChunk* InChunk)
+{
+	DataArray.Add(FChunkWithSquaredDistance(InChunk, 0));
+}
+
+void FSortedChunksBySquaredDistance::RemoveChunk(AATVoxelChunk* InChunk)
+{
+	DataArray.RemoveAll([InChunk](const FChunkWithSquaredDistance& InData)
+	{
+		return InData.Chunk == InChunk;
+	});
+}
+
 /*void FVoxelCompoundData::GetAllPoints(TArray<FIntVector>& OutPoints) const
 {
 	ensure(OutPoints.IsEmpty());

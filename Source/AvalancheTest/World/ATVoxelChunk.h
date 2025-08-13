@@ -115,6 +115,9 @@ public:
 	UFUNCTION(Category = "Voxel Setters", BlueprintCallable, meta = (KeyWords = "RemoveVoxelAt, DeleteVoxelAt", AutoCreateRefTerm = "InBreakData"))
 	void HandleBreakVoxelAtPoint(const FIntVector& InPoint, const FVoxelBreakData& InBreakData);
 
+	UFUNCTION(Category = "Voxel Setters", BlueprintCallable, meta = (KeyWords = "AddVoxelAt, PlaceVoxelAt"))
+	void HandleUpdateAllVoxelInstanceDataFromTree();
+
 	//UFUNCTION(Category = "Setters", BlueprintCallable)
 	//void HandleSetVoxelStabilityAtPoint(const FIntVector& InPoint, float InNewStability);
 
