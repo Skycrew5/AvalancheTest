@@ -54,27 +54,27 @@ void UATVoxelPMC::BeginPlay() // UActorComponent
 	VoxelSidePlaneDataArray.Add(FPlaneData(0, 0, 1, VoxelSize));
 	VoxelSidePlaneDataArray.Add(FPlaneData(0, 0, 1, 0));
 
-	EdgeSectionPlaneDataArray.Add(FPlaneData(0, -1, 1, VoxelSize * (1 - 2 * VoxelTypeData->SectionsDepth)));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(0, -1, 1, -VoxelSize * (1 - 2 * VoxelTypeData->SectionsDepth)));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(0, 1, 1, (VoxelSize * 2) * VoxelTypeData->SectionsDepth));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(0, 1, 1, -(VoxelSize * 2) * (VoxelTypeData->SectionsDepth - 1)));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(-1, 0, 1, VoxelSize * (1 - 2 * VoxelTypeData->SectionsDepth)));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(-1, 0, 1, -VoxelSize * (1 - 2 * VoxelTypeData->SectionsDepth)));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(1, 0, 1, (VoxelSize * 2) * VoxelTypeData->SectionsDepth));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(1, 0, 1, -(VoxelSize * 2) * (VoxelTypeData->SectionsDepth - 1)));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(1, 1, 0, (VoxelSize * 2) * VoxelTypeData->SectionsDepth));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(1, 1, 0, -(VoxelSize * 2) * (VoxelTypeData->SectionsDepth - 1)));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(1, -1, 0, VoxelSize * (1 - 2 * VoxelTypeData->SectionsDepth)));
-	EdgeSectionPlaneDataArray.Add(FPlaneData(1, -1, 0, -VoxelSize * (1 - 2 * VoxelTypeData->SectionsDepth)));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(0, -1, 1, VoxelSize * (1 - VoxelTypeData->SectionsDepth)));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(0, -1, 1, -VoxelSize * (1 - VoxelTypeData->SectionsDepth)));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(0, 1, 1, VoxelSize * VoxelTypeData->SectionsDepth));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(0, 1, 1, -VoxelSize * (VoxelTypeData->SectionsDepth - 2)));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(-1, 0, 1, VoxelSize * (1 - VoxelTypeData->SectionsDepth)));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(-1, 0, 1, -VoxelSize * (1 - VoxelTypeData->SectionsDepth)));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(1, 0, 1, VoxelSize * VoxelTypeData->SectionsDepth));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(1, 0, 1, VoxelSize * (2 - VoxelTypeData->SectionsDepth)));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(1, 1, 0, VoxelSize * VoxelTypeData->SectionsDepth));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(1, 1, 0, VoxelSize * (2 - VoxelTypeData->SectionsDepth)));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(1, -1, 0, VoxelSize * (1 - VoxelTypeData->SectionsDepth)));
+	EdgeSectionPlaneDataArray.Add(FPlaneData(1, -1, 0, -VoxelSize * (1 - VoxelTypeData->SectionsDepth)));
 
-	AngleSectionPlaneDataArray.Add(FPlaneData(1, 1, -1, -VoxelSize * (1 - VoxelTypeData->SectionsDepth    * 2)));
-	AngleSectionPlaneDataArray.Add(FPlaneData(1, -1, -1, -VoxelSize * (2 - VoxelTypeData->SectionsDepth   * 2)));
-	AngleSectionPlaneDataArray.Add(FPlaneData(-1, -1, -1, -VoxelSize * (3 - VoxelTypeData->SectionsDepth   * 2)));
-	AngleSectionPlaneDataArray.Add(FPlaneData(-1, 1, -1, -VoxelSize * (2 - VoxelTypeData->SectionsDepth    * 2)));
-	AngleSectionPlaneDataArray.Add(FPlaneData(-1, - 1, -1, -VoxelSize * VoxelTypeData->SectionsDepth    * 2));
-	AngleSectionPlaneDataArray.Add(FPlaneData(-1, 1, -1, VoxelSize * (1 - VoxelTypeData->SectionsDepth    * 2)));
-	AngleSectionPlaneDataArray.Add(FPlaneData(1, 1, -1, VoxelSize * (2 - VoxelTypeData->SectionsDepth    * 2)));
-	AngleSectionPlaneDataArray.Add(FPlaneData(1, -1, -1, VoxelSize * (1 - VoxelTypeData->SectionsDepth    * 2)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(1, 1, -1, -VoxelSize * (1 - VoxelTypeData->SectionsDepth)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(1, -1, -1, -VoxelSize * (2 - VoxelTypeData->SectionsDepth)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(-1, -1, -1, -VoxelSize * (3 - VoxelTypeData->SectionsDepth)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(-1, 1, -1, -VoxelSize * (2 - VoxelTypeData->SectionsDepth)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(-1, - 1, -1, -VoxelSize * VoxelTypeData->SectionsDepth));
+	AngleSectionPlaneDataArray.Add(FPlaneData(-1, 1, -1, VoxelSize * (1 - VoxelTypeData->SectionsDepth)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(1, 1, -1, VoxelSize * (2 - VoxelTypeData->SectionsDepth)));
+	AngleSectionPlaneDataArray.Add(FPlaneData(1, -1, -1, VoxelSize * (1 - VoxelTypeData->SectionsDepth)));
 
 	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(0, 2), 8); 
 	SideIndexesPair_to_EdgeIndex_Map.Add(FIntPoint(2, 0), 8);
@@ -189,38 +189,20 @@ void UATVoxelPMC::BeginPlay() // UActorComponent
 	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(5, 6), 5);
 	SideAndAngleIndexes_to_SecondAdjacentEdgeIndex_Map.Add(FIntPoint(5, 7), 1);
 
-	if (VoxelTypeData->SectionsDepth <= 0.5) // To make less intersections to find vertices
-	{
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(0, { 0, 2, 4, 3 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(1, { 1, 2, 5, 3 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(2, { 0, 3, 5, 2 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(3, { 4, 2, 1, 3 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(4, { 2, 1, 4, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(5, { 3, 1, 5, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(6, { 2, 0, 5, 1 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(7, { 4, 1, 3, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(8, { 0, 5, 2, 4 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(9, { 1, 5, 3, 4 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(10, { 0, 4, 3, 5 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(11, { 2, 5, 1, 4 });
-	}
-	else
-	{
-		/*EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(0, { 1, 3, 5, 2 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(1, { 3, 4, 2, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(2, { 4, 3, 1, 2 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(3, { 3, 5, 2, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(4, { 5, 1, 3, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(5, { 4, 1, 2, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(6, { 3, 1, 4, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(7, { 5, 1, 2, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(8, { 3, 5, 1, 4 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(9, { 5, 2, 4, 0 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(10, { 5, 1, 4, 2 });
-		EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(11, { 5, 3, 4, 0 });*/
-	}
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(0, { 0, 2, 4, 3 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(1, { 1, 2, 5, 3 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(2, { 0, 3, 5, 2 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(3, { 4, 2, 1, 3 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(4, { 2, 1, 4, 0 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(5, { 3, 1, 5, 0 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(6, { 2, 0, 5, 1 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(7, { 4, 1, 3, 0 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(8, { 0, 5, 2, 4 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(9, { 1, 5, 3, 4 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(10, { 0, 4, 3, 5 });
+	EdgeIndex_to_IntersectableSideIndexesArray_Map.Add(11, { 2, 5, 1, 4 });
 
-	if (VoxelTypeData->SectionsDepth <= 0.25)
+	if (VoxelTypeData->SectionsDepth <= 0.45f)
 	{
 		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(0, { 4, 7, 8, 10 });
 		EdgeIndex_to_IntersectableEdgeIndexesArray_Map.Add(1, { 5, 6, 9, 11 });
@@ -828,41 +810,6 @@ void UATVoxelPMC::CreateVoxelMeshTemplate(TArray<int32>& InUnattachedSideIndexes
 				{
 					UnattachedSideVerticesArray.Add(CurrentIntersectionPoint);
 
-					/*if (FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
-					{
-						if (TArray<FVector>* EdgeSectionPlaneBelongVerticesArray = EdgeIndex_to_BelongVerticesArray_Map.Find(FirstAdjacentPlaneDataIndex))
-						{
-							if (EdgeSectionPlaneBelongVerticesArray->Num() % 2 != 0 && FirstAdjacentPlaneDataIndex != SecondPreviousEdgeIndex)
-							{
-								EdgeSectionPlaneBelongVerticesArray->Insert(CurrentIntersectionPoint, EdgeSectionPlaneBelongVerticesArray->Num() == 3 ? 2 : 0);
-							}
-							else EdgeSectionPlaneBelongVerticesArray->Add(CurrentIntersectionPoint);
-						} 
-						else EdgeIndex_to_BelongVerticesArray_Map.Add(FirstAdjacentPlaneDataIndex, { CurrentIntersectionPoint });
-
-						FirstPreviousEdgeIndex = FirstAdjacentPlaneDataIndex;
-					}
-					else if (FirstPreviousEdgeIndex != -1) FirstPreviousEdgeIndex = -1;
-
-					if (SecondAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
-					{
-						if (TArray<FVector>* EdgeSectionPlaneBelongVerticesArray = EdgeIndex_to_BelongVerticesArray_Map.Find(SecondAdjacentPlaneDataIndex))
-						{
-							if (EdgeSectionPlaneBelongVerticesArray->Num() % 2 != 0 && SecondAdjacentPlaneDataIndex != FirstPreviousEdgeIndex)
-							{
-								EdgeSectionPlaneBelongVerticesArray->Insert(CurrentIntersectionPoint, EdgeSectionPlaneBelongVerticesArray->Num() == 3 ? 2 : 0);
-							}
-							else EdgeSectionPlaneBelongVerticesArray->Add(CurrentIntersectionPoint);
-						}
-						else EdgeIndex_to_BelongVerticesArray_Map.Add(SecondAdjacentPlaneDataIndex, { CurrentIntersectionPoint });
-
-						SecondPreviousEdgeIndex = SecondAdjacentPlaneDataIndex;
-					}
-					else if (SecondPreviousEdgeIndex != -1) SecondPreviousEdgeIndex = -1;*/
-
-
-
-
 					if (FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
 					{
 						if (TArray<FVector>* EdgeSectionPlaneBelongVerticesArray = EdgeIndex_to_BelongVerticesArray_Map.Find(FirstAdjacentPlaneDataIndex))
@@ -896,11 +843,6 @@ void UATVoxelPMC::CreateVoxelMeshTemplate(TArray<int32>& InUnattachedSideIndexes
 					if (FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection) SecondPreviousEdgeIndex = SecondAdjacentPlaneDataIndex;
 
 					else if (SecondPreviousEdgeIndex != -1) SecondPreviousEdgeIndex = -1;
-
-
-
-
-
 
 					if (AngleIndexToVerticesPairsArray && FirstAdjacentPlaneType == EVoxelPlaneType::EdgeSection && SecondAdjacentPlaneType == EVoxelPlaneType::EdgeSection)
 					{
