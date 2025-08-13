@@ -17,8 +17,17 @@ void UATSaveGame_VoxelTree::SaveSlot(AATVoxelTree* InTargetTree, const FString& 
 	SaveData->ChunkSize = InTargetTree->ChunkSize;
 	SaveData->VoxelSize = InTargetTree->VoxelSize;
 	SaveData->ChunksUpdateMaxSquareExtent = InTargetTree->ChunksUpdateMaxSquareExtent;
-	SaveData->Point_To_VoxelInstanceData_Map = InTargetTree->Point_To_VoxelInstanceData_Map;
 
+	for (const auto& Pair : InTargetTree->Point_To_VoxelInstanceData_Map)
+	{
+		const UATVoxelTypeData* TypeData = Pair.Value.TypeData;
+
+		if (!SaveData->VoxelTypeData_To_SaveData_Map.Contains(TypeData))
+		{
+			SaveData->VoxelTypeData_To_SaveData_Map.Add(TypeData);
+		}
+		SaveData->VoxelTypeData_To_SaveData_Map[TypeData].Points.Add(Pair.Key);
+	}
 	UGameplayStatics::SaveGameToSlot(SaveData, InSaveSlot, 0);
 }
 //~ End Save
@@ -38,9 +47,15 @@ void UATSaveGame_VoxelTree::LoadSlot(class AATVoxelTree* InTargetTree, const FSt
 	InTargetTree->VoxelSize = LoadedData->VoxelSize;
 	InTargetTree->ChunksUpdateMaxSquareExtent = LoadedData->ChunksUpdateMaxSquareExtent;
 
-	for (const auto& Pair : LoadedData->Point_To_VoxelInstanceData_Map)
+	InTargetTree->InitAllChunks();
+	InTargetTree->MarkAllChunksAsSimulationReady();
+
+	for (const auto& Pair : LoadedData->VoxelTypeData_To_SaveData_Map)
 	{
-		InTargetTree->SetVoxelAtPoint(Pair.Key, Pair.Value.TypeData, true);
+		for (const FIntVector& SamplePoint : Pair.Value.Points)
+		{
+			InTargetTree->SetVoxelAtPoint(SamplePoint, Pair.Key);
+		}
 	}
 }
 //~ End Load

@@ -8,6 +8,15 @@
 
 #include "ATSaveGame_VoxelTree.generated.h"
 
+USTRUCT(BlueprintType)
+struct FATVoxelTypeSaveData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
+	TArray<FIntVector> Points;
+};
+
 /**
  * 
  */
@@ -47,6 +56,6 @@ public:
 	int32 ChunksUpdateMaxSquareExtent;
 
 	UPROPERTY(Category = "Data", EditAnywhere, BlueprintReadWrite)
-	TMap<FIntVector, FVoxelInstanceData> Point_To_VoxelInstanceData_Map;
+	TMap<TObjectPtr<const class UATVoxelTypeData>, FATVoxelTypeSaveData> VoxelTypeData_To_SaveData_Map;
 //~ End Data
 };

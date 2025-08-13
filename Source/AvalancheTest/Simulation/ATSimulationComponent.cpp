@@ -12,6 +12,7 @@
 UATSimulationComponent::UATSimulationComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
 	PrimaryComponentTick.TickInterval = 0.5f;
 
 	TaskArray = {
@@ -28,8 +29,10 @@ void UATSimulationComponent::OnRegister() // UActorComponent
 {
 	Super::OnRegister();
 
-	PrimaryComponentTick.SetTickFunctionEnable(!GetWorld()->IsEditorWorld());
-
+	if (GetWorld()->IsGameWorld())
+	{
+		PrimaryComponentTick.SetTickFunctionEnable(true);
+	}
 	OwnerTree = GetOwner<AATVoxelTree>();
 	ensure(OwnerTree);
 
@@ -60,6 +63,7 @@ void UATSimulationComponent::TickComponent(float InDeltaSeconds, enum ELevelTick
 {
 	Super::TickComponent(InDeltaSeconds, InTickType, InThisTickFunction);
 
+	ensureReturn(!GetWorld()->IsEditorWorld());
 	HandleTickUpdate(InDeltaSeconds);
 
 	SIZE_T TasksQueuedPointsAllocatedSize = 0;

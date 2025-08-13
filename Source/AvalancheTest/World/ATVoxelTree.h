@@ -111,6 +111,9 @@ public:
 	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
 	void UnRegisterChunksUpdateReferenceActor(const AActor* InActor);
 
+	UFUNCTION(Category = "Voxel Chunks", BlueprintCallable)
+	void MarkAllChunksAsSimulationReady();
+
 	const TArray<const AActor*>& GetChunksUpdateReferenceActors() const { return ChunksUpdateReferenceActors; }
 protected:
 	void UpdateBoundsSize() { BoundsSize = TreeSizeInChunks * ChunkSize; }
@@ -154,6 +157,9 @@ public:
 
 	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
 	int32 GetTreeSeed() const { return TreeSeed; }
+
+	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
+	void InitAllChunks();
 
 	UFUNCTION(Category = "Voxel Generation", BlueprintCallable)
 	void HandleGenerate(bool bInAsync, int32 InTreeSeed);

@@ -176,6 +176,15 @@ void AATVoxelTree::UnRegisterChunksUpdateReferenceActor(const AActor* InActor)
 	ChunksUpdateReferenceActors.Remove(InActor);
 }
 
+void AATVoxelTree::MarkAllChunksAsSimulationReady()
+{
+	for (const auto& Pair : ChunksMap)
+	{
+		ensureContinue(Pair.Value);
+		Pair.Value->MarkChunkAsSimulationReady();
+	}
+}
+
 void AATVoxelTree::HandleChunkUpdates()
 {
 	ensureReturn(SimulationComponent);
@@ -317,6 +326,18 @@ LeaveLoop:
 }
 //~ End Voxel Chunks
 
+void AATVoxelTree::InitAllChunks()
+{
+	SetThisTickUpdatesTimeBudget(1000000.0);
+
+	FIntPoint TreeSizeInChunksXY = FIntPoint(TreeSizeInChunks.X, TreeSizeInChunks.Y);
+
+	TArray<AATVoxelChunk*> NewChunks;
+	InitVoxelChunksInSquare(TreeSizeInChunksXY / 2, TreeSizeInChunksXY.GetMax() / 2 + 1, NewChunks, true);
+
+	SetThisTickUpdatesTimeBudget(0.0);
+}
+
 void AATVoxelTree::HandleGenerate(bool bInAsync, int32 InTreeSeed)
 {
 	ResetData();
@@ -327,15 +348,10 @@ void AATVoxelTree::HandleGenerate(bool bInAsync, int32 InTreeSeed)
 	{
 		CVarVoxelTree_ForceSyncUpdates->Set(1);
 	}
-	FIntPoint TreeSizeInChunksXY = FIntPoint(TreeSizeInChunks.X, TreeSizeInChunks.Y);
-
-	SetThisTickUpdatesTimeBudget(1000000.0);
+	InitAllChunks();
 
 	TArray<AATVoxelChunk*> NewChunks;
-	InitVoxelChunksInSquare(TreeSizeInChunksXY / 2, TreeSizeInChunksXY.GetMax() / 2 + 1, NewChunks, true);
-
-	SetThisTickUpdatesTimeBudget(0.0);
-
+	ChunksMap.GenerateValueArray(NewChunks);
 	ProceduralGeneratorComponent->QueueChunksForTaskAtIndex(NewChunks, 0);
 }
 

@@ -7,7 +7,7 @@
 #include "PropertyEditorModule.h"
 
 #include "Details/VoxelChunkDetails.h"
-#include "Debug/GameplayDebuggerCategory_Voxels.h"
+#include "Debugger/GameplayDebuggerCategory_Voxels.h"
 
 #include "EditorMode/VoxelToolsEditorMode.h"
 #include "EditorMode/VoxelToolsEditorModeCommands.h"
