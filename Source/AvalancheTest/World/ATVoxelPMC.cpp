@@ -1063,22 +1063,6 @@ void UATVoxelPMC::CreateMesh(TArray<FIntVector>& InVisibleVoxelPointsArray)
 					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 0);
 					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 3);
 
-					/*EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 1);
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 0);
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
-
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 1);
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 3);*/
-
-					/*EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 1);
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 0);
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
-
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 1);
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 2);
-					EdgeSectionPlanesMeshTriangleVertexIndexesArray.Add(CurrentVoxelFaceStartVertexIndex + 3);*/
-
 					AddedEdgeSectionsNum++;
 				}
 			}

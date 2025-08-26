@@ -45,7 +45,7 @@ public:
 //~ Begin Mesh
 public:
 
-	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly, meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float SectionsDepth;
 
 	UPROPERTY(Category = "Mesh", EditDefaultsOnly, BlueprintReadOnly)
